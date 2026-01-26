@@ -74,6 +74,8 @@ Each application runs independently and communicates with the backend API.
 - Git
 - Expo Go app (mobile developers only)
 
+### Test my own branch
+
 Verify installation:
 
 ```bash
