@@ -177,3 +177,4 @@ docker compose down -v
 Notes
     •    This Docker database is for local development only
     •    Production deployment will use Azure MySQL in a later phase
+```

@@ -1,10 +1,22 @@
 const express = require("express");
 const cors = require("cors");
+const mysql = require('mysql2/promise')
 const dotenv = require("dotenv");
 
 dotenv.config();
 
 const app = express();
+
+// Create the connect with database
+const database = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USERNAME,
+  password: process.env.DB_PASSWORD,
+  database: 'travelexperts',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+})
 
 // Middleware
 app.use(cors());
@@ -18,6 +30,29 @@ app.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+//Get User List
+app.get("/packages",async (req, res) => {
+  try {
+    const [rows] = await database.query('SELECT * FROM packages');
+    res.json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database query failed' });
+  }
+})
+
+// test
+app.get('/daryl',(req,res) => {
+  res.status(200).json(
+    {
+      status: "ok",
+      text: "Hello Daryl",
+      timestamp: new Date().toLocaleDateString(),
+    }
+  );
+})
+
 
 // 404 handler
 app.use((req, res) => {
