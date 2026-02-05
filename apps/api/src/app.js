@@ -3,6 +3,9 @@ const cors = require("cors");
 
 const healthRoutes = require("./routes/health");
 
+const notFound = require("./middleware/notFound");
+const errorHandler = require("./middleware/errorHandler");
+
 const app = express();
 
 // Middleware
@@ -13,8 +16,7 @@ app.use(express.json());
 app.use("/health", healthRoutes);
 
 // 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: "Not Found" });
-});
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;
