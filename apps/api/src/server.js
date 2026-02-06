@@ -3,7 +3,10 @@ const cors = require("cors");
 const mysql = require('mysql2/promise')
 const dotenv = require("dotenv");
 
-dotenv.config();
+// apps/api/src/server.js
+require("dotenv").config();
+
+const app = require("./app");
 
 const app = express();
 
@@ -61,6 +64,7 @@ app.use((req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 3001;
+
 app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}`);
 });
