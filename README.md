@@ -1,6 +1,6 @@
-# 🌱 Salsa Verde Platform
+# 🌱 Greenery Platform
 
-Salsa Verde is a full-stack mobile and web platform designed to manage plant maintenance and greenhouse operations.  
+Greenery is a full-stack mobile and web platform designed to manage plant maintenance and greenhouse operations.  
 The system supports technicians in the field as well as managers and administrators through a centralized web dashboard.
 
 This project is developed as a **capstone project** using **Agile (Scrum) methodology** and industry-standard tools.
