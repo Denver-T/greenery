@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 
 const healthRoutes = require("./routes/health");
-
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
