@@ -1,12 +1,10 @@
 const express = require("express");
-const plantController = require("../controllers/plantController");
-
 const router = express.Router();
 
-// GET /plants
-router.get("/", plantController.getPlants);
+const plantController = require("../controllers/plantController");
 
-// GET /plants/:id
+router.get("/", plantController.getPlants);
 router.get("/:id", plantController.getPlantById);
+router.post("/", plantController.createPlant);
 
 module.exports = router;
