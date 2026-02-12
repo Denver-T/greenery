@@ -1,26 +1,85 @@
+/* 1) Tailwind v4 core */
 @import "tailwindcss";
 
+/* 2) Color variables for light/dark */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --background: #f8faf8;      /* app background */
+  --foreground: #1f2937;      /* gray-800 */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0b0f0a;
+    --foreground: #e5e7eb;
   }
+}
+
+/* 3) Tailwind v4 @theme: define design tokens you want as Tailwind colors/fonts */
+@theme inline {
+  /* map CSS custom props into Tailwind color tokens */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* project brand greens (from your mock) */
+  --color-brand: #6a8f41;
+  --color-brand-700: #50712f;
+
+  /* optional fonts (if you wire them in layout.js) */
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* card radius used in examples */
+  --radius-card: 12px;
+}
+
+/* 4) Global defaults */
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: #a3e635; /* lime-400 */
+  color: #000;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* 5) High-visibility keyboard focus */
+:focus-visible {
+  outline: 2px solid #86efac; /* green-300 */
+  outline-offset: 2px;
+}
+
+/* Smooth interactions on links and buttons */
+a, button {
+  transition: all .15s ease;
+}
+
+/* 6) Tailwind v4 custom utilities used by components */
+@utility shadow-soft {
+  box-shadow:
+    0 1px 2px rgba(0,0,0,.06),
+    0 1px 3px rgba(0,0,0,.10);
+}
+
+@utility rounded-card {
+  border-radius: var(--radius-card);
+}
+
+/* Subtle, reusable shadow for nav items */
+@utility shadow-elevated {
+  box-shadow:
+    0 1px 1px rgba(0,0,0,.06),
+    0 2px 4px rgba(0,0,0,.10);
+}
+
+/* A bit stronger when hovered/active */
+@utility shadow-elevated-lg {
+  box-shadow:
+    0 2px 3px rgba(0,0,0,.08),
+    0 6px 12px rgba(0,0,0,.16);
 }
