@@ -1,4 +1,15 @@
+/**
+ * Plant Controller
+ * ----------------
+ * Responsibilities:
+ * - Validate request inputs (params/body)
+ * - Call the service layer
+ * - Return consistent API responses
+ */
+
 const plantService = require("../services/plantService");
+const { httpError } = require("../utils/httpError");
+const { isNonEmptyString, toPositiveInt } = require("../utils/validators");
 
 exports.getPlants = async (req, res, next) => {
   try {
@@ -11,15 +22,41 @@ exports.getPlants = async (req, res, next) => {
 
 exports.getPlantById = async (req, res, next) => {
   try {
-    const plant = await plantService.getPlantById(req.params.id);
+    const id = toPositiveInt(req.params.id);
+    if (!id) {
+      return next(
+        httpError(400, "Invalid plant id", "VALIDATION_ERROR", [
+          { field: "id", issue: "must be a positive integer" },
+        ])
+      );
+    }
+
+    const plant = await plantService.getPlantById(id);
 
     if (!plant) {
-      return res.status(404).json({
-        error: { message: "Plant not found", code: "PLANT_NOT_FOUND" },
-      });
+      return next(httpError(404, "Plant not found", "PLANT_NOT_FOUND"));
     }
 
     res.status(200).json({ data: plant });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.createPlant = async (req, res, next) => {
+  try {
+    const { name } = req.body;
+
+    if (!isNonEmptyString(name)) {
+      return next(
+        httpError(400, "Field 'name' is required", "VALIDATION_ERROR", [
+          { field: "name", issue: "required" },
+        ])
+      );
+    }
+
+    const created = await plantService.createPlant({ name });
+    res.status(201).json({ data: created });
   } catch (err) {
     next(err);
   }
