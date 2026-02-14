@@ -1,0 +1,32 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: greenery_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: greenery
+      MYSQL_USER: greenery_user
+      MYSQL_PASSWORD: greenery_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - greenery_mysql_data:/var/lib/mysql
+      - ./init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -prootpassword --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  adminer:
+    image: adminer
+    container_name: greenery_adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  greenery_mysql_data:
