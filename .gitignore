@@ -10,7 +10,8 @@ web-build/
 
 # Env files
 .env
-.env.local
+.env.*
+!.env.example
 
 # OS
 .DS_Store
