@@ -29,7 +29,7 @@ const userRoutes = require("./routes/users");
 // Global Middleware
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
-const userRoutes = require("./api/users/route");
+// const userRoutes = require("./api/users/route");
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('../config/swagger');
 
