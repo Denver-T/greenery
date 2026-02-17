@@ -1,9 +1,13 @@
-const db = require('../lib/db')
+const db = require('../db')
 
 
 //Get Package List
-export async function GetPackages(){
-    const data = db.query('SELECT * FROM packages')
+const GetPackages = async () =>{
+    const [data] = await db.query('SELECT * FROM packages')
     return data;
+}
+
+module.exports ={
+    GetPackages
 }
 

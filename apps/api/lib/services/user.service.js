@@ -1,6 +1,10 @@
 const userRepo = require("../repositories/user.repo");
 
-export async function GetPackages() {
+const GetPackages = async () => {
     const packages = await userRepo.GetPackages();
     return packages;
+}
+
+module.exports = {
+    GetPackages
 }
