@@ -19,6 +19,7 @@ const cors = require("cors");
 
 // Route Modules
 const healthRoutes = require("./routes/health");
+
 const dbHealthRoutes = require("./routes/dbHealth");
 const authRoutes = require("./routes/auth");
 const taskRoutes = require("./routes/tasks");
@@ -28,6 +29,10 @@ const userRoutes = require("./routes/users");
 // Global Middleware
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
+// const userRoutes = require("./api/users/route");
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('../config/swagger');
+
 
 const app = express();
 
@@ -53,6 +58,13 @@ app.use("/tasks", taskRoutes);         // Task domain
 app.use("/plants", plantRoutes);       // Plant domain
 app.use("/users", userRoutes);         // User domain
 
+// User
+app.use("/users", userRoutes);
+
+// Documents
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+
+// 404 handler
 /**
  * Error Handling (Order Matters)
  * ------------------------------
