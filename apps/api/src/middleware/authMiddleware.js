@@ -47,6 +47,7 @@ exports.verifyToken = async (req, res, next) => {
 
     return next();
   } catch (err) {
+    console.error("verifyToken failed:", err);
     return next(
       httpError(401, "Invalid authentication token", "AUTH_TOKEN_INVALID")
     );
