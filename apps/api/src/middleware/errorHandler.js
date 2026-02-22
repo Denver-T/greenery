@@ -10,8 +10,9 @@
  *
  * Must be registered LAST in app.js
  */
-
 module.exports = (err, req, res, next) => {
+  void next; // Express requires 4 args for error middleware; intentionally unused
+
   console.error(err);
 
   /**
@@ -27,7 +28,7 @@ module.exports = (err, req, res, next) => {
     "ER_BAD_DB_ERROR",
   ]);
 
-  // 1️⃣ Handle infrastructure failures (DB unavailable)
+  // Handle infrastructure failures (DB unavailable)
   if (dbErrorCodes.has(err.code)) {
     return res.status(503).json({
       error: {
@@ -39,7 +40,7 @@ module.exports = (err, req, res, next) => {
     });
   }
 
-  // 2️⃣ Handle application-level errors
+  // Handle application-level errors
   const status = err.statusCode || 500;
 
   res.status(status).json({
