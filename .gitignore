@@ -3,10 +3,17 @@ node_modules/
 npm-debug.log*
 yarn-error.log*
 
+# Next.js
+.next/
+
 # Expo / React Native
 .expo/
 .expo-shared/
 web-build/
+
+# Build output
+dist/
+coverage/
 
 # Env files
 .env
@@ -15,3 +22,4 @@ web-build/
 
 # OS
 .DS_Store
+__MACOSX/
