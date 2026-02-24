@@ -55,6 +55,10 @@ export default function LoginScreen() {
   function onForgotPassword() {
     navigation.navigate('ForgotPassword');
   }
+  
+  function onHomePage(){
+        navigation.navigate('HomePage');
+    }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -63,7 +67,7 @@ export default function LoginScreen() {
         <View style={styles.tint} />
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'android' ? 'padding' : undefined}
           style={styles.container}
         >
           {/* Top logo card */}
@@ -118,6 +122,11 @@ export default function LoginScreen() {
 
             <Pressable onPress={onForgotPassword} style={styles.forgotWrap}>
               <Text style={styles.forgotText}>Forgot password?</Text>
+            </Pressable>
+          </View>
+          <View>
+            <Pressable onPress={onHomePage}>
+              <Text>To Home Screen</Text>
             </Pressable>
           </View>
         </KeyboardAvoidingView>
