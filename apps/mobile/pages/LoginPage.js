@@ -24,7 +24,7 @@ const LOGO = require('../assets/logo.png'); // poster/logo image
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [secure, setSecure] = useState(true);
+  const [secure] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const navigation = useNavigation();
