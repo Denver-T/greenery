@@ -13,9 +13,9 @@ async function getPool() {
   const {
     DB_HOST = "localhost",
     DB_PORT = "3306",
-    DB_NAME = "greenery",
-    DB_USER = "greenery_user",
-    DB_PASSWORD = "greenery_pass",
+    DB_NAME = process.env.DB_NAME,
+    DB_USER = process.env.DB_USERNAME,
+    DB_PASSWORD = process.env.DB_PASSWORD,
   } = process.env;
 
   pool = mysql.createPool({

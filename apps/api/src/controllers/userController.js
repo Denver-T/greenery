@@ -45,7 +45,7 @@ exports.getUserById = async (req, res, next) => {
 
 exports.createUser = async (req, res, next) => {
   try {
-    const { name, role } = req.body;
+    const { name, password, role } = req.body;
 
     if (!isNonEmptyString(name)) {
       return next(
@@ -64,7 +64,7 @@ exports.createUser = async (req, res, next) => {
       );
     }
 
-    const created = await userService.createUser({ name, role });
+    const created = await userService.createUser({ name, password });
     res.status(201).json({ data: created });
   } catch (err) {
     next(err);

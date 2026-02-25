@@ -3,6 +3,7 @@ const path = require('path');
 
 const options = {
   definition: {
+    openapi: "3.0.0",
     info: {
       title: 'Greenery API',
       version: '1.0.0',

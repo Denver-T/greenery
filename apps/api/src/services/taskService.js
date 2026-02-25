@@ -6,28 +6,45 @@ let tasks = [
   { id: 2, title: "Inspect Fiddle Leaf Fig", status: "in_progress" },
 ];
 
+const { getPool } = require("../db/index");
+
 exports.getTasks = async () => {
-  return tasks;
+  const pool = await getPool();
+  const [rows] = await pool.query("SELECT * FROM tasks");
+  return rows;
 };
 
-exports.createTask = async (payload) => {
-  const title = typeof payload?.title === "string" ? payload.title.trim() : "";
-  const status =
-    typeof payload?.status === "string" ? payload.status.trim() : "assigned";
+exports.createTask = async (taskData) => {
+  const pool = await getPool();
 
-  const created = {
-    id: nextId++,
-    title: title || "Untitled Task",
-    status: status || "assigned",
+  const [result] = await pool.query(
+    `
+    INSERT INTO Tasks
+      (TaskTitle, Status, AssignedUserId, CreatedByUserId, Description, CreateTime)
+    VALUES (?, ?, ?, ?, ?, NOW())
+    `,
+    [
+      taskData.title,
+      taskData.status,
+      taskData.assignedUser,
+      taskData.createUser,
+      taskData.description,
+    ]
+  );
+
+  return {
+    TaskID: result.insertId,
+    ...taskData,
   };
-
-  tasks.push(created);
-  return created;
 };
 
 exports.getTaskById = async (id) => {
-  const num = Number(id);
-  return tasks.find((t) => t.id === num) || null;
+  const pool = await getPool();
+  const [rows] = await pool.query(
+    "SELECT * FROM tasks WHERE TaskID = ?",
+    [id]
+  );
+  return rows[0] || null;
 };
 
 exports.updateTaskStatus = async (id, payload) => {

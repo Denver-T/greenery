@@ -32,7 +32,7 @@ exports.createTask = async (req, res, next) => {
      * Validate as early as possible (at the API boundary).
      * This prevents bad data from flowing deeper into the system.
      */
-    const { title, status } = req.body;
+    const { title, status, createUser } = req.body;
 
     if (!isNonEmptyString(title)) {
       return next(
@@ -51,7 +51,7 @@ exports.createTask = async (req, res, next) => {
       );
     }
 
-    const created = await taskService.createTask({ title, status });
+    const created = await taskService.createTask({ title, status, createUser  });
     res.status(201).json({ data: created });
   } catch (err) {
     next(err);
