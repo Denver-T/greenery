@@ -64,7 +64,7 @@ exports.createUser = async (req, res, next) => {
       );
     }
 
-    const created = await userService.createUser({ name, password });
+    const created = await userService.createUser({ name, password, role });
     res.status(201).json({ data: created });
   } catch (err) {
     next(err);

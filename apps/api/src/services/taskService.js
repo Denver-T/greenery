@@ -1,4 +1,3 @@
-let nextId = 3;
 
 // In-memory stub data for scaffolding (SV-27)
 let tasks = [
