@@ -129,6 +129,117 @@ router.get("/:id", taskController.getTaskById);
  *         description: Invalid input
  */
 router.post("/", taskController.createTask);
+
+/**
+ * @swagger
+ * /tasks/{id}:
+ *   patch:
+ *     summary: Update task status
+ *     description: Partially updates the status of a task by its ID
+ *     tags:
+ *       - Tasks
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Task ID
+ *         schema:
+ *           type: integer
+ *           example: 101
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: integer
+ *                 example: 2
+ *     responses:
+ *       200:
+ *         description: Task status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     TaskID:
+ *                       type: integer
+ *                       example: 101
+ *                     Status:
+ *                       type: integer
+ *                       example: 2
+ *                     AssignedUserId:
+ *                       type: integer
+ *                       nullable: true
+ *                       example: 3
+ *                     CreatedByUserId:
+ *                       type: integer
+ *                       example: 1
+ *                     Description:
+ *                       type: string
+ *                       example: Fix production bug
+ *                     CreateTime:
+ *                       type: string
+ *                       format: date-time
+ *                     ChangeTime:
+ *                       type: string
+ *                       format: date-time
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Invalid status value
+ *       404:
+ *         description: Task not found
+ */
 router.patch("/:id", taskController.updateTaskStatus);
+
+/**
+ * @swagger
+ * /tasks/{id}/assign:
+ *   patch:
+ *     summary: Assign task to a user
+ *     description: Updates the assigned user of a task
+ *     tags:
+ *       - Tasks
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Task ID
+ *         schema:
+ *           type: integer
+ *           example: 101
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - assignedUserId
+ *             properties:
+ *               assignedUserId:
+ *                 type: integer
+ *                 example: 3
+ *     responses:
+ *       200:
+ *         description: Task assigned successfully
+ *       400:
+ *         description: Invalid input
+ *       404:
+ *         description: Task not found
+ */
+router.patch("/:id/assign", taskController.assignTask);
 
 module.exports = router;

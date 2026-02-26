@@ -85,35 +85,50 @@ exports.getTaskById = async (req, res, next) => {
   }
 };
 
-exports.updateTaskStatus = async (req, res, next) => {
+exports.updateTaskStatus = async (req, res) => {
   try {
-    const id = toPositiveInt(req.params.id);
-    if (!id) {
-      return next(
-        httpError(400, "Invalid task id", "VALIDATION_ERROR", [
-          { field: "id", issue: "must be a positive integer" },
-        ])
-      );
+    const updatedTask = await taskService.updateTaskStatus(
+      req.params.id,
+      req.body.status
+    );
+
+    if (!updatedTask) {
+      return res.status(404).json({
+        error: "Task not found",
+      });
     }
 
-    const { status } = req.body;
+    res.status(200).json({
+      status: "ok",
+      data: updatedTask,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: error.message,
+    });
+  }
+};
 
-    if (!isNonEmptyString(status)) {
-      return next(
-        httpError(400, "Field 'status' is required", "VALIDATION_ERROR", [
-          { field: "status", issue: "required" },
-        ])
-      );
+exports.assignTask = async (req, res) => {
+  try {
+    const task = await taskService.assignTask(
+      req.params.id,
+      req.body.assignedUserId
+    );
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
     }
 
-    const updated = await taskService.updateTaskStatus(id, { status });
-
-    if (!updated) {
-      return next(httpError(404, "Task not found", "TASK_NOT_FOUND"));
-    }
-
-    res.status(200).json({ data: updated });
-  } catch (err) {
-    next(err);
+    res.status(200).json({
+      status: "ok",
+      data: task,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: error.message,
+    });
   }
 };
