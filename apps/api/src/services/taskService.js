@@ -1,10 +1,10 @@
 
 const userService = require("./userService");
 // In-memory stub data for scaffolding (SV-27)
-let tasks = [
-  { id: 1, title: "Water Monstera", status: "assigned" },
-  { id: 2, title: "Inspect Fiddle Leaf Fig", status: "in_progress" },
-];
+// let tasks = [
+//   { id: 1, title: "Water Monstera", status: "assigned" },
+//   { id: 2, title: "Inspect Fiddle Leaf Fig", status: "in_progress" },
+// ];
 
 const { getPool } = require("../db/index");
 
