@@ -1,28 +1,43 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-
 /**
- * Employees Admin Page (CRUD)
- * UI calls API routes:
- *   GET    /api/employees
- *   POST   /api/employees
- *   PUT    /api/employees/:id
- *   DELETE /api/employees/:id
+ * Employees page (WEB)
+ * ----------------------------------------------------------
+ * This is UI only. It does NOT touch the database directly.
  *
- * ✅ IMPORTANT:
- * The "stickiness" (persistence) happens in the API routes where you connect to MySQL.
- * This page should never connect to the DB directly.
+ * Data flow:
+ *   Next.js UI -> calls apps/api (HTTP) -> apps/api talks to MySQL
+ *
+ * API endpoints used:
+ *   GET    http://localhost:3001/employees
+ *   POST   http://localhost:3001/employees
+ *   PUT    http://localhost:3001/employees/:id
+ *   DELETE http://localhost:3001/employees/:id
+ *
+ * Config:
+ *   Set NEXT_PUBLIC_API_URL in apps/web/.env.local
  */
 
+import { useEffect, useState } from "react";
+import AppShell from "@/components/AppShell";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+async function jsonOrThrow(res) {
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error || `Request failed (${res.status})`);
+  return body;
+}
+
 export default function EmployeesPage() {
+  // ----- Page state -----
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // Create form
-  const [newEmp, setNewEmp] = useState({
+  // ----- Create form state -----
+  const [form, setForm] = useState({
     name: "",
     role: "Technician",
     email: "",
@@ -31,41 +46,47 @@ export default function EmployeesPage() {
     permissionLevel: "Technician",
   });
 
-  // Edit modal/state
+  // ----- Edit modal state -----
   const [editing, setEditing] = useState(null); // employee object or null
 
-  const hasData = employees.length > 0;
-
-  async function loadEmployees() {
+  /**
+   * Load employees from the unified backend.
+   * This is what makes HeidiSQL inserts show up in the UI.
+   */
+  async function refresh() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/employees", { cache: "no-store" });
-      if (!res.ok) throw new Error(`Failed to load employees (${res.status})`);
-      const data = await res.json();
+      const res = await fetch(`${API_BASE}/employees`, { cache: "no-store" });
+      const data = await jsonOrThrow(res);
       setEmployees(Array.isArray(data) ? data : []);
     } catch (e) {
-      setError(e?.message || "Could not load employees.");
+      setError(e.message || "Failed to load employees.");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadEmployees();
+    refresh();
   }, []);
 
+  /**
+   * Create employee (POST)
+   */
   async function createEmployee() {
     setError("");
     setBusy(true);
     try {
-      const res = await fetch("/api/employees", {
+      const res = await fetch(`${API_BASE}/employees`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newEmp),
+        body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error(`Create failed (${res.status})`);
-      setNewEmp({
+      await jsonOrThrow(res);
+
+      // Reset form and reload
+      setForm({
         name: "",
         role: "Technician",
         email: "",
@@ -73,222 +94,208 @@ export default function EmployeesPage() {
         status: "Active",
         permissionLevel: "Technician",
       });
-      await loadEmployees(); // refresh list
+      await refresh();
     } catch (e) {
-      setError(e?.message || "Could not create employee.");
+      setError(e.message || "Failed to create employee.");
     } finally {
       setBusy(false);
     }
   }
 
-  async function updateEmployee(emp) {
+  /**
+   * Save edits (PUT)
+   */
+  async function saveEdit() {
+    if (!editing) return;
     setError("");
     setBusy(true);
     try {
-      const res = await fetch(`/api/employees/${emp.id}`, {
+      const res = await fetch(`${API_BASE}/employees/${editing.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(emp),
+        body: JSON.stringify(editing),
       });
-      if (!res.ok) throw new Error(`Update failed (${res.status})`);
+      await jsonOrThrow(res);
       setEditing(null);
-      await loadEmployees();
+      await refresh();
     } catch (e) {
-      setError(e?.message || "Could not update employee.");
+      setError(e.message || "Failed to update employee.");
     } finally {
       setBusy(false);
     }
   }
 
+  /**
+   * Delete employee (DELETE)
+   */
   async function deleteEmployee(id) {
     if (!confirm("Delete this employee?")) return;
     setError("");
     setBusy(true);
     try {
-      const res = await fetch(`/api/employees/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(`Delete failed (${res.status})`);
-      await loadEmployees();
+      const res = await fetch(`${API_BASE}/employees/${id}`, {
+        method: "DELETE",
+      });
+      await jsonOrThrow(res);
+      await refresh();
     } catch (e) {
-      setError(e?.message || "Could not delete employee.");
+      setError(e.message || "Failed to delete employee.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div style={styles.page}>
-      {/* Left nav (simple placeholder to match your prototype vibe) */}
-      <aside style={styles.sidebar}>
-        <div style={styles.profileCard}>
-          <div style={styles.avatar}>👤</div>
-          <div>
-            <div style={styles.profileName}>Admin Phil Philinson</div>
-            <div style={styles.profileSub}>Administrator</div>
+    <AppShell title="Manage Employees">
+      <div className="p-6">
+        {/* Error banner */}
+        {error ? (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 font-semibold text-red-700">
+            {error}
           </div>
-        </div>
+        ) : null}
 
-        <nav style={styles.nav}>
-          <a style={styles.navItem} href="/admin/dashboard-analytics">
-            Dashboard Analytics
-          </a>
-          <a style={styles.navItem} href="/req-review">
-            REQ Review
-          </a>
-          <a style={styles.navItem} href="/task-sets">
-            Create Task Sets
-          </a>
-          <a style={{ ...styles.navItem, ...styles.navItemActive }} href="/employees">
-            Manage Employees
-          </a>
-          <a style={styles.navItem} href="/calendar">
-            View Calendar
-          </a>
-        </nav>
-      </aside>
+        {/* Create form */}
+        <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="mb-3 text-lg font-extrabold text-brand-700">
+            Create New Employee
+          </div>
 
-      {/* Main */}
-      <main style={styles.main}>
-        <header style={styles.header}>
-          <h1 style={styles.title}>Manage Employees</h1>
-          <div style={styles.subTitle}>Admin can view and manage employees (CRUD)</div>
-        </header>
-
-        {error ? <div style={styles.error}>{error}</div> : null}
-
-        {/* Create new employee */}
-        <section style={styles.panel}>
-          <div style={styles.panelTitle}>Create New Employee</div>
-
-          <div style={styles.formGrid}>
-            <Field label="Name">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-1">
+              <span className="text-sm font-bold text-gray-700">Name</span>
               <input
-                style={styles.input}
-                value={newEmp.name}
-                onChange={(e) => setNewEmp({ ...newEmp, name: e.target.value })}
+                className="rounded-xl border border-gray-200 px-3 py-2"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="e.g., Tung Sahur"
               />
-            </Field>
+            </label>
 
-            <Field label="Role">
+            <label className="grid gap-1">
+              <span className="text-sm font-bold text-gray-700">Role</span>
               <select
-                style={styles.input}
-                value={newEmp.role}
-                onChange={(e) => setNewEmp({ ...newEmp, role: e.target.value })}
+                className="rounded-xl border border-gray-200 px-3 py-2"
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
               >
                 <option>Technician</option>
                 <option>Manager</option>
                 <option>Administrator</option>
               </select>
-            </Field>
+            </label>
 
-            <Field label="Email">
+            <label className="grid gap-1">
+              <span className="text-sm font-bold text-gray-700">Email</span>
               <input
-                style={styles.input}
-                value={newEmp.email}
-                onChange={(e) => setNewEmp({ ...newEmp, email: e.target.value })}
+                className="rounded-xl border border-gray-200 px-3 py-2"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="example@greenery.ca"
               />
-            </Field>
+            </label>
 
-            <Field label="Phone">
+            <label className="grid gap-1">
+              <span className="text-sm font-bold text-gray-700">Phone</span>
               <input
-                style={styles.input}
-                value={newEmp.phone}
-                onChange={(e) => setNewEmp({ ...newEmp, phone: e.target.value })}
+                className="rounded-xl border border-gray-200 px-3 py-2"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 placeholder="555-555-5555"
               />
-            </Field>
+            </label>
 
-            <Field label="Status">
+            <label className="grid gap-1">
+              <span className="text-sm font-bold text-gray-700">Status</span>
               <select
-                style={styles.input}
-                value={newEmp.status}
-                onChange={(e) => setNewEmp({ ...newEmp, status: e.target.value })}
+                className="rounded-xl border border-gray-200 px-3 py-2"
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
               >
                 <option>Active</option>
                 <option>Inactive</option>
               </select>
-            </Field>
+            </label>
 
-            <Field label="Permission Level">
+            <label className="grid gap-1">
+              <span className="text-sm font-bold text-gray-700">Permission Level</span>
               <select
-                style={styles.input}
-                value={newEmp.permissionLevel}
-                onChange={(e) =>
-                  setNewEmp({ ...newEmp, permissionLevel: e.target.value })
-                }
+                className="rounded-xl border border-gray-200 px-3 py-2"
+                value={form.permissionLevel}
+                onChange={(e) => setForm({ ...form, permissionLevel: e.target.value })}
               >
                 <option>Technician</option>
                 <option>Manager</option>
                 <option>Administrator</option>
               </select>
-            </Field>
+            </label>
           </div>
 
-          <button
-            style={styles.primaryBtn}
-            onClick={createEmployee}
-            disabled={busy || !newEmp.name.trim()}
-          >
-            {busy ? "Saving..." : "Create Employee"}
-          </button>
+          <div className="mt-4 flex gap-3">
+            <button
+              className="rounded-xl bg-brand-700 px-4 py-2 font-extrabold text-white disabled:opacity-60"
+              disabled={busy || !form.name.trim()}
+              onClick={createEmployee}
+            >
+              {busy ? "Saving..." : "Create Employee"}
+            </button>
 
-          <div style={styles.note}>
-            {/* DB linkage note */}
-            <strong>DB note:</strong> Create/Update/Delete persist via{" "}
-            <code>/api/employees</code> routes. Those routes should execute MySQL
-            queries so operations “stick” in the database.
+            <button
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2 font-extrabold text-gray-800 disabled:opacity-60"
+              disabled={busy}
+              onClick={refresh}
+            >
+              Refresh
+            </button>
           </div>
-        </section>
 
-        {/* List employees */}
-        <section style={styles.panel}>
-          <div style={styles.panelTitle}>All Employees</div>
+          <p className="mt-3 text-xs font-semibold text-gray-500">
+            Data comes from <code>{API_BASE}/employees</code> (apps/api). HeidiSQL inserts will appear after Refresh.
+          </p>
+        </div>
+
+        {/* List */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="mb-3 text-lg font-extrabold text-brand-700">All Employees</div>
 
           {loading ? (
-            <div style={styles.muted}>Loading employees…</div>
-          ) : !hasData ? (
-            <div style={styles.muted}>No employees yet.</div>
+            <div className="text-gray-600">Loading…</div>
+          ) : employees.length === 0 ? (
+            <div className="text-gray-600">No employees found.</div>
           ) : (
-            <div style={styles.cards}>
+            <div className="grid grid-cols-3 gap-4">
               {employees.map((emp) => (
-                <div key={emp.id} style={styles.card}>
-                  <div style={styles.cardTop}>
-                    <div style={styles.empIcon}>👤</div>
+                <div key={emp.id} className="rounded-2xl border border-gray-200 p-4 shadow-sm">
+                  <div className="mb-2 flex items-center gap-3">
+                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-green-50 text-xl">
+                      👤
+                    </div>
                     <div>
-                      <div style={styles.empName}>{emp.name}</div>
-                      <div style={styles.empRole}>{emp.role}</div>
-                      <div style={styles.empId}>Employee ID: {emp.id}</div>
+                      <div className="text-lg font-extrabold text-gray-900">{emp.name}</div>
+                      <div className="text-sm font-bold text-gray-600">{emp.role}</div>
+                      <div className="text-xs font-semibold text-gray-500">ID: {emp.id}</div>
                     </div>
                   </div>
 
-                  <div style={styles.cardFields}>
-                    <div style={styles.cardField}>
-                      <span style={styles.cardLabel}>Email:</span>{" "}
-                      <span>{emp.email || "-"}</span>
-                    </div>
-                    <div style={styles.cardField}>
-                      <span style={styles.cardLabel}>Phone:</span>{" "}
-                      <span>{emp.phone || "-"}</span>
-                    </div>
-                    <div style={styles.cardField}>
-                      <span style={styles.cardLabel}>Status:</span>{" "}
-                      <span>{emp.status || "Active"}</span>
-                    </div>
-                    <div style={styles.cardField}>
-                      <span style={styles.cardLabel}>Permission:</span>{" "}
-                      <span>{emp.permissionLevel || emp.role}</span>
-                    </div>
+                  <div className="grid gap-2 text-sm font-semibold text-gray-700">
+                    <div>Email: <span className="font-normal">{emp.email || "-"}</span></div>
+                    <div>Phone: <span className="font-normal">{emp.phone || "-"}</span></div>
+                    <div>Status: <span className="font-normal">{emp.status || "Active"}</span></div>
+                    <div>Permission: <span className="font-normal">{emp.permissionLevel || emp.role}</span></div>
                   </div>
 
-                  <div style={styles.cardActions}>
-                    <button style={styles.smallBtn} onClick={() => setEditing(emp)}>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 font-extrabold disabled:opacity-60"
+                      disabled={busy}
+                      onClick={() => setEditing({ ...emp })}
+                    >
                       Edit
                     </button>
                     <button
-                      style={{ ...styles.smallBtn, ...styles.dangerBtn }}
-                      onClick={() => deleteEmployee(emp.id)}
+                      className="flex-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 font-extrabold text-red-700 disabled:opacity-60"
                       disabled={busy}
+                      onClick={() => deleteEmployee(emp.id)}
                     >
                       Delete
                     </button>
@@ -297,314 +304,113 @@ export default function EmployeesPage() {
               ))}
             </div>
           )}
-        </section>
+        </div>
 
         {/* Edit modal */}
         {editing ? (
-          <EditModal
-            employee={editing}
-            onClose={() => setEditing(null)}
-            onSave={updateEmployee}
-            busy={busy}
-          />
-        ) : null}
-      </main>
-    </div>
-  );
-}
-
-function Field({ label, children }) {
-  return (
-    <label style={styles.field}>
-      <div style={styles.fieldLabel}>{label}</div>
-      {children}
-    </label>
-  );
-}
-
-function EditModal({ employee, onClose, onSave, busy }) {
-  const [emp, setEmp] = useState(employee);
-
-  return (
-    <div style={styles.modalBackdrop} onClick={onClose}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div style={styles.modalTitle}>Edit Employee</div>
-
-        <div style={styles.formGrid}>
-          <Field label="Name">
-            <input
-              style={styles.input}
-              value={emp.name || ""}
-              onChange={(e) => setEmp({ ...emp, name: e.target.value })}
-            />
-          </Field>
-
-          <Field label="Role">
-            <select
-              style={styles.input}
-              value={emp.role || "Technician"}
-              onChange={(e) => setEmp({ ...emp, role: e.target.value })}
-            >
-              <option>Technician</option>
-              <option>Manager</option>
-              <option>Administrator</option>
-            </select>
-          </Field>
-
-          <Field label="Email">
-            <input
-              style={styles.input}
-              value={emp.email || ""}
-              onChange={(e) => setEmp({ ...emp, email: e.target.value })}
-            />
-          </Field>
-
-          <Field label="Phone">
-            <input
-              style={styles.input}
-              value={emp.phone || ""}
-              onChange={(e) => setEmp({ ...emp, phone: e.target.value })}
-            />
-          </Field>
-
-          <Field label="Status">
-            <select
-              style={styles.input}
-              value={emp.status || "Active"}
-              onChange={(e) => setEmp({ ...emp, status: e.target.value })}
-            >
-              <option>Active</option>
-              <option>Inactive</option>
-            </select>
-          </Field>
-
-          <Field label="Permission Level">
-            <select
-              style={styles.input}
-              value={emp.permissionLevel || emp.role || "Technician"}
-              onChange={(e) =>
-                setEmp({ ...emp, permissionLevel: e.target.value })
-              }
-            >
-              <option>Technician</option>
-              <option>Manager</option>
-              <option>Administrator</option>
-            </select>
-          </Field>
-        </div>
-
-        <div style={styles.modalActions}>
-          <button style={styles.smallBtn} onClick={onClose} disabled={busy}>
-            Cancel
-          </button>
-          <button
-            style={styles.primaryBtn}
-            onClick={() => onSave(emp)}
-            disabled={busy || !emp.name?.trim()}
+          <div
+            className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-6"
+            onClick={() => setEditing(null)}
           >
-            {busy ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
+            <div
+              className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-3 text-lg font-extrabold text-brand-700">Edit Employee</div>
 
-        <div style={styles.note}>
-          <strong>DB note:</strong> Save triggers <code>PUT /api/employees/{emp.id}</code>.
-          That API route should update the MySQL row.
-        </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="grid gap-1">
+                  <span className="text-sm font-bold text-gray-700">Name</span>
+                  <input
+                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    value={editing.name || ""}
+                    onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                  />
+                </label>
+
+                <label className="grid gap-1">
+                  <span className="text-sm font-bold text-gray-700">Role</span>
+                  <select
+                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    value={editing.role || "Technician"}
+                    onChange={(e) => setEditing({ ...editing, role: e.target.value })}
+                  >
+                    <option>Technician</option>
+                    <option>Manager</option>
+                    <option>Administrator</option>
+                  </select>
+                </label>
+
+                <label className="grid gap-1">
+                  <span className="text-sm font-bold text-gray-700">Email</span>
+                  <input
+                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    value={editing.email || ""}
+                    onChange={(e) => setEditing({ ...editing, email: e.target.value })}
+                  />
+                </label>
+
+                <label className="grid gap-1">
+                  <span className="text-sm font-bold text-gray-700">Phone</span>
+                  <input
+                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    value={editing.phone || ""}
+                    onChange={(e) => setEditing({ ...editing, phone: e.target.value })}
+                  />
+                </label>
+
+                <label className="grid gap-1">
+                  <span className="text-sm font-bold text-gray-700">Status</span>
+                  <select
+                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    value={editing.status || "Active"}
+                    onChange={(e) => setEditing({ ...editing, status: e.target.value })}
+                  >
+                    <option>Active</option>
+                    <option>Inactive</option>
+                  </select>
+                </label>
+
+                <label className="grid gap-1">
+                  <span className="text-sm font-bold text-gray-700">Permission Level</span>
+                  <select
+                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    value={editing.permissionLevel || editing.role || "Technician"}
+                    onChange={(e) =>
+                      setEditing({ ...editing, permissionLevel: e.target.value })
+                    }
+                  >
+                    <option>Technician</option>
+                    <option>Manager</option>
+                    <option>Administrator</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-2 font-extrabold"
+                  disabled={busy}
+                  onClick={() => setEditing(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="rounded-xl bg-brand-700 px-4 py-2 font-extrabold text-white disabled:opacity-60"
+                  disabled={busy || !editing.name?.trim()}
+                  onClick={saveEdit}
+                >
+                  {busy ? "Saving..." : "Save"}
+                </button>
+              </div>
+
+              <p className="mt-3 text-xs font-semibold text-gray-500">
+                Saves to <code>{API_BASE}/employees/{editing.id}</code>
+              </p>
+            </div>
+          </div>
+        ) : null}
       </div>
-    </div>
+    </AppShell>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: "100vh",
-    display: "grid",
-    gridTemplateColumns: "280px 1fr",
-    background:
-      "linear-gradient(180deg, rgba(20,40,15,0.08), rgba(20,40,15,0.02))",
-    fontFamily:
-      'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial',
-  },
-  sidebar: {
-    background: "#2f5f1f",
-    color: "white",
-    padding: "18px",
-    position: "sticky",
-    top: 0,
-    height: "100vh",
-  },
-  profileCard: {
-    display: "flex",
-    gap: "12px",
-    alignItems: "center",
-    padding: "14px",
-    borderRadius: "16px",
-    background: "rgba(255,255,255,0.12)",
-    boxShadow: "0 10px 24px rgba(0,0,0,0.18)",
-    marginBottom: "16px",
-  },
-  avatar: {
-    width: "44px",
-    height: "44px",
-    borderRadius: "14px",
-    display: "grid",
-    placeItems: "center",
-    background: "rgba(255,255,255,0.15)",
-    fontSize: "20px",
-  },
-  profileName: { fontWeight: 800, lineHeight: 1.1 },
-  profileSub: { opacity: 0.85, fontSize: "12px" },
-  nav: { display: "grid", gap: "10px" },
-  navItem: {
-    color: "white",
-    textDecoration: "none",
-    padding: "12px 12px",
-    borderRadius: "14px",
-    background: "rgba(255,255,255,0.10)",
-    fontWeight: 750,
-  },
-  navItemActive: {
-    background: "rgba(255,255,255,0.22)",
-    outline: "1px solid rgba(255,255,255,0.25)",
-  },
-
-  main: { padding: "26px 26px 80px" },
-  header: { marginBottom: "14px" },
-  title: { margin: 0, fontSize: "32px", color: "#214617" },
-  subTitle: { marginTop: "6px", color: "rgba(33,70,23,0.70)", fontWeight: 650 },
-
-  panel: {
-    background: "rgba(255,255,255,0.92)",
-    borderRadius: "18px",
-    padding: "18px",
-    boxShadow: "0 16px 40px rgba(0,0,0,0.10)",
-    border: "1px solid rgba(33,70,23,0.10)",
-    marginTop: "16px",
-  },
-  panelTitle: { fontWeight: 900, color: "#214617", marginBottom: "12px" },
-
-  formGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: "12px",
-  },
-  field: { display: "grid", gap: "7px" },
-  fieldLabel: { fontSize: "12px", fontWeight: 800, color: "#214617" },
-  input: {
-    padding: "12px",
-    borderRadius: "12px",
-    border: "1px solid rgba(33,70,23,0.18)",
-    outline: "none",
-    background: "white",
-  },
-  primaryBtn: {
-    marginTop: "12px",
-    padding: "12px 14px",
-    borderRadius: "12px",
-    border: "none",
-    cursor: "pointer",
-    fontWeight: 900,
-    color: "white",
-    background: "linear-gradient(135deg, #2f5f1f, #7fa24a)",
-    boxShadow: "0 12px 30px rgba(47,95,31,0.18)",
-  },
-  note: {
-    marginTop: "10px",
-    padding: "10px 12px",
-    borderRadius: "12px",
-    background: "rgba(33,70,23,0.06)",
-    border: "1px solid rgba(33,70,23,0.10)",
-    color: "rgba(33,70,23,0.8)",
-    fontSize: "12px",
-  },
-  error: {
-    marginTop: "10px",
-    padding: "10px 12px",
-    borderRadius: "12px",
-    background: "rgba(178, 34, 34, 0.10)",
-    border: "1px solid rgba(178, 34, 34, 0.25)",
-    color: "firebrick",
-    fontWeight: 700,
-  },
-  muted: { color: "rgba(33,70,23,0.65)", fontWeight: 650 },
-
-  cards: {
-    marginTop: "12px",
-    display: "grid",
-    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "14px",
-  },
-  card: {
-    borderRadius: "18px",
-    padding: "14px",
-    background: "white",
-    border: "1px solid rgba(33,70,23,0.10)",
-    boxShadow: "0 10px 24px rgba(0,0,0,0.08)",
-  },
-  cardTop: { display: "flex", gap: "12px", alignItems: "center" },
-  empIcon: {
-    width: "54px",
-    height: "54px",
-    borderRadius: "16px",
-    display: "grid",
-    placeItems: "center",
-    background: "rgba(47,95,31,0.10)",
-    fontSize: "22px",
-  },
-  empName: { fontWeight: 1000, color: "#214617", fontSize: "18px" },
-  empRole: { color: "rgba(33,70,23,0.70)", fontWeight: 800 },
-  empId: { color: "rgba(33,70,23,0.55)", fontSize: "12px", fontWeight: 800 },
-
-  cardFields: { marginTop: "10px", display: "grid", gap: "6px" },
-  cardField: {
-    padding: "10px 10px",
-    borderRadius: "12px",
-    background: "rgba(47,95,31,0.08)",
-    border: "1px solid rgba(33,70,23,0.08)",
-    fontWeight: 750,
-    color: "rgba(33,70,23,0.85)",
-    fontSize: "13px",
-  },
-  cardLabel: { fontWeight: 1000, marginRight: "6px" },
-
-  cardActions: { marginTop: "10px", display: "flex", gap: "10px" },
-  smallBtn: {
-    padding: "10px 12px",
-    borderRadius: "12px",
-    cursor: "pointer",
-    fontWeight: 900,
-    border: "1px solid rgba(33,70,23,0.18)",
-    background: "white",
-    color: "#214617",
-    flex: 1,
-  },
-  dangerBtn: {
-    border: "1px solid rgba(178,34,34,0.25)",
-    color: "firebrick",
-    background: "rgba(178,34,34,0.06)",
-  },
-
-  modalBackdrop: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.45)",
-    display: "grid",
-    placeItems: "center",
-    padding: "18px",
-    zIndex: 1000,
-  },
-  modal: {
-    width: "min(720px, 96vw)",
-    background: "white",
-    borderRadius: "18px",
-    padding: "16px",
-    boxShadow: "0 18px 60px rgba(0,0,0,0.35)",
-  },
-  modalTitle: { fontWeight: 1000, color: "#214617", marginBottom: "10px" },
-  modalActions: {
-    display: "flex",
-    justifyContent: "flex-end",
-    gap: "10px",
-    marginTop: "12px",
-  },
-};

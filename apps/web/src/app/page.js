@@ -116,7 +116,7 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign In"}
           </button>
           
-          // skip loging for now and go to dashboard
+          // skip logging and go to dashboard
           <button onClick={() => router.push("/dashboard")} style={styles.secondaryBtn}>
             Skip Login and Go to Dashboard
           </button>
