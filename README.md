@@ -74,6 +74,8 @@ Each application runs independently and communicates with the backend API.
 - Git
 - Expo Go app (mobile developers only)
 
+### Test my own branch
+
 Verify installation:
 
 ```bash
@@ -124,54 +126,125 @@ When finished:
 📊 Project Status
 
 The project is under active development.
-
 Current focus areas:
     •    Application scaffolding
     •    Authentication and role-based access
     •    Database integration
     •    Sprint-based feature delivery
     
-🗄️ Database Setup (Docker – Local Development)
+Install the following:
+Docker Desktop
+Node.js (v18+ recommended)
+HeidiSQL (for viewing database contents)
 
-The project uses MySQL. For local development, MySQL runs in Docker to ensure a consistent environment across the team.
-
-Prerequisites
-
-Install and start Docker Desktop.
-
-Verify Docker is available:
+Verify installation:
 docker --version
-docker compose version
+node -v
+npm -v
 
-1) Start the MySQL container
+🗄️ Database Setup (Docker – Local Development)
+The project uses MySQL inside Docker for consistent development.
 
-From the repository root:
+1️⃣ Start the Database
+Navigate to:
 cd apps/api/db
+
+Start MySQL container:
 docker compose up -d
 
-Check that the container is running:
+Verify container is running:
 docker ps
 
-2) Connection details (local)
+You should see:
+0.0.0.0:3307->3306/tcp
+Note: We use port 3307 locally to avoid conflicts with system MySQL.
 
-Use the following settings for local development:
-    •    Host: localhost
-    •    Port: 3306
-    •    Database: greenery
-    •    Username: greenery_user
-    •    Password: greenery_pass
-    •    Root password: rootpassword
+2️⃣ Database Connection Info (Local)
 
-3) Stop / Reset the database
+Use these settings:
 
-Stop the container:
-cd apps/api/db
-docker compose down
+Setting	Value
+Host	127.0.0.1
+Port	3307
+Database	greenery
+Username	greenery_user
+Password	greenery_pass
+Root Password	rootpassword
 
-Stop and remove all data (full reset):
+🧰 HeidiSQL Setup
+HeidiSQL is used to view and edit database records during development.
+Create a New Session
+Open HeidiSQL
+Click New
+Select MySQL (TCP/IP)
+Enter:
+Hostname/IP: 127.0.0.1
+Port: 3307
+User: greenery_user
+Password: greenery_pass
+
+Click Open
+You should see the greenery database and tables like:
+employees
+plants
+tasks
+users
+
+🚀 API Setup (Backend)
+Navigate to:
+cd apps/api
+
+Install dependencies:
+npm install
+
+Ensure .env exists in apps/api:
+PORT=3001
+DB_HOST=127.0.0.1
+DB_PORT=3307
+DB_NAME=greenery
+DB_USER=greenery_user
+DB_PASSWORD=greenery_pass
+
+Start API:
+
+npm run dev
+API runs at:
+
+http://localhost:3001
+🔎 Test API
+
+Health check:
+http://localhost:3001/db-health
+
+Employees endpoint:
+http://localhost:3001/employees
+
+If database is connected correctly, /employees should return:
+[]     or a list of employees.
+
+🌐 Web Setup (Frontend)
+Navigate to:
+cd apps/web
+
+Install dependencies:
+npm install
+
+Create .env.local:
+NEXT_PUBLIC_API_URL=http://localhost:3001
+
+Start web server:
+npm run dev
+
+Web runs at:
+http://localhost:3000
+
+🔄 Reset Database (If Needed)
+To completely reset the database:
+
 cd apps/api/db
 docker compose down -v
+docker compose up -d
 
-Notes
-    •    This Docker database is for local development only
-    •    Production deployment will use Azure MySQL in a later phase
+⚠️ This deletes all local data.
+
+```

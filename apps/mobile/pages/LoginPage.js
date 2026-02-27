@@ -24,7 +24,7 @@ const LOGO = require('../assets/logo.png'); // poster/logo image
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [secure, setSecure] = useState(true);
+  const [secure] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const navigation = useNavigation();
@@ -55,6 +55,10 @@ export default function LoginScreen() {
   function onForgotPassword() {
     navigation.navigate('ForgotPassword');
   }
+  
+  function onHomePage(){
+        navigation.navigate('HomePage');
+    }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -63,7 +67,7 @@ export default function LoginScreen() {
         <View style={styles.tint} />
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'android' ? 'padding' : undefined}
           style={styles.container}
         >
           {/* Top logo card */}
@@ -118,6 +122,11 @@ export default function LoginScreen() {
 
             <Pressable onPress={onForgotPassword} style={styles.forgotWrap}>
               <Text style={styles.forgotText}>Forgot password?</Text>
+            </Pressable>
+          </View>
+          <View>
+            <Pressable onPress={onHomePage}>
+              <Text>To Home Screen</Text>
             </Pressable>
           </View>
         </KeyboardAvoidingView>
