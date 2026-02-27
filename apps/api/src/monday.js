@@ -1,5 +1,4 @@
-import {rateLimit} from 'express-rate-limit';
-
+const rateLimit = require('express-rate-limit');
 const token = process.env.api_token;
 
 // Rate limit implementation
