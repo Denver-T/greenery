@@ -34,12 +34,8 @@ export default function ForgotPasswordPage() {
       /*
       ForgetPassword Functionality
       */
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || 'Failed to send reset link');
-
-      Alert.alert('Check your inbox', 'We sent you a password reset link.');
     } catch (err) {
-      Alert.alert('Error', err?.message || 'Unable to process the request.');
+        //Error handling
     } finally {
       setLoading(false);
     }
