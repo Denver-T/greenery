@@ -1,7 +1,6 @@
 const rateLimit = require('express-rate-limit');
 const token = process.env.api_token;
-const board_id = process.env.board_id;
-const app = require(express);
+const app = require('express');
 
 // Rate limit implementation
 const limiter = rateLimit({
