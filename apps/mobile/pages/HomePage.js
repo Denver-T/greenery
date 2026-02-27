@@ -18,6 +18,7 @@ import {
   FontAwesome5,
   Feather,
 } from '@expo/vector-icons';
+import NavBar from '../components/NavBar'; 
 
 const BG = require('../assets/bg.jpg');
 
@@ -46,25 +47,19 @@ const MENU_ITEMS = [
     key: 'work_requests_view',
     label: 'View Work Requests',
     leftIcon: (props) => <MaterialIcons name="insert-drive-file" {...props} />,
-    route: 'WorkRequests',
+    route: 'WorkRequestView',
   },
   {
     key: 'dashboard_analytics',
     label: 'Dashboard Analytics',
     leftIcon: (props) => <MaterialIcons name="pie-chart" {...props} />,
-    route: 'DashboardAnalytics',
-  },
-  {
-    key: 'clock',
-    label: 'Clock In/Out',
-    leftIcon: (props) => <MaterialIcons name="access-time" {...props} />,
-    route: 'Clock',
+    route: 'Dashboard',
   },
   {
     key: 'calendar',
     label: 'Event Calendar',
     leftIcon: (props) => <MaterialIcons name="calendar-today" {...props} />,
-    route: 'Calendar',
+    route: 'EventCalendar',
   },
   {
     key: 'tasks',
@@ -76,7 +71,7 @@ const MENU_ITEMS = [
     key: 'pto',
     label: 'Book Time Off',
     leftIcon: (props) => <MaterialCommunityIcons name="clock-outline" {...props} />,
-    route: 'TimeOff',
+    route: 'PTO',
   },
   {
     key: 'schedule',
@@ -88,6 +83,10 @@ const MENU_ITEMS = [
 
 export default function HomePage() {
   const navigation = useNavigation();
+
+  function onMenu() {
+    navigation.navigate('HomePage')
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -156,30 +155,7 @@ export default function HomePage() {
         </ScrollView>
 
         <View style={styles.tabBar}>
-          <Pressable style={styles.tabItem} android_ripple={{ color: '#6a7d49' }}>
-            <MaterialCommunityIcons name="clock-outline" size={18} color={COLORS.tabIcon} />
-            <Text style={styles.tabText}>Time</Text>
-          </Pressable>
-          
-          <Pressable style={styles.tabItem} android_ripple={{ color: '#6a7d49' }}>
-            <MaterialCommunityIcons name="view-dashboard-outline" size={18} color={COLORS.tabIcon} />
-            <Text style={styles.tabText}>Dashboard</Text>
-          </Pressable>
-          
-          <Pressable style={styles.tabItem} android_ripple={{ color: '#6a7d49' }}>
-            <FontAwesome5 name="wpforms" size={16} color={COLORS.tabIcon} />
-            <Text style={styles.tabText}>Forms</Text>
-          </Pressable>
-          
-          <Pressable style={styles.tabItem} android_ripple={{ color: '#6a7d49' }}>
-            <MaterialCommunityIcons name="calendar-multiselect" size={18} color={COLORS.tabIcon} />
-            <Text style={styles.tabText}>Schedule</Text>
-          </Pressable>
-          
-          <Pressable style={styles.tabItem} android_ripple={{ color: '#6a7d49' }}>
-            <Feather name="menu" size={20} color={COLORS.tabIcon} />
-            <Text style={styles.tabText}>Menu</Text>
-          </Pressable>
+          <NavBar />
         </View>
       </ImageBackground>
     </SafeAreaView>
