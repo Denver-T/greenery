@@ -36,15 +36,9 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:4000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error((data && data.message) || 'Sign in failed');
-      Alert.alert('Welcome', `Signed in as ${data.user.email}`);
-      // TODO: persist token with expo-secure-store and navigate
+      /* 
+      Login Functionality
+      */
     } catch (err) {
       Alert.alert('Error', (err && err.message) || 'Unable to sign in');
     } finally {
@@ -55,6 +49,10 @@ export default function LoginScreen() {
   function onForgotPassword() {
     navigation.navigate('ForgotPassword');
   }
+  
+  function onHomePage(){
+        navigation.navigate('HomePage');
+    }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -63,7 +61,7 @@ export default function LoginScreen() {
         <View style={styles.tint} />
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'android' ? 'padding' : undefined}
           style={styles.container}
         >
           {/* Top logo card */}
@@ -118,6 +116,11 @@ export default function LoginScreen() {
 
             <Pressable onPress={onForgotPassword} style={styles.forgotWrap}>
               <Text style={styles.forgotText}>Forgot password?</Text>
+            </Pressable>
+          </View>
+          <View>
+            <Pressable onPress={onHomePage}>
+              <Text>To Home Screen</Text>
             </Pressable>
           </View>
         </KeyboardAvoidingView>

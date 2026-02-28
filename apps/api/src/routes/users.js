@@ -79,16 +79,48 @@ router.get("/:id", userController.getUserById);
  *           schema:
  *             type: object
  *             required:
- *               - name
+ *               - username
  *               - email
+ *               - password
  *             properties:
- *               name:
+ *               username:
  *                 type: string
+ *                 example: medhi
  *               email:
  *                 type: string
+ *                 format: email
+ *                 example: medhi@example.com
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: StrongPassword123
  *     responses:
  *       201:
  *         description: User created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     userId:
+ *                       type: integer
+ *                       example: 101
+ *                     username:
+ *                       type: string
+ *                       example: medhi
+ *                     email:
+ *                       type: string
+ *                       example: medhi@example.com
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                   example: 2026-02-25T12:00:00.000Z
  *       400:
  *         description: Invalid input
  */
