@@ -1,4 +1,3 @@
-// apps/api/src/db/index.js
 const mysql = require("mysql2");
 
 let pool;
@@ -21,13 +20,4 @@ function getPool() {
   return pool;
 }
 
-// dbHealthController expects db.query(...)
-async function query(sql, params = []) {
-  const p = getPool();
-  return p.query(sql, params);
-}
-
-module.exports = {
-  query,
-  getPool, // optional, handy for services later
-};
+module.exports = { getPool };

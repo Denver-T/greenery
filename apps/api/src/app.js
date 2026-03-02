@@ -25,6 +25,7 @@ const authRoutes = require("./routes/auth");
 const taskRoutes = require("./routes/tasks");
 const plantRoutes = require("./routes/plants");
 const userRoutes = require("./routes/users");
+const employeeRoutes = require("./routes/employees");
 
 // Global Middleware
 const notFound = require("./middleware/notFound");
@@ -57,6 +58,8 @@ app.use("/auth", authRoutes);          // Authentication-related routes (SV-12)
 app.use("/tasks", taskRoutes);         // Task domain
 app.use("/plants", plantRoutes);       // Plant domain
 app.use("/users", userRoutes);         // User domain
+app.use("/employees", employeeRoutes); // Employee domain
+
 
 // User
 app.use("/users", userRoutes);
