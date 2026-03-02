@@ -1,11 +1,48 @@
-let query = '{ boards (limit:5) {name id} }';
+const rateLimit = require('express-rate-limit');
+const token = process.env.api_token;
+const app = require('express');
+
+// Rate limit implementation
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 100
+});
+app.use(limiter);
+
+// Fetch boards by ID (Must use POST)
+
+const query = `
+  query {
+    board_id
+  }
+`;
+
 fetch ("https://api.monday.com", {
   method: 'post',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization' : 'MONDAY_BOARD_ID'
+    'Authorization' : token
   },
-  body: JSON.stringify({ 'query' : query })
+  body: JSON.stringify({ query })
 })
 .then(res => res.json())
-.then(res => console.log(JSON.stringify(res, null, 2)));
+.then(data => console.log(data));
+
+// Delete board
+
+const del = `
+  mutation {
+    board_id
+  }
+`;
+
+fetch ("https://api.monday.com", {
+  method: 'post',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization' : token
+  },
+  body: JSON.stringify({ del })
+})
+.then(res => res.json())
+.then(data => console.log(data));

@@ -24,7 +24,7 @@ const LOGO = require('../assets/logo.png'); // poster/logo image
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [secure] = useState(true);
+  const [secure, setSecure] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const navigation = useNavigation();
@@ -36,15 +36,9 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:4000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error((data && data.message) || 'Sign in failed');
-      Alert.alert('Welcome', `Signed in as ${data.user.email}`);
-      // TODO: persist token with expo-secure-store and navigate
+      /* 
+      Login Functionality
+      */
     } catch (err) {
       Alert.alert('Error', (err && err.message) || 'Unable to sign in');
     } finally {

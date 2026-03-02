@@ -31,17 +31,11 @@ export default function ForgotPasswordPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:4000/auth/request-reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || 'Failed to send reset link');
-
-      Alert.alert('Check your inbox', 'We sent you a password reset link.');
+      /*
+      ForgetPassword Functionality
+      */
     } catch (err) {
-      Alert.alert('Error', err?.message || 'Unable to process the request.');
+        //Error handling
     } finally {
       setLoading(false);
     }
