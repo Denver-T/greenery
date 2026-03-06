@@ -13,7 +13,10 @@ app.use(limiter);
 
 const query = `
   query {
-    board_id
+    board_id {
+        priority
+        task
+        }
   }
 `;
 
@@ -37,7 +40,7 @@ try {
 
 const del = `
   mutation {
-    board_id
+    board_id {
   }
 `;
 
