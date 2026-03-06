@@ -1,7 +1,23 @@
+// apps/api/src/routes/tasks.js
+
 const express = require("express");
 const router = express.Router();
 
 const taskController = require("../controllers/taskController");
+
+/**
+ * Task Routes
+ * -----------
+ * Thin HTTP routing layer:
+ * - Maps URLs + HTTP verbs to controller methods
+ * - Keeps business logic out of routes
+ * - Swagger docs live here (or can be extracted later)
+ *
+ * Important consistency notes:
+ * - Controller methods should ONLY send success responses.
+ * - All error responses must be produced by the global error handler.
+ * - Route paths should match controller intent (e.g., status update vs assignment).
+ */
 
 /**
  * @swagger
@@ -14,19 +30,6 @@ const taskController = require("../controllers/taskController");
  *     responses:
  *       200:
  *         description: Successfully retrieved tasks
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                 service:
- *                   type: array
- *                   items:
- *                     type: object
- *                 timestamp:
- *                   type: string
  */
 router.get("/", taskController.getTasks);
 
@@ -44,23 +47,12 @@ router.get("/", taskController.getTasks);
  *         required: true
  *         description: The ID of the task
  *         schema:
- *           type: string
+ *           type: integer
  *     responses:
  *       200:
- *         description: Successfully retrieved tasks
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                 service:
- *                   type: object
- *                 timestamp:
- *                   type: string
+ *         description: Successfully retrieved task
  *       404:
- *         description: User not found
+ *         description: Task not found
  */
 router.get("/:id", taskController.getTaskById);
 
@@ -141,14 +133,40 @@ router.get("/:id", taskController.getTaskById);
  *                   type: string
  *                   format: date-time
  *                   example: 2026-03-03T12:00:00.000Z
- *       400:
- *         description: Invalid input
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Fix production bug
+ *               status:
+ *                 type: string
+ *                 example: assigned
+ *               createUser:
+ *                 type: integer
+ *                 example: 1
+ *
+ * NOTE:
+ * Your existing Swagger schema here previously described fields like
+ * createdByUserId / assignedUserId / description, which does NOT match the
+ * controller currently validating `{ title, status, createUser }`.
+ *
+ * If your DB/service expects different names, update the controller + service
+ * together, but keep them consistent.
  */
 router.post("/", taskController.createTask);
 
 /**
+ * PATCH /tasks/:id/status
+ * Prefer explicit sub-resource naming for partial updates.
+ *
+ * Your controller method name is `updateTaskStatus`, so it’s clearer if
+ * the route path includes `/status` rather than PATCHing the base resource.
+ *
+ * If you MUST keep `PATCH /tasks/:id`, the controller still works, but it’s
+ * easier for teammates and clients to understand when it’s explicit.
+ */
+/**
  * @swagger
- * /tasks/{id}:
+ * /tasks/{id}/status:
  *   patch:
  *     summary: Update task status
  *     description: Updates the ENUM status of a task by its ID
@@ -161,7 +179,6 @@ router.post("/", taskController.createTask);
  *         description: Task ID
  *         schema:
  *           type: integer
- *           example: 101
  *     requestBody:
  *       required: true
  *       content:
@@ -221,7 +238,7 @@ router.post("/", taskController.createTask);
  *       404:
  *         description: Task not found
  */
-router.patch("/:id", taskController.updateTaskStatus);
+router.patch("/:id/status", taskController.updateTaskStatus);
 
 /**
  * @swagger
@@ -238,7 +255,6 @@ router.patch("/:id", taskController.updateTaskStatus);
  *         description: Task ID
  *         schema:
  *           type: integer
- *           example: 101
  *     requestBody:
  *       required: true
  *       content:
