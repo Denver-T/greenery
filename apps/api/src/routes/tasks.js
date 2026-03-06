@@ -143,30 +143,12 @@ router.get("/:id", taskController.getTaskById);
  *               createUser:
  *                 type: integer
  *                 example: 1
- *
- * NOTE:
- * Your existing Swagger schema here previously described fields like
- * createdByUserId / assignedUserId / description, which does NOT match the
- * controller currently validating `{ title, status, createUser }`.
- *
- * If your DB/service expects different names, update the controller + service
- * together, but keep them consistent.
  */
 router.post("/", taskController.createTask);
 
 /**
- * PATCH /tasks/:id/status
- * Prefer explicit sub-resource naming for partial updates.
- *
- * Your controller method name is `updateTaskStatus`, so it’s clearer if
- * the route path includes `/status` rather than PATCHing the base resource.
- *
- * If you MUST keep `PATCH /tasks/:id`, the controller still works, but it’s
- * easier for teammates and clients to understand when it’s explicit.
- */
-/**
  * @swagger
- * /tasks/{id}/status:
+ * /tasks/{id}/updateStatus:
  *   patch:
  *     summary: Update task status
  *     description: Updates the ENUM status of a task by its ID
@@ -238,7 +220,7 @@ router.post("/", taskController.createTask);
  *       404:
  *         description: Task not found
  */
-router.patch("/:id/status", taskController.updateTaskStatus);
+router.patch("/:id/updateStatus", taskController.updateTaskStatus);
 
 /**
  * @swagger
