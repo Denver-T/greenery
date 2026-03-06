@@ -21,10 +21,6 @@ const { getPool } = require("../db/index");
 const { httpError } = require("../utils/httpError");
 const { isNonEmptyString, toPositiveInt } = require("../utils/validators");
 
-/**
- * Small helper for consistent table name usage.
- * If you ever rename the table, it’s localized to one constant.
- */
 const TASKS_TABLE = "tasks";
 
 /**
@@ -42,22 +38,10 @@ exports.getTasks = async () => {
 
 /**
  * CREATE a task
- *
- * Expected `taskData` shape (based on your controller):
- * - title: string (required)
- * - status?: string (optional)
- * - createUser?: number (optional)  <-- might later come from req.user.uid mapping
- *
- * NOTE:
- * Your DB insert previously referenced columns like TaskTitle / AssignedUserId etc.
- * That’s totally fine if your schema uses those, but the table name should still
- * be consistent (`tasks`).
  */
 exports.createTask = async (taskData) => {
   const pool = await getPool();
 
-  // Defensive validation in the service as a backstop (controller should already validate).
-  // This protects you if another caller (tests, cron, future route) calls the service directly.
   if (!taskData || !isNonEmptyString(taskData.title)) {
     throw httpError(400, "Field 'title' is required", "VALIDATION_ERROR", [
       { field: "title", issue: "required" },
@@ -70,10 +54,6 @@ exports.createTask = async (taskData) => {
     ]);
   }
 
-  /**
-   * Normalize optional numeric IDs (if provided).
-   * `toPositiveInt` returns null/undefined for invalid values, so we can validate.
-   */
   const createdByUserId =
     taskData.createUser === undefined ? null : toPositiveInt(taskData.createUser);
 
@@ -83,35 +63,24 @@ exports.createTask = async (taskData) => {
     ]);
   }
 
-  /**
-   * IMPORTANT:
-   * Your earlier SQL used `INSERT INTO Tasks (...)` (capital T) with columns:
-   * (TaskTitle, Status, AssignedUserId, CreatedByUserId, Description, CreateTime)
-   *
-   * I’m keeping your column naming pattern because it likely matches your schema,
-   * but switching the TABLE name to `tasks` for consistency.
-   *
-   * If your actual schema columns are different, adjust here to match 01_schema.sql.
-   */
   const [result] = await pool.query(
     `
-    INSERT INTO ${TASKS_TABLE}
-      (TaskTitle, Status, AssignedUserId, CreatedByUserId, Description, CreateTime)
-    VALUES (?, ?, ?, ?, ?, NOW())
+    INSERT INTO tasks
+      (title, status, assigned_to, plant_id, notes, due_date)
+    VALUES (?, ?, ?, ?, ?, ?)
     `,
     [
       taskData.title,
-      taskData.status ?? null,
-      // assignedUser isn't currently provided by your controller for createTask,
-      // so keep null unless you later add it.
-      taskData.assignedUser ?? null,
-      createdByUserId,
-      taskData.description ?? null,
+      taskData.status || 'assigned',
+      taskData.assigned_to || null,  
+      taskData.plant_id || null, 
+      taskData.notes || null,
+      taskData.due_date || null
     ]
   );
 
   return {
-    TaskID: result.insertId,
+    id: result.insertId,
     ...taskData,
   };
 };
@@ -130,8 +99,8 @@ exports.getTaskById = async (id) => {
   }
 
   const [rows] = await pool.query(
-    `SELECT * FROM ${TASKS_TABLE} WHERE TaskID = ?`,
-    [taskId]
+    "SELECT * FROM tasks WHERE id = ?",
+    [id]
   );
 
   return rows[0] || null;
@@ -158,16 +127,14 @@ exports.updateTaskStatus = async (id, status) => {
 
   const [result] = await pool.query(
     `
-    UPDATE ${TASKS_TABLE}
-    SET Status = ?, ChangeTime = NOW()
-    WHERE TaskID = ?
+    UPDATE tasks
+    SET status = ?
+    WHERE id = ?
     `,
     [status, taskId]
   );
 
   if (result.affectedRows === 0) {
-    // Controller expects null and will next(httpError(404...)).
-    // Either approach is fine; returning null keeps controller logic unchanged.
     return null;
   }
 
@@ -199,15 +166,6 @@ exports.assignTask = async (id, assignedUserId) => {
     ]);
   }
 
-  /**
-   * Domain rule: you can only assign tasks to real users.
-   * If userService returns null, we convert to a structured 404/400-type error.
-   *
-   * Choose 404 vs 400:
-   * - 404 (USER_NOT_FOUND): the referenced resource doesn't exist.
-   * - 400: invalid input.
-   * 404 is usually clearer here.
-   */
   const user = await userService.getUserById(userId);
   if (!user) {
     throw httpError(404, "Assigned user does not exist", "USER_NOT_FOUND", [
@@ -229,8 +187,38 @@ exports.assignTask = async (id, assignedUserId) => {
   }
 
   const [rows] = await pool.query(
-    `SELECT * FROM ${TASKS_TABLE} WHERE TaskID = ?`,
-    [taskId]
+    `SELECT * FROM tasks WHERE id = ?`,
+    [id]
+  );
+
+  return rows[0];
+};
+
+exports.assignTask = async (id, assignedUserId) => {
+   const pool = await getPool();
+  if (!assignedUserId) {
+    throw new Error("assignedUserId is required");
+  }
+
+  const user = await userService.getUserById(assignedUserId);
+  if (!user) {
+    throw new Error("Assigned user does not exist");
+  }
+
+  const [result] = await pool.query(
+    `
+    UPDATE tasks
+    SET assigned_to = ?
+    WHERE id = ?
+    `,
+    [assignedUserId, id]
+  );
+
+  if (result.affectedRows === 0) return null;
+
+  const [rows] = await pool.query(
+    "SELECT * FROM tasks WHERE id = ?",
+    [id]
   );
 
   return rows[0] || null;

@@ -134,11 +134,6 @@ exports.updateTaskStatus = async (req, res, next) => {
       );
     }
 
-    /**
-     * Contract:
-     * - Service returns null when TaskID does not exist
-     * - Service may throw httpError for other domain failures
-     */
     const updatedTask = await taskService.updateTaskStatus(id, status);
 
     if (!updatedTask) {
