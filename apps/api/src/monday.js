@@ -17,16 +17,21 @@ const query = `
   }
 `;
 
-fetch ("https://api.monday.com", {
-  method: 'post',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization' : token
-  },
-  body: JSON.stringify({ query })
-})
-.then(res => res.json())
-.then(data => console.log(data));
+// Exception handling
+try { 
+    fetch ("https://api.monday.com", {
+      method: 'post',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization' : token
+      },
+      body: JSON.stringify({ query })
+    })
+    .then(res => res.json())
+    .then(data => console.log(data));
+} catch (error) {
+    console.error('An error occured while fetching boards from Monday.com.', error.message);
+}
 
 // Delete board
 
@@ -36,13 +41,17 @@ const del = `
   }
 `;
 
-fetch ("https://api.monday.com", {
-  method: 'post',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization' : token
-  },
-  body: JSON.stringify({ del })
-})
-.then(res => res.json())
-.then(data => console.log(data));
+try {
+    fetch ("https://api.monday.com", {
+      method: 'post',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization' : token
+      },
+      body: JSON.stringify({ del })
+    })
+    .then(res => res.json())
+    .then(data => console.log(data));
+} catch (error) {
+    console.error('An error occured while deleting a board from Monday.com.', error.message);
+}
