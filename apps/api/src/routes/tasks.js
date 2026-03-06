@@ -69,7 +69,7 @@ router.get("/:id", taskController.getTaskById);
  * /tasks:
  *   post:
  *     summary: Create a new task
- *     description: Creates a new task in the system
+ *     description: Creates a new task in the system based on the updated schema
  *     tags:
  *       - Tasks
  *     requestBody:
@@ -79,20 +79,28 @@ router.get("/:id", taskController.getTaskById);
  *           schema:
  *             type: object
  *             required:
- *               - createdByUserId
+ *               - title
  *             properties:
- *               status:
- *                 type: integer
- *                 example: 0 
- *               assignedUserId:
- *                 type: integer
- *                 example: 2 //userId
- *               createdByUserId:
- *                 type: integer
- *                 example: 1 //userId
- *               description:
+ *               title:
  *                 type: string
- *                 example: description
+ *                 example: Water the Ficus
+ *               status:
+ *                 type: string
+ *                 enum: [assigned, in_progress, completed, cancelled]
+ *                 example: assigned
+ *               assigned_to:
+ *                 type: integer
+ *                 example: 2
+ *               plant_id:
+ *                 type: integer
+ *                 example: 5
+ *               notes:
+ *                 type: string
+ *                 example: Use 500ml of water
+ *               due_date:
+ *                 type: string
+ *                 format: date-time
+ *                 example: 2026-03-10T14:00:00.000Z
  *     responses:
  *       201:
  *         description: Task created successfully
@@ -107,24 +115,32 @@ router.get("/:id", taskController.getTaskById);
  *                 data:
  *                   type: object
  *                   properties:
- *                     TaskID:
+ *                     id:
  *                       type: integer
  *                       example: 101
+ *                     title:
+ *                       type: string
+ *                       example: Water the Ficus
  *                     status:
- *                       type: integer
- *                       example: 1
- *                     assignedUserId:
+ *                       type: string
+ *                       example: assigned
+ *                     assigned_to:
  *                       type: integer
  *                       example: 2
- *                     createdByUserId:
+ *                     plant_id:
  *                       type: integer
- *                       example: 1
- *                     description:
+ *                       example: 5
+ *                     notes:
  *                       type: string
- *                       example: Fix production bug
+ *                       example: Use 500ml of water
+ *                     due_date:
+ *                       type: string
+ *                       format: date-time
+ *                       example: 2026-03-10T14:00:00.000Z
  *                 timestamp:
  *                   type: string
- *                   example: 2026-02-25T12:00:00.000Z
+ *                   format: date-time
+ *                   example: 2026-03-03T12:00:00.000Z
  *       400:
  *         description: Invalid input
  */
@@ -135,7 +151,7 @@ router.post("/", taskController.createTask);
  * /tasks/{id}:
  *   patch:
  *     summary: Update task status
- *     description: Partially updates the status of a task by its ID
+ *     description: Updates the ENUM status of a task by its ID
  *     tags:
  *       - Tasks
  *     parameters:
@@ -156,8 +172,9 @@ router.post("/", taskController.createTask);
  *               - status
  *             properties:
  *               status:
- *                 type: integer
- *                 example: 2
+ *                 type: string
+ *                 enum: [assigned, in_progress, completed, cancelled]
+ *                 example: in_progress
  *     responses:
  *       200:
  *         description: Task status updated successfully
@@ -172,26 +189,28 @@ router.post("/", taskController.createTask);
  *                 data:
  *                   type: object
  *                   properties:
- *                     TaskID:
+ *                     id:
  *                       type: integer
  *                       example: 101
- *                     Status:
+ *                     title:
+ *                       type: string
+ *                       example: Water the Ficus
+ *                     status:
+ *                       type: string
+ *                       example: in_progress
+ *                     assigned_to:
  *                       type: integer
- *                       example: 2
- *                     AssignedUserId:
- *                       type: integer
- *                       nullable: true
  *                       example: 3
- *                     CreatedByUserId:
+ *                     plant_id:
  *                       type: integer
- *                       example: 1
- *                     Description:
+ *                       example: 5
+ *                     notes:
  *                       type: string
  *                       example: Fix production bug
- *                     CreateTime:
+ *                     created_at:
  *                       type: string
  *                       format: date-time
- *                     ChangeTime:
+ *                     updated_at:
  *                       type: string
  *                       format: date-time
  *                 timestamp:
@@ -209,7 +228,7 @@ router.patch("/:id", taskController.updateTaskStatus);
  * /tasks/{id}/assign:
  *   patch:
  *     summary: Assign task to a user
- *     description: Updates the assigned user of a task
+ *     description: Updates the assigned_to field of a task
  *     tags:
  *       - Tasks
  *     parameters:
@@ -227,9 +246,9 @@ router.patch("/:id", taskController.updateTaskStatus);
  *           schema:
  *             type: object
  *             required:
- *               - assignedUserId
+ *               - assigned_to
  *             properties:
- *               assignedUserId:
+ *               assigned_to:
  *                 type: integer
  *                 example: 3
  *     responses:

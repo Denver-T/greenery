@@ -8,7 +8,7 @@ const userController = require("../controllers/userController");
  * /users:
  *   get:
  *     summary: Get all users
- *     description: Returns a list of all users
+ *     description: Returns a list of all users from the accounts table
  *     tags:
  *       - Users
  *     responses:
@@ -21,12 +21,34 @@ const userController = require("../controllers/userController");
  *               properties:
  *                 status:
  *                   type: string
- *                 service:
+ *                   example: ok
+ *                 data:
  *                   type: array
  *                   items:
  *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       name:
+ *                         type: string
+ *                         example: Jane Doe
+ *                       role:
+ *                         type: string
+ *                         enum: [technician, manager, admin]
+ *                         example: technician
+ *                       email:
+ *                         type: string
+ *                         example: jane.doe@greenery.com
+ *                       phone:
+ *                         type: string
+ *                         example: 555-0199
+ *                       created_at:
+ *                         type: string
+ *                         format: date-time
  *                 timestamp:
  *                   type: string
+ *                   format: date-time
  */
 router.get("/", userController.getUsers);
 
@@ -35,7 +57,7 @@ router.get("/", userController.getUsers);
  * /users/{id}:
  *   get:
  *     summary: Get User By Id
- *     description: Get the specific user by Id
+ *     description: Get a specific user from the accounts table by their ID
  *     tags:
  *       - Users
  *     parameters:
@@ -44,10 +66,11 @@ router.get("/", userController.getUsers);
  *         required: true
  *         description: The ID of the user
  *         schema:
- *           type: string
+ *           type: integer
+ *           example: 1
  *     responses:
  *       200:
- *         description: Successfully retrieved users
+ *         description: Successfully retrieved user
  *         content:
  *           application/json:
  *             schema:
@@ -55,10 +78,32 @@ router.get("/", userController.getUsers);
  *               properties:
  *                 status:
  *                   type: string
- *                 service:
+ *                   example: ok
+ *                 data:
  *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     name:
+ *                       type: string
+ *                       example: Jane Doe
+ *                     role:
+ *                       type: string
+ *                       enum: [technician, manager, admin]
+ *                       example: technician
+ *                     email:
+ *                       type: string
+ *                       example: jane.doe@greenery.com
+ *                     phone:
+ *                       type: string
+ *                       example: 555-0199
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
  *                 timestamp:
  *                   type: string
+ *                   format: date-time
  *       404:
  *         description: User not found
  */
@@ -69,7 +114,7 @@ router.get("/:id", userController.getUserById);
  * /users:
  *   post:
  *     summary: Create a new user
- *     description: Creates a new user in the system
+ *     description: Creates a new user in the accounts table
  *     tags:
  *       - Users
  *     requestBody:
@@ -79,21 +124,23 @@ router.get("/:id", userController.getUserById);
  *           schema:
  *             type: object
  *             required:
- *               - username
- *               - email
- *               - password
+ *               - name
+ *               - role
  *             properties:
- *               username:
+ *               name:
  *                 type: string
- *                 example: medhi
+ *                 example: Jane Doe
+ *               role:
+ *                 type: string
+ *                 enum: [technician, manager, admin]
+ *                 example: technician
  *               email:
  *                 type: string
  *                 format: email
- *                 example: medhi@example.com
- *               password:
+ *                 example: jane.doe@greenery.com
+ *               phone:
  *                 type: string
- *                 format: password
- *                 example: StrongPassword123
+ *                 example: 555-0199
  *     responses:
  *       201:
  *         description: User created successfully
@@ -108,21 +155,28 @@ router.get("/:id", userController.getUserById);
  *                 data:
  *                   type: object
  *                   properties:
- *                     userId:
+ *                     id:
  *                       type: integer
  *                       example: 101
- *                     username:
+ *                     name:
  *                       type: string
- *                       example: medhi
+ *                       example: Jane Doe
+ *                     role:
+ *                       type: string
+ *                       enum: [technician, manager, admin]
+ *                       example: technician
  *                     email:
  *                       type: string
- *                       example: medhi@example.com
+ *                       example: jane.doe@greenery.com
+ *                     phone:
+ *                       type: string
+ *                       example: 555-0199
  *                 timestamp:
  *                   type: string
  *                   format: date-time
- *                   example: 2026-02-25T12:00:00.000Z
+ *                   example: 2026-03-04T12:00:00.000Z
  *       400:
- *         description: Invalid input
+ *         description: Invalid input (e.g., missing name, or invalid email/phone regex)
  */
 router.post("/", userController.createUser);
 

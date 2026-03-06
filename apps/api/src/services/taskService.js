@@ -1,10 +1,5 @@
 
 const userService = require("./userService");
-// In-memory stub data for scaffolding (SV-27)
-// let tasks = [
-//   { id: 1, title: "Water Monstera", status: "assigned" },
-//   { id: 2, title: "Inspect Fiddle Leaf Fig", status: "in_progress" },
-// ];
 
 const { getPool } = require("../db/index");
 
@@ -19,21 +14,22 @@ exports.createTask = async (taskData) => {
 
   const [result] = await pool.query(
     `
-    INSERT INTO Tasks
-      (TaskTitle, Status, AssignedUserId, CreatedByUserId, Description, CreateTime)
-    VALUES (?, ?, ?, ?, ?, NOW())
+    INSERT INTO tasks
+      (title, status, assigned_to, plant_id, notes, due_date)
+    VALUES (?, ?, ?, ?, ?, ?)
     `,
     [
       taskData.title,
-      taskData.status,
-      taskData.assignedUser,
-      taskData.createUser,
-      taskData.description,
+      taskData.status || 'assigned',
+      taskData.assigned_to || null,  
+      taskData.plant_id || null, 
+      taskData.notes || null,
+      taskData.due_date || null
     ]
   );
 
   return {
-    TaskID: result.insertId,
+    id: result.insertId,
     ...taskData,
   };
 };
@@ -41,7 +37,7 @@ exports.createTask = async (taskData) => {
 exports.getTaskById = async (id) => {
   const pool = await getPool();
   const [rows] = await pool.query(
-    "SELECT * FROM tasks WHERE TaskID = ?",
+    "SELECT * FROM tasks WHERE id = ?",
     [id]
   );
   return rows[0] || null;
@@ -51,9 +47,9 @@ exports.updateTaskStatus = async (id, status) => {
   const pool = await getPool();
   const [result] = await pool.query(
     `
-    UPDATE Tasks
-    SET Status = ?, ChangeTime = NOW()
-    WHERE TaskID = ?
+    UPDATE tasks
+    SET status = ?
+    WHERE id = ?
     `,
     [status, id]
   );
@@ -64,7 +60,7 @@ exports.updateTaskStatus = async (id, status) => {
 
   // Return updated task
   const [rows] = await pool.query(
-    `SELECT * FROM tasks WHERE TaskID = ?`,
+    `SELECT * FROM tasks WHERE id = ?`,
     [id]
   );
 
@@ -84,9 +80,9 @@ exports.assignTask = async (id, assignedUserId) => {
 
   const [result] = await pool.query(
     `
-    UPDATE Tasks
-    SET AssignedUserId = ?, ChangeTime = NOW()
-    WHERE TaskID = ?
+    UPDATE tasks
+    SET assigned_to = ?
+    WHERE id = ?
     `,
     [assignedUserId, id]
   );
@@ -94,7 +90,7 @@ exports.assignTask = async (id, assignedUserId) => {
   if (result.affectedRows === 0) return null;
 
   const [rows] = await pool.query(
-    "SELECT * FROM Tasks WHERE TaskID = ?",
+    "SELECT * FROM tasks WHERE id = ?",
     [id]
   );
 
