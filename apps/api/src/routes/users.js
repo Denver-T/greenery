@@ -1,7 +1,38 @@
+// apps/api/src/routes/users.js
+
+/**
+ * Users Routes
+ * ------------
+ * Defines HTTP endpoints related to user resources.
+ *
+ * Responsibilities:
+ * - Route incoming requests to the appropriate controller
+ * - Apply middleware such as rate limiting, authentication, or validation
+ * - Provide Swagger documentation for API consumers
+ */
+
 const express = require("express");
 const router = express.Router();
 
 const userController = require("../controllers/userController");
+const { writeLimiter } = require("../middleware/rateLimiters");
+
+/**
+ * -------------------------------------------------------------------------
+ * GET /users
+ * -------------------------------------------------------------------------
+ * Retrieves a list of all users in the system.
+ *
+ * Middleware:
+ * - None applied currently (public read endpoint)
+ *
+ * Controller:
+ * - userController.getUsers
+ *
+ * Expected Behavior:
+ * - Returns a collection of user objects
+ * - Returns HTTP 200 on success
+ */
 
 /**
  * @swagger
@@ -29,6 +60,26 @@ const userController = require("../controllers/userController");
  *                   type: string
  */
 router.get("/", userController.getUsers);
+
+/**
+ * -------------------------------------------------------------------------
+ * GET /users/:id
+ * -------------------------------------------------------------------------
+ * Retrieves a single user by ID.
+ *
+ * Parameters:
+ * - id (path): Unique identifier of the user
+ *
+ * Middleware:
+ * - None applied currently
+ *
+ * Controller:
+ * - userController.getUserById
+ *
+ * Expected Behavior:
+ * - Returns a single user object if found
+ * - Returns HTTP 404 if the user does not exist
+ */
 
 /**
  * @swagger
@@ -63,6 +114,29 @@ router.get("/", userController.getUsers);
  *         description: User not found
  */
 router.get("/:id", userController.getUserById);
+
+/**
+ * -------------------------------------------------------------------------
+ * POST /users
+ * -------------------------------------------------------------------------
+ * Creates a new user in the system.
+ *
+ * Security:
+ * - Protected by rate limiting middleware to prevent abuse
+ *
+ * Middleware:
+ * - writeLimiter: Restricts the number of write operations allowed
+ *   within a configured time window.
+ *
+ * Controller:
+ * - userController.createUser
+ *
+ * Expected Behavior:
+ * - Valid request creates a user record
+ * - Returns HTTP 201 with the created user data
+ * - Returns HTTP 400 for invalid input
+ * - Returns HTTP 429 if rate limit is exceeded
+ */
 
 /**
  * @swagger
@@ -124,6 +198,12 @@ router.get("/:id", userController.getUserById);
  *       400:
  *         description: Invalid input
  */
-router.post("/", userController.createUser);
+router.post("/", writeLimiter, userController.createUser);
 
+/**
+ * Export router for use in the main application.
+ * The router will typically be mounted in app.js as:
+ *
+ * app.use("/users", usersRouter);
+ */
 module.exports = router;
