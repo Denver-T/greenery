@@ -248,7 +248,7 @@ docker compose up -d
 ⚠️ This deletes all local data.
 
 ```
-apps>api>.env 
+```apps>api>.env 
 # Server
 PORT=3001
 NODE_ENV=development
@@ -278,3 +278,4 @@ DB_NAME=greenery
 DB_USER=greenery_user
 DB_PASSWORD=greenery_pass
 NEXT_PUBLIC_API_URL=http://localhost:3001
+```
