@@ -248,7 +248,8 @@ docker compose up -d
 ⚠️ This deletes all local data.
 
 ```
-```apps>api>.env 
+```
+apps>api>.env 
 # Server
 PORT=3001
 NODE_ENV=development
