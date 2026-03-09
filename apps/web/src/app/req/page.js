@@ -49,7 +49,7 @@ export default function ReqPage() {
   return (
     <AppShell title="Create Work REQ">
       <section className="rounded-card bg-white p-6 shadow-soft">
-        <h2 className="mb-4 text-xl font-semibold text-gray-900">Work Req Form</h2>
+        <h2 className="mb-4 text-xl font-extrabold text-brand-700">Work Req Form</h2>
 
         <form onSubmit={onSubmit} encType="multipart/form-data" className="space-y-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -273,7 +273,7 @@ export default function ReqPage() {
                 type="file"
                 name="picture"
                 accept="image/*"
-                className="rounded-md border border-gray-300 bg-white file:mr-4 file:rounded-md file:border-0 file:bg-emerald-600 file:px-4 file:py-2 file:font-medium file:text-white hover:file:bg-emerald-700 text-gray-900"
+                className="rounded-md border border-gray-300 bg-white file:mr-4 file:rounded-md file:border-0 file:bg-emerald-700 file:px-4 file:py-2 file:font-medium file:text-white hover:file:bg-emerald-700 text-gray-900"
               />
             </div>
           </div>
@@ -286,7 +286,7 @@ export default function ReqPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center rounded-lg bg-emerald-600 px-5 py-2.5 font-medium text-white shadow hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center rounded-lg bg-emerald-700 px-5 py-2.5 font-medium text-white shadow hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitting ? "Submitting..." : "Submit REQ"}
             </button>
