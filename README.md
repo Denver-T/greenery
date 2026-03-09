@@ -248,3 +248,33 @@ docker compose up -d
 ⚠️ This deletes all local data.
 
 ```
+apps>api>.env 
+# Server
+PORT=3001
+NODE_ENV=development
+
+# Database (local Docker)
+DB_HOST=127.0.0.1
+DB_PORT=3307
+DB_NAME=greenery
+DB_USER=greenery_user
+DB_PASSWORD=greenery_pass
+
+
+# # Authentication (placeholder)
+# AUTH_PROVIDER=firebase
+# FIREBASE_PROJECT_ID=
+# FIREBASE_CLIENT_EMAIL=
+# FIREBASE_PRIVATE_KEY=
+
+# # Monday.com Integration (placeholder)
+# MONDAY_API_TOKEN=
+# MONDAY_BOARD_ID=
+
+apps>web>.env.local
+DB_HOST=127.0.0.1
+DB_PORT=3307
+DB_NAME=greenery
+DB_USER=greenery_user
+DB_PASSWORD=greenery_pass
+NEXT_PUBLIC_API_URL=http://localhost:3001
