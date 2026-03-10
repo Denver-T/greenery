@@ -4,6 +4,8 @@ import AppShell from "@/components/AppShell";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 export default function ReqPage() {
   const router = useRouter();
 
@@ -31,7 +33,18 @@ export default function ReqPage() {
 
     try {
       const fd = new FormData(e.currentTarget);
-      const res = await fetch("/api/req", { method: "POST", body: fd });
+
+      /**
+       * ---------------------------------------------------------
+       * Submit to the unified backend API
+       * ---------------------------------------------------------
+       * This sends multipart/form-data to apps/api
+       * because the form contains a file input.
+       */
+      const res = await fetch(`${API_BASE}/reqs`, {
+        method: "POST",
+        body: fd,
+      });
 
       if (!res.ok) {
         const text = await res.text();
@@ -185,8 +198,8 @@ export default function ReqPage() {
                 defaultValue="Shorter than 2 feet"
               >
                 <option>Shorter than 2 feet</option>
-                <option>2–4 feet</option>
-                <option>4–6 feet</option>
+                <option>2-4 feet</option>
+                <option>4-6 feet</option>
                 <option>Taller than 6 feet</option>
               </select>
             </div>
@@ -293,7 +306,7 @@ export default function ReqPage() {
 
             <button
               type="button"
-              onClick={() => history.back()}
+              onClick={() => router.back()}
               className="rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-800 hover:bg-gray-300"
             >
               Cancel
