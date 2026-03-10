@@ -1,3 +1,6 @@
+const admin = require("../config/firebase");
+const { httpError } = require("../utils/httpError");
+
 /**
  * Authentication Middleware
  * -------------------------
@@ -5,16 +8,13 @@
  *   Authorization: Bearer <token>
  *
  * On success:
- * - Attaches a normalized user object to req.user
+ * - Attaches a normalized authenticated identity to req.user
  *
  * On failure:
  * - Forwards a standardized 401 error to the global error handler
  */
 
-const admin = require("../config/firebase");
-const { httpError } = require("../utils/httpError");
-
-exports.verifyToken = async (req, res, next) => {
+async function verifyToken(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
@@ -36,18 +36,20 @@ exports.verifyToken = async (req, res, next) => {
 
     req.user = {
       uid: decoded.uid,
-      email: decoded.email ?? null,
-      // keep role null until SV-13 / custom claims are implemented
-      role: decoded.role ?? null,
-      // optional: keep the whole token if you want
-      // claims: decoded,
+      email: typeof decoded.email === "string" ? decoded.email.trim().toLowerCase() : null,
+      role: typeof decoded.role === "string" ? decoded.role.trim().toLowerCase() : null,
     };
 
     return next();
   } catch (err) {
     console.error("verifyToken failed:", err);
+
     return next(
       httpError(401, "Invalid authentication token", "AUTH_TOKEN_INVALID")
     );
   }
+}
+
+module.exports = {
+  verifyToken,
 };

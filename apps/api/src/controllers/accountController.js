@@ -249,10 +249,47 @@ async function deleteAccount(req, res, next) {
   }
 }
 
+async function getMe(req, res, next) {
+  try {
+    if (!req.user) {
+      return next(httpError(401, "Authentication required", "AUTH_REQUIRED"));
+    }
+
+    const email =
+      typeof req.user.email === "string" ? req.user.email.trim().toLowerCase() : null;
+
+    if (!email) {
+      return next(
+        httpError(
+          400,
+          "Authenticated token is missing an email claim",
+          "AUTH_INVALID_TOKEN",
+          [{ field: "email", issue: "missing from authenticated token" }]
+        )
+      );
+    }
+
+    const account = await accountService.getAccountByEmail(email);
+
+    if (!account) {
+      return next(
+        httpError(404, "Authenticated account not found", "ACCOUNT_NOT_FOUND")
+      );
+    }
+
+    return res.status(200).json({
+      data: account,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getAccounts,
   getAccountById,
   createAccount,
   updateAccount,
   deleteAccount,
+  getMe
 };

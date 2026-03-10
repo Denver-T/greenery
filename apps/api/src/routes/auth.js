@@ -1,5 +1,3 @@
-// apps/api/src/routes/auth.js
-
 const express = require("express");
 const router = express.Router();
 
@@ -17,13 +15,18 @@ const taskController = require("../controllers/taskController");
  * - a valid Firebase ID token
  * - role-based authorization
  * - optional rate limiting for write operations
- *
- * Middleware order:
- * 1) writeLimiter (for write routes)
- * 2) verifyToken
- * 3) authorize(...)
- * 4) controller
  */
+
+/**
+ * GET /auth/me
+ * Any authenticated user
+ * Returns the authenticated account based on the email in the verified token.
+ *
+ * NOTE:
+ * This route should only require verifyToken for now.
+ * Firebase custom role claims are not guaranteed to exist yet.
+ */
+router.get("/me", verifyToken, accountController.getMe);
 
 /**
  * POST /auth/accounts
