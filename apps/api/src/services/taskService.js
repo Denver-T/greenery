@@ -46,12 +46,6 @@ exports.getTasks = async () => {
  * Expected `taskData` shape (based on your controller):
  * - title: string (required)
  * - status?: string (optional)
- * - createUser?: number (optional)  <-- might later come from req.user.uid mapping
- *
- * NOTE:
- * Your DB insert previously referenced columns like TaskTitle / AssignedUserId etc.
- * That’s totally fine if your schema uses those, but the table name should still
- * be consistent (`tasks`).
  */
 exports.createTask = async (taskData) => {
   const pool = await getPool();
@@ -83,16 +77,7 @@ exports.createTask = async (taskData) => {
     ]);
   }
 
-  /**
-   * IMPORTANT:
-   * Your earlier SQL used `INSERT INTO Tasks (...)` (capital T) with columns:
-   * (TaskTitle, Status, AssignedUserId, CreatedByUserId, Description, CreateTime)
-   *
-   * I’m keeping your column naming pattern because it likely matches your schema,
-   * but switching the TABLE name to `tasks` for consistency.
-   *
-   * If your actual schema columns are different, adjust here to match 01_schema.sql.
-   */
+
   const [result] = await pool.query(
     `
     INSERT INTO ${TASKS_TABLE}
