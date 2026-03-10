@@ -1,36 +1,34 @@
-// In-memory stub data for scaffolding (SV-27)
-// const users = [
-//   { id: 1, name: "Tech One", role: "technician" },
-//   { id: 2, name: "Manager One", role: "manager" },
-// ];
 
 const { getPool } = require("../db/index");
 
 exports.getUsers = async () => {
   const pool = await getPool();
-  const [rows] = await pool.query("SELECT * FROM user");
+  const [rows] = await pool.query("SELECT * FROM accounts");
   return rows;
 };
 
 exports.getUserById = async (id) => {
   const pool = await getPool();
   const [rows] = await pool.query(
-    "SELECT * FROM user WHERE id = ?",
+    "SELECT * FROM accounts WHERE id = ?",
     [id]
   );
   return rows[0] || null;
 };
 
-exports.createUser = async ({name,password,role}) => {
+exports.createUser = async (userData) => {
   const pool = await getPool();
+  const {name, role, email, phone} = userData;
   const [result] = await pool.query(
-    "INSERT INTO user (name, password) VALUES (?, ?)",
-    [name, password]
+    "INSERT INTO accounts (name, role, email, phone) VALUES (?, ?, ?, ?)",
+    [name, role, email || null, phone || null]
   );
 
   return {
     id: result.insertId,
     name,
     role,
+    email: email || null, 
+    phone: phone || null
   };
 };

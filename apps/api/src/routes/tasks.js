@@ -61,7 +61,7 @@ router.get("/:id", taskController.getTaskById);
  * /tasks:
  *   post:
  *     summary: Create a new task
- *     description: Creates a new task in the system
+ *     description: Creates a new task in the system based on the updated schema
  *     tags:
  *       - Tasks
  *     requestBody:
@@ -70,6 +70,69 @@ router.get("/:id", taskController.getTaskById);
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - title
+ *             properties:
+ *               title:
+ *                 type: string
+ *                 example: Water the Ficus
+ *               status:
+ *                 type: string
+ *                 enum: [assigned, in_progress, completed, cancelled]
+ *                 example: assigned
+ *               assigned_to:
+ *                 type: integer
+ *                 example: 2
+ *               plant_id:
+ *                 type: integer
+ *                 example: 5
+ *               notes:
+ *                 type: string
+ *                 example: Use 500ml of water
+ *               due_date:
+ *                 type: string
+ *                 format: date-time
+ *                 example: 2026-03-10T14:00:00.000Z
+ *     responses:
+ *       201:
+ *         description: Task created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 101
+ *                     title:
+ *                       type: string
+ *                       example: Water the Ficus
+ *                     status:
+ *                       type: string
+ *                       example: assigned
+ *                     assigned_to:
+ *                       type: integer
+ *                       example: 2
+ *                     plant_id:
+ *                       type: integer
+ *                       example: 5
+ *                     notes:
+ *                       type: string
+ *                       example: Use 500ml of water
+ *                     due_date:
+ *                       type: string
+ *                       format: date-time
+ *                       example: 2026-03-10T14:00:00.000Z
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                   example: 2026-03-03T12:00:00.000Z
  *             properties:
  *               title:
  *                 type: string
@@ -80,38 +143,15 @@ router.get("/:id", taskController.getTaskById);
  *               createUser:
  *                 type: integer
  *                 example: 1
- *     responses:
- *       201:
- *         description: Task created successfully
- *       400:
- *         description: Invalid input
- *
- * NOTE:
- * Your existing Swagger schema here previously described fields like
- * createdByUserId / assignedUserId / description, which does NOT match the
- * controller currently validating `{ title, status, createUser }`.
- *
- * If your DB/service expects different names, update the controller + service
- * together, but keep them consistent.
  */
 router.post("/", taskController.createTask);
 
 /**
- * PATCH /tasks/:id/status
- * Prefer explicit sub-resource naming for partial updates.
- *
- * Your controller method name is `updateTaskStatus`, so it’s clearer if
- * the route path includes `/status` rather than PATCHing the base resource.
- *
- * If you MUST keep `PATCH /tasks/:id`, the controller still works, but it’s
- * easier for teammates and clients to understand when it’s explicit.
- */
-/**
  * @swagger
- * /tasks/{id}/status:
+ * /tasks/{id}/updateStatus:
  *   patch:
  *     summary: Update task status
- *     description: Updates ONLY the status of a task by its ID
+ *     description: Updates the ENUM status of a task by its ID
  *     tags:
  *       - Tasks
  *     parameters:
@@ -132,23 +172,62 @@ router.post("/", taskController.createTask);
  *             properties:
  *               status:
  *                 type: string
+ *                 enum: [assigned, in_progress, completed, cancelled]
  *                 example: in_progress
  *     responses:
  *       200:
  *         description: Task status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: ok
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 101
+ *                     title:
+ *                       type: string
+ *                       example: Water the Ficus
+ *                     status:
+ *                       type: string
+ *                       example: in_progress
+ *                     assigned_to:
+ *                       type: integer
+ *                       example: 3
+ *                     plant_id:
+ *                       type: integer
+ *                       example: 5
+ *                     notes:
+ *                       type: string
+ *                       example: Fix production bug
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
  *       400:
  *         description: Invalid status value
  *       404:
  *         description: Task not found
  */
-router.patch("/:id/status", taskController.updateTaskStatus);
+router.patch("/:id/updateStatus", taskController.updateTaskStatus);
 
 /**
  * @swagger
  * /tasks/{id}/assign:
  *   patch:
  *     summary: Assign task to a user
- *     description: Updates the assigned user of a task
+ *     description: Updates the assigned_to field of a task
  *     tags:
  *       - Tasks
  *     parameters:
@@ -165,9 +244,9 @@ router.patch("/:id/status", taskController.updateTaskStatus);
  *           schema:
  *             type: object
  *             required:
- *               - assignedUserId
+ *               - assigned_to
  *             properties:
- *               assignedUserId:
+ *               assigned_to:
  *                 type: integer
  *                 example: 3
  *     responses:

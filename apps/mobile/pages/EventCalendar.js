@@ -120,31 +120,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 10,
   },
-  /* Bottom tab bar (static) */
-  tabBar: {
-    position: 'absolute',
-    left: 0, right: 0, bottom: 0,
-    height: 56,
-    backgroundColor: COLORS.green,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.25)',
-    elevation: 12,
-  },
-  tabItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-  },
-  tabText: {
-    color: COLORS.textOnGreen,
-    fontSize: 11,
-    marginTop: 2,
-  },
   menuBlockWrap: {
     marginTop: 8,
     marginBottom: 8,

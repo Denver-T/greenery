@@ -42,11 +42,6 @@ exports.getUsers = async (req, res, next) => {
  */
 exports.getUserById = async (req, res, next) => {
   try {
-    /**
-     * Normalize/validate path param.
-     * - `toPositiveInt` should return a positive integer or a falsy value.
-     * - Keep validation errors as 400 (client input issue).
-     */
     const id = toPositiveInt(req.params.id);
     if (!id) {
       return next(
@@ -58,11 +53,6 @@ exports.getUserById = async (req, res, next) => {
 
     const user = await userService.getUserById(id);
 
-    /**
-     * Not found:
-     * - Use 404 when the resource does not exist.
-     * - Provide a stable error code for clients/tests.
-     */
     if (!user) {
       return next(httpError(404, "User not found", "USER_NOT_FOUND"));
     }
@@ -77,22 +67,11 @@ exports.getUserById = async (req, res, next) => {
  * POST /users
  * Creates a new user.
  *
- * Expected body (example):
- * {
- *   "name": "Jane",
- *   "password": "StrongPassword123",
- *   "role": "technician"
- * }
  */
 exports.createUser = async (req, res, next) => {
   try {
-    const { name, password, role } = req.body;
+    const { name, role, email, phone } = req.body;
 
-    /**
-     * Validate required fields.
-     * If multiple fields are invalid, you can accumulate details and return once.
-     * (Kept simple here to match your current style.)
-     */
     if (!isNonEmptyString(name)) {
       return next(
         httpError(400, "Field 'name' is required", "VALIDATION_ERROR", [
@@ -102,19 +81,14 @@ exports.createUser = async (req, res, next) => {
     }
 
     // Password is referenced in the service call; validate it here to avoid surprises downstream.
-    if (!isNonEmptyString(password)) {
-      return next(
-        httpError(400, "Field 'password' is required", "VALIDATION_ERROR", [
-          { field: "password", issue: "required" },
-        ])
-      );
-    }
+    // if (!isNonEmptyString(password)) {
+    //   return next(
+    //     httpError(400, "Field 'password' is required", "VALIDATION_ERROR", [
+    //       { field: "password", issue: "required" },
+    //     ])
+    //   );
+    // }
 
-    /**
-     * role is optional:
-     * - if present, must be non-empty
-     * - if absent, service layer may apply defaults
-     */
     if (role !== undefined && !isNonEmptyString(role)) {
       return next(
         httpError(400, "Field 'role' must be a non-empty string", "VALIDATION_ERROR", [
@@ -123,7 +97,8 @@ exports.createUser = async (req, res, next) => {
       );
     }
 
-    const created = await userService.createUser({ name, password, role });
+    const created = await userService.createUser({ name, role, email, phone });
+    res.status(201).json({ data: created });
 
     // 201 Created for successful resource creation.
     return res.status(201).json({ data: created });
