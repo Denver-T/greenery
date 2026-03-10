@@ -38,6 +38,10 @@ exports.getTasks = async () => {
 
 /**
  * CREATE a task
+ *
+ * Expected `taskData` shape (based on your controller):
+ * - title: string (required)
+ * - status?: string (optional)
  */
 exports.createTask = async (taskData) => {
   const pool = await getPool();
@@ -62,6 +66,7 @@ exports.createTask = async (taskData) => {
       { field: "createUser", issue: "must be a positive integer" },
     ]);
   }
+
 
   const [result] = await pool.query(
     `
