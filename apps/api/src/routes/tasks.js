@@ -1,22 +1,153 @@
-// apps/api/src/routes/tasks.js
-
 const express = require("express");
-const router = express.Router();
-
+const { writeLimiter } = require("../middleware/rateLimiters");
 const taskController = require("../controllers/taskController");
 
+const router = express.Router();
+
 /**
- * Task Routes
- * -----------
- * Thin HTTP routing layer:
- * - Maps URLs + HTTP verbs to controller methods
- * - Keeps business logic out of routes
- * - Swagger docs live here (or can be extracted later)
+ * @swagger
+ * tags:
+ *   - name: Tasks
+ *     description: Task management endpoints
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     Task:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           example: 1
+ *         title:
+ *           type: string
+ *           example: Water Monstera
+ *         status:
+ *           type: string
+ *           enum: [assigned, in_progress, completed, cancelled]
+ *           example: assigned
+ *         assigned_to:
+ *           type: integer
+ *           nullable: true
+ *           example: 1
+ *         plant_id:
+ *           type: integer
+ *           nullable: true
+ *           example: 2
+ *         notes:
+ *           type: string
+ *           nullable: true
+ *           example: Weekly watering
+ *         due_date:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           example: 2026-03-15T09:00:00.000Z
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *           example: 2026-03-10T18:30:00.000Z
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *           example: 2026-03-10T19:00:00.000Z
  *
- * Important consistency notes:
- * - Controller methods should ONLY send success responses.
- * - All error responses must be produced by the global error handler.
- * - Route paths should match controller intent (e.g., status update vs assignment).
+ *     TaskInput:
+ *       type: object
+ *       required:
+ *         - title
+ *       properties:
+ *         title:
+ *           type: string
+ *           example: Water the Ficus
+ *         status:
+ *           type: string
+ *           enum: [assigned, in_progress, completed, cancelled]
+ *           example: assigned
+ *         assigned_to:
+ *           type: integer
+ *           nullable: true
+ *           example: 2
+ *         plant_id:
+ *           type: integer
+ *           nullable: true
+ *           example: 5
+ *         notes:
+ *           type: string
+ *           nullable: true
+ *           example: Use 500ml of water
+ *         due_date:
+ *           type: string
+ *           format: date-time
+ *           nullable: true
+ *           example: 2026-03-10T14:00:00.000Z
+ *
+ *     TaskStatusInput:
+ *       type: object
+ *       required:
+ *         - status
+ *       properties:
+ *         status:
+ *           type: string
+ *           enum: [assigned, in_progress, completed, cancelled]
+ *           example: in_progress
+ *
+ *     TaskAssignInput:
+ *       type: object
+ *       required:
+ *         - assigned_to
+ *       properties:
+ *         assigned_to:
+ *           type: integer
+ *           example: 3
+ *
+ *     ValidationError:
+ *       type: object
+ *       properties:
+ *         status:
+ *           type: string
+ *           example: error
+ *         code:
+ *           type: string
+ *           example: VALIDATION_ERROR
+ *         message:
+ *           type: string
+ *           example: Invalid task payload
+ *         details:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               field:
+ *                 type: string
+ *                 example: status
+ *               issue:
+ *                 type: string
+ *                 example: "must be one of: assigned, in_progress, completed, cancelled"
+ *         timestamp:
+ *           type: string
+ *           format: date-time
+ *
+ *     TaskNotFoundError:
+ *       type: object
+ *       properties:
+ *         status:
+ *           type: string
+ *           example: error
+ *         code:
+ *           type: string
+ *           example: TASK_NOT_FOUND
+ *         message:
+ *           type: string
+ *           example: Task not found
+ *         details:
+ *           type: array
+ *           example: []
+ *         timestamp:
+ *           type: string
+ *           format: date-time
  */
 
 /**
@@ -24,12 +155,20 @@ const taskController = require("../controllers/taskController");
  * /tasks:
  *   get:
  *     summary: Get all tasks
- *     description: Returns a list of all tasks
  *     tags:
  *       - Tasks
  *     responses:
  *       200:
  *         description: Successfully retrieved tasks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Task'
  */
 router.get("/", taskController.getTasks);
 
@@ -37,22 +176,37 @@ router.get("/", taskController.getTasks);
  * @swagger
  * /tasks/{id}:
  *   get:
- *     summary: Get Task By Id
- *     description: Get the specific task by Id
+ *     summary: Get task by ID
  *     tags:
  *       - Tasks
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         description: The ID of the task
  *         schema:
  *           type: integer
  *     responses:
  *       200:
  *         description: Successfully retrieved task
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Task'
+ *       400:
+ *         description: Invalid task ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
  *       404:
  *         description: Task not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TaskNotFoundError'
  */
 router.get("/:id", taskController.getTaskById);
 
@@ -61,7 +215,7 @@ router.get("/:id", taskController.getTaskById);
  * /tasks:
  *   post:
  *     summary: Create a new task
- *     description: Creates a new task in the system based on the updated schema
+ *     description: Creates a new task in the system based on the current schema
  *     tags:
  *       - Tasks
  *     requestBody:
@@ -69,30 +223,7 @@ router.get("/:id", taskController.getTaskById);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - title
- *             properties:
- *               title:
- *                 type: string
- *                 example: Water the Ficus
- *               status:
- *                 type: string
- *                 enum: [assigned, in_progress, completed, cancelled]
- *                 example: assigned
- *               assigned_to:
- *                 type: integer
- *                 example: 2
- *               plant_id:
- *                 type: integer
- *                 example: 5
- *               notes:
- *                 type: string
- *                 example: Use 500ml of water
- *               due_date:
- *                 type: string
- *                 format: date-time
- *                 example: 2026-03-10T14:00:00.000Z
+ *             $ref: '#/components/schemas/TaskInput'
  *     responses:
  *       201:
  *         description: Task created successfully
@@ -101,64 +232,32 @@ router.get("/:id", taskController.getTaskById);
  *             schema:
  *               type: object
  *               properties:
- *                 status:
- *                   type: string
- *                   example: ok
  *                 data:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                       example: 101
- *                     title:
- *                       type: string
- *                       example: Water the Ficus
- *                     status:
- *                       type: string
- *                       example: assigned
- *                     assigned_to:
- *                       type: integer
- *                       example: 2
- *                     plant_id:
- *                       type: integer
- *                       example: 5
- *                     notes:
- *                       type: string
- *                       example: Use 500ml of water
- *                     due_date:
- *                       type: string
- *                       format: date-time
- *                       example: 2026-03-10T14:00:00.000Z
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *                   example: 2026-03-03T12:00:00.000Z
- *             properties:
- *               title:
- *                 type: string
- *                 example: Fix production bug
- *               status:
- *                 type: string
- *                 example: assigned
- *               createUser:
- *                 type: integer
- *                 example: 1
+ *                   $ref: '#/components/schemas/Task'
+ *       400:
+ *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
+ *       404:
+ *         description: Referenced account not found
+ *       429:
+ *         description: Too many requests
  */
-router.post("/", taskController.createTask);
+router.post("/", writeLimiter, taskController.createTask);
 
 /**
  * @swagger
- * /tasks/{id}/updateStatus:
+ * /tasks/{id}/status:
  *   patch:
  *     summary: Update task status
- *     description: Updates the ENUM status of a task by its ID
  *     tags:
  *       - Tasks
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         description: Task ID
  *         schema:
  *           type: integer
  *     requestBody:
@@ -166,14 +265,7 @@ router.post("/", taskController.createTask);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - status
- *             properties:
- *               status:
- *                 type: string
- *                 enum: [assigned, in_progress, completed, cancelled]
- *                 example: in_progress
+ *             $ref: '#/components/schemas/TaskStatusInput'
  *     responses:
  *       200:
  *         description: Task status updated successfully
@@ -182,59 +274,36 @@ router.post("/", taskController.createTask);
  *             schema:
  *               type: object
  *               properties:
- *                 status:
- *                   type: string
- *                   example: ok
  *                 data:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: integer
- *                       example: 101
- *                     title:
- *                       type: string
- *                       example: Water the Ficus
- *                     status:
- *                       type: string
- *                       example: in_progress
- *                     assigned_to:
- *                       type: integer
- *                       example: 3
- *                     plant_id:
- *                       type: integer
- *                       example: 5
- *                     notes:
- *                       type: string
- *                       example: Fix production bug
- *                     created_at:
- *                       type: string
- *                       format: date-time
- *                     updated_at:
- *                       type: string
- *                       format: date-time
- *                 timestamp:
- *                   type: string
- *                   format: date-time
+ *                   $ref: '#/components/schemas/Task'
  *       400:
  *         description: Invalid status value
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
  *       404:
  *         description: Task not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TaskNotFoundError'
+ *       429:
+ *         description: Too many requests
  */
-router.patch("/:id/updateStatus", taskController.updateTaskStatus);
+router.patch("/:id/status", writeLimiter, taskController.updateTaskStatus);
 
 /**
  * @swagger
  * /tasks/{id}/assign:
  *   patch:
- *     summary: Assign task to a user
- *     description: Updates the assigned_to field of a task
+ *     summary: Assign task to an account
  *     tags:
  *       - Tasks
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         description: Task ID
  *         schema:
  *           type: integer
  *     requestBody:
@@ -242,21 +311,32 @@ router.patch("/:id/updateStatus", taskController.updateTaskStatus);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - assigned_to
- *             properties:
- *               assigned_to:
- *                 type: integer
- *                 example: 3
+ *             $ref: '#/components/schemas/TaskAssignInput'
  *     responses:
  *       200:
  *         description: Task assigned successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Task'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidationError'
  *       404:
- *         description: Task not found
+ *         description: Task or account not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TaskNotFoundError'
+ *       429:
+ *         description: Too many requests
  */
-router.patch("/:id/assign", taskController.assignTask);
+router.patch("/:id/assign", writeLimiter, taskController.assignTask);
 
 module.exports = router;
