@@ -102,12 +102,13 @@ export default function LoginPage() {
 
             <button
               type="button"
-              onClick={() => alert("Hook this to Firebase password reset later")}
+              onClick={() =>
+                alert("Hook this to Firebase password reset later")
+              }
               style={styles.linkBtn}
             >
               Forgot password?
             </button>
-          
           </div>
 
           {error ? <div style={styles.error}>{error}</div> : null}
@@ -115,9 +116,12 @@ export default function LoginPage() {
           <button type="submit" style={styles.primaryBtn} disabled={loading}>
             {loading ? "Signing in..." : "Sign In"}
           </button>
-          
-          // skip logging and go to dashboard
-          <button onClick={() => router.push("/dashboard")} style={styles.secondaryBtn}>
+
+          {/* skip logging and go to dashboard */}
+          <button
+            onClick={() => router.push("/dashboard")}
+            style={styles.secondaryBtn}
+          >
             Skip Login and Go to Dashboard
           </button>
 
@@ -132,7 +136,7 @@ export default function LoginPage() {
             style={styles.secondaryBtn}
             onClick={() =>
               alert(
-                "Later: connect Firebase Google Sign-In here.\nFor now this is just a placeholder."
+                "Later: connect Firebase Google Sign-In here.\nFor now this is just a placeholder.",
               )
             }
           >

@@ -30,13 +30,13 @@ async function jsonOrThrow(res) {
 }
 
 export default function EmployeesPage() {
-  // ----- Page state -----
+  {/* ----- Page state ----- */}
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // ----- Create form state -----
+  {/* ----- Create form state ----- */}
   const [form, setForm] = useState({
     name: "",
     role: "Technician",
@@ -46,13 +46,13 @@ export default function EmployeesPage() {
     permissionLevel: "Technician",
   });
 
-  // ----- Edit modal state -----
-  const [editing, setEditing] = useState(null); // employee object or null
+  {/* ----- Edit modal state -----*/}
+  const [editing, setEditing] = useState(null); {/* employee object or null */}
 
-  /**
+  {/**
    * Load employees from the unified backend.
    * This is what makes HeidiSQL inserts show up in the UI.
-   */
+   */}
   async function refresh() {
     setError("");
     setLoading(true);
@@ -71,9 +71,9 @@ export default function EmployeesPage() {
     refresh();
   }, []);
 
-  /**
+  {/**
    * Create employee (POST)
-   */
+   */}
   async function createEmployee() {
     setError("");
     setBusy(true);
@@ -85,7 +85,7 @@ export default function EmployeesPage() {
       });
       await jsonOrThrow(res);
 
-      // Reset form and reload
+      {/* Reset form and reload */}
       setForm({
         name: "",
         role: "Technician",
@@ -102,9 +102,9 @@ export default function EmployeesPage() {
     }
   }
 
-  /**
+  {/**
    * Save edits (PUT)
-   */
+   */}
   async function saveEdit() {
     if (!editing) return;
     setError("");
@@ -125,9 +125,9 @@ export default function EmployeesPage() {
     }
   }
 
-  /**
+  {/**
    * Delete employee (DELETE)
-   */
+   */}
   async function deleteEmployee(id) {
     if (!confirm("Delete this employee?")) return;
     setError("");
