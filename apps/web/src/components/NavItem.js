@@ -27,7 +27,7 @@ export default function NavItem({ href, label, icon }) {
           : "bg-white/10 hover:bg-white/14 hover:shadow-elevated-lg",
 
         // focus ring (keyboard)
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
       ].join(" ")}
     >
       <span aria-hidden="true">{icon}</span>

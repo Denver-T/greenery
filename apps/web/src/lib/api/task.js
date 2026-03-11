@@ -2,8 +2,8 @@ import { fetchApi } from "./api";
 
 // get all tasks
 export const getAllTask = async () => {
-    return await fetchApi("/tasks");
-}
+  return await fetchApi("/tasks");
+};
 
 // get task by id
 export const getTaskById = async (id) => {

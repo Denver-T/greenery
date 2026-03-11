@@ -41,7 +41,7 @@ export async function fetchApi(endpoint, options = {}) {
       // Throw an error that components can catch
       const status = response.status;
       const errorMessage = data.error || data.message || `HTTP Error ${status}`;
-      
+
       switch (status) {
         case 400:
           console.error("❌ Bad Request: The data sent was invalid.");
@@ -51,11 +51,13 @@ export async function fetchApi(endpoint, options = {}) {
           // Global Action: Clear local storage and force redirect to login
           if (typeof window !== "undefined") {
             localStorage.removeItem("token");
-            window.location.href = "/login"; 
+            window.location.href = "/login";
           }
           break;
         case 403:
-          console.error("🛑 Forbidden: You do not have permission (e.g., not an Admin).");
+          console.error(
+            "🛑 Forbidden: You do not have permission (e.g., not an Admin).",
+          );
           break;
         case 404:
           console.error("👻 Not Found: The requested resource does not exist.");
@@ -65,11 +67,10 @@ export async function fetchApi(endpoint, options = {}) {
           break;
         default:
           console.error(`⚠️ Unhandled Error (${status}):`, errorMessage);
-        }
+      }
     }
 
     return data;
-
   } catch (error) {
     console.error(`[API Error] ${method} ${endpoint}:`, error);
     throw error;
