@@ -30,13 +30,13 @@ async function jsonOrThrow(res) {
 }
 
 export default function EmployeesPage() {
-  // ----- Page state -----
+  {/* ----- Page state ----- */}
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // ----- Create form state -----
+  {/* ----- Create form state ----- */}
   const [form, setForm] = useState({
     name: "",
     role: "Technician",
@@ -46,13 +46,13 @@ export default function EmployeesPage() {
     permissionLevel: "Technician",
   });
 
-  // ----- Edit modal state -----
+  {/* ----- Edit modal state -----*/}
   const [editing, setEditing] = useState(null); // employee object or null
 
-  /**
+  {/**
    * Load employees from the unified backend.
    * This is what makes HeidiSQL inserts show up in the UI.
-   */
+   */}
   async function refresh() {
     setError("");
     setLoading(true);
