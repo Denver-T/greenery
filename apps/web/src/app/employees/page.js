@@ -47,7 +47,7 @@ export default function EmployeesPage() {
   });
 
   {/* ----- Edit modal state -----*/}
-  const [editing, setEditing] = useState(null); // employee object or null
+  const [editing, setEditing] = useState(null); {/* employee object or null */}
 
   {/**
    * Load employees from the unified backend.
