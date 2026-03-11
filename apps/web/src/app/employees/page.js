@@ -71,9 +71,9 @@ export default function EmployeesPage() {
     refresh();
   }, []);
 
-  /**
+  {/**
    * Create employee (POST)
-   */
+   */}
   async function createEmployee() {
     setError("");
     setBusy(true);
@@ -85,7 +85,7 @@ export default function EmployeesPage() {
       });
       await jsonOrThrow(res);
 
-      // Reset form and reload
+      {/* Reset form and reload */}
       setForm({
         name: "",
         role: "Technician",
@@ -102,9 +102,9 @@ export default function EmployeesPage() {
     }
   }
 
-  /**
+  {/**
    * Save edits (PUT)
-   */
+   */}
   async function saveEdit() {
     if (!editing) return;
     setError("");
@@ -125,9 +125,9 @@ export default function EmployeesPage() {
     }
   }
 
-  /**
+  {/**
    * Delete employee (DELETE)
-   */
+   */}
   async function deleteEmployee(id) {
     if (!confirm("Delete this employee?")) return;
     setError("");
