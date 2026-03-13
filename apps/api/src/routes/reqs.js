@@ -6,17 +6,6 @@ const db = require("../db");
 
 const router = express.Router();
 
-/**
- * ---------------------------------------------------------
- * Upload configuration
- * ---------------------------------------------------------
- * Uploaded images will be stored in:
- *   apps/api/uploads
- *
- * This route accepts multipart/form-data because your web form
- * uses FormData and includes a file input.
- */
-
 // Ensure upload directory exists
 const uploadDir = path.join(__dirname, "../../uploads");
 if (!fs.existsSync(uploadDir)) {
@@ -38,22 +27,16 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 /**
- * ---------------------------------------------------------
  * POST /reqs
- * ---------------------------------------------------------
- * Creates a new work request.
- * Accepts:
- * - all text form fields
- * - optional file field called "picture"
+ * Creates a new work request
  */
 router.post("/", upload.single("picture"), async (req, res, next) => {
   try {
     const body = req.body || {};
 
-    // Basic required validation
-    if (!body.referenceNumber || !body.date || !body.techName || !body.account) {
+    if (!body.referenceNumber || !body.requestDate || !body.techName || !body.account) {
       return res.status(400).json({
-        error: "referenceNumber, date, techName, and account are required",
+        error: "referenceNumber, requestDate, techName, and account are required",
       });
     }
 
@@ -62,7 +45,7 @@ router.post("/", upload.single("picture"), async (req, res, next) => {
     const [result] = await db.query(
       `INSERT INTO work_reqs (
         referenceNumber,
-        date,
+        requestDate,
         techName,
         account,
         accountContact,
@@ -80,11 +63,14 @@ router.post("/", upload.single("picture"), async (req, res, next) => {
         method,
         location,
         notes,
-        picturePath
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        picturePath,
+        assignedTo,
+        dueDate,
+        status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         body.referenceNumber,
-        body.date,
+        body.requestDate,
         body.techName,
         body.account,
         body.accountContact || null,
@@ -103,6 +89,9 @@ router.post("/", upload.single("picture"), async (req, res, next) => {
         body.location || null,
         body.notes || null,
         picturePath,
+        null,
+        null,
+        "unassigned",
       ]
     );
 
@@ -118,10 +107,7 @@ router.post("/", upload.single("picture"), async (req, res, next) => {
 });
 
 /**
- * ---------------------------------------------------------
  * GET /reqs
- * ---------------------------------------------------------
- * Useful for testing and later for list/review pages.
  */
 router.get("/", async (req, res, next) => {
   try {
@@ -129,12 +115,15 @@ router.get("/", async (req, res, next) => {
       `SELECT
         id,
         referenceNumber,
-        date,
+        requestDate,
         techName,
         account,
         actionRequired,
         location,
         picturePath,
+        assignedTo,
+        dueDate,
+        status,
         created_at
       FROM work_reqs
       ORDER BY id DESC`
@@ -147,10 +136,7 @@ router.get("/", async (req, res, next) => {
 });
 
 /**
- * ---------------------------------------------------------
  * GET /reqs/:id
- * ---------------------------------------------------------
- * Useful if later you want a details page.
  */
 router.get("/:id", async (req, res, next) => {
   try {
@@ -159,10 +145,7 @@ router.get("/:id", async (req, res, next) => {
       return res.status(400).json({ error: "Invalid id" });
     }
 
-    const [rows] = await db.query(
-      `SELECT * FROM work_reqs WHERE id = ?`,
-      [id]
-    );
+    const [rows] = await db.query(`SELECT * FROM work_reqs WHERE id = ?`, [id]);
 
     if (!rows.length) {
       return res.status(404).json({ error: "REQ not found" });

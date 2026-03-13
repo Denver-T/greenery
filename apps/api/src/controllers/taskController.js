@@ -1,26 +1,33 @@
-// apps/api/src/controllers/taskController.js
-/**
- * Task Controller
- * ---------------
- * Responsibilities:
- * - Validate incoming HTTP input (params/body) at the boundary
- * - Call the service layer for business logic
- * - Return consistent HTTP responses
- * - Forward unexpected errors to the global error handler via next(err)
- *
- * Notes:
- * - This controller does NOT know about the database.
- * - DB integration will later live inside the service layer.
- */
-
-const taskService = require("../services/taskService");
+const db = require("../db");
 const { httpError } = require("../utils/httpError");
 const { isNonEmptyString, toPositiveInt } = require("../utils/validators");
 
 exports.getTasks = async (req, res, next) => {
   try {
-    const tasks = await taskService.getTasks();
-    res.status(200).json({ data: tasks });
+    if (req.query.scope === "assignment") {
+      const [rows] = await db.query(`
+        SELECT
+          id,
+          actionRequired AS title,
+          account,
+          location,
+          assignedTo,
+          dueDate AS date,
+          status
+        FROM work_reqs
+        ORDER BY id DESC
+      `);
+
+      return res.status(200).json(rows);
+    }
+
+    const [rows] = await db.query(`
+      SELECT *
+      FROM work_reqs
+      ORDER BY id DESC
+    `);
+
+    res.status(200).json(rows);
   } catch (err) {
     next(err);
   }
@@ -28,31 +35,129 @@ exports.getTasks = async (req, res, next) => {
 
 exports.createTask = async (req, res, next) => {
   try {
-    /**
-     * Validate as early as possible (at the API boundary).
-     * This prevents bad data from flowing deeper into the system.
-     */
-    const { title, status } = req.body;
+    const {
+      referenceNumber,
+      requestDate,
+      techName,
+      account,
+      accountContact,
+      accountAddress,
+      actionRequired,
+      numberOfPlants,
+      plantWanted,
+      plantReplaced,
+      plantSize,
+      plantHeight,
+      planterTypeSize,
+      planterColour,
+      stagingMaterial,
+      lighting,
+      method,
+      location,
+      notes,
+      picturePath,
+      assignedTo,
+      dueDate,
+      status,
+    } = req.body || {};
 
-    if (!isNonEmptyString(title)) {
+    if (!isNonEmptyString(referenceNumber)) {
       return next(
-        httpError(400, "Field 'title' is required", "VALIDATION_ERROR", [
-          { field: "title", issue: "required" },
+        httpError(400, "Field 'referenceNumber' is required", "VALIDATION_ERROR", [
+          { field: "referenceNumber", issue: "required" },
         ])
       );
     }
 
-    // status is optional during scaffolding; if provided, it must be non-empty
-    if (status !== undefined && !isNonEmptyString(status)) {
+    if (!isNonEmptyString(requestDate)) {
       return next(
-        httpError(400, "Field 'status' must be a non-empty string", "VALIDATION_ERROR", [
-          { field: "status", issue: "must be a non-empty string" },
+        httpError(400, "Field 'requestDate' is required", "VALIDATION_ERROR", [
+          { field: "requestDate", issue: "required" },
         ])
       );
     }
 
-    const created = await taskService.createTask({ title, status });
-    res.status(201).json({ data: created });
+    if (!isNonEmptyString(account)) {
+      return next(
+        httpError(400, "Field 'account' is required", "VALIDATION_ERROR", [
+          { field: "account", issue: "required" },
+        ])
+      );
+    }
+
+    if (!isNonEmptyString(actionRequired)) {
+      return next(
+        httpError(400, "Field 'actionRequired' is required", "VALIDATION_ERROR", [
+          { field: "actionRequired", issue: "required" },
+        ])
+      );
+    }
+
+    const [result] = await db.query(
+      `
+      INSERT INTO work_reqs (
+        referenceNumber,
+        requestDate,
+        techName,
+        account,
+        accountContact,
+        accountAddress,
+        actionRequired,
+        numberOfPlants,
+        plantWanted,
+        plantReplaced,
+        plantSize,
+        plantHeight,
+        planterTypeSize,
+        planterColour,
+        stagingMaterial,
+        lighting,
+        method,
+        location,
+        notes,
+        picturePath,
+        assignedTo,
+        dueDate,
+        status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        referenceNumber,
+        requestDate,
+        techName ?? null,
+        account,
+        accountContact ?? null,
+        accountAddress ?? null,
+        actionRequired,
+        numberOfPlants ?? null,
+        plantWanted ?? null,
+        plantReplaced ?? null,
+        plantSize ?? null,
+        plantHeight ?? null,
+        planterTypeSize ?? null,
+        planterColour ?? null,
+        stagingMaterial ?? null,
+        lighting ?? null,
+        method ?? null,
+        location ?? null,
+        notes ?? null,
+        picturePath ?? null,
+        assignedTo ?? null,
+        dueDate ?? null,
+        status ?? "unassigned",
+      ]
+    );
+
+    const [rows] = await db.query(
+      `
+      SELECT *
+      FROM work_reqs
+      WHERE id = ?
+      `,
+      [result.insertId]
+    );
+
+    res.status(201).json(rows[0]);
   } catch (err) {
     next(err);
   }
@@ -60,11 +165,8 @@ exports.createTask = async (req, res, next) => {
 
 exports.getTaskById = async (req, res, next) => {
   try {
-    /**
-     * Route params are strings by default.
-     * Convert and validate :id so downstream code can trust it.
-     */
     const id = toPositiveInt(req.params.id);
+
     if (!id) {
       return next(
         httpError(400, "Invalid task id", "VALIDATION_ERROR", [
@@ -73,13 +175,20 @@ exports.getTaskById = async (req, res, next) => {
       );
     }
 
-    const task = await taskService.getTaskById(id);
+    const [rows] = await db.query(
+      `
+      SELECT *
+      FROM work_reqs
+      WHERE id = ?
+      `,
+      [id]
+    );
 
-    if (!task) {
+    if (rows.length === 0) {
       return next(httpError(404, "Task not found", "TASK_NOT_FOUND"));
     }
 
-    res.status(200).json({ data: task });
+    res.status(200).json(rows[0]);
   } catch (err) {
     next(err);
   }
@@ -88,6 +197,7 @@ exports.getTaskById = async (req, res, next) => {
 exports.updateTaskStatus = async (req, res, next) => {
   try {
     const id = toPositiveInt(req.params.id);
+
     if (!id) {
       return next(
         httpError(400, "Invalid task id", "VALIDATION_ERROR", [
@@ -96,23 +206,51 @@ exports.updateTaskStatus = async (req, res, next) => {
       );
     }
 
-    const { status } = req.body;
+    const { status, assignedTo, date } = req.body || {};
 
-    if (!isNonEmptyString(status)) {
+    if (
+      status !== undefined &&
+      !["unassigned", "assigned", "in_progress", "completed", "cancelled"].includes(status)
+    ) {
       return next(
-        httpError(400, "Field 'status' is required", "VALIDATION_ERROR", [
-          { field: "status", issue: "required" },
+        httpError(400, "Invalid status value", "VALIDATION_ERROR", [
+          { field: "status", issue: "invalid enum value" },
         ])
       );
     }
 
-    const updated = await taskService.updateTaskStatus(id, { status });
+    const [result] = await db.query(
+      `
+      UPDATE work_reqs
+      SET
+        status = COALESCE(?, status),
+        assignedTo = ?,
+        dueDate = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+      `,
+      [
+        status ?? null,
+        assignedTo ?? null,
+        date ?? null,
+        id,
+      ]
+    );
 
-    if (!updated) {
+    if (result.affectedRows === 0) {
       return next(httpError(404, "Task not found", "TASK_NOT_FOUND"));
     }
 
-    res.status(200).json({ data: updated });
+    const [rows] = await db.query(
+      `
+      SELECT *
+      FROM work_reqs
+      WHERE id = ?
+      `,
+      [id]
+    );
+
+    res.status(200).json(rows[0]);
   } catch (err) {
     next(err);
   }

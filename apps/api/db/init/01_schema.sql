@@ -1,83 +1,103 @@
 -- apps/api/db/init/01_schema.sql
--- Minimal schema aligned to current controllers/services (plants, tasks, users) + forward-looking tables.
 
-CREATE TABLE IF NOT EXISTS accounts (
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS schedule_events;
+DROP TABLE IF EXISTS work_reqs;
+DROP TABLE IF EXISTS plants;
+DROP TABLE IF EXISTS employees;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- Employees
+CREATE TABLE employees (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
-  role ENUM('technician','manager','admin') NOT NULL,
+  role ENUM('Technician', 'Manager', 'Administrator') NOT NULL DEFAULT 'Technician',
   email VARCHAR(255) NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  phone VARCHAR(50) NULL,
+  status ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active',
+  permissionLevel ENUM('Technician', 'Manager', 'Administrator') NOT NULL DEFAULT 'Technician',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS plants (
+-- Plants
+CREATE TABLE plants (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   location VARCHAR(150) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS tasks (
+-- Work_reqs
+CREATE TABLE IF NOT EXISTS work_reqs (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  title VARCHAR(150) NOT NULL,
-  status ENUM('assigned','in_progress','completed','cancelled') NOT NULL DEFAULT 'assigned',
-  assigned_to INT NULL,
-  plant_id INT NULL,
+  referenceNumber VARCHAR(50) NOT NULL,
+  requestDate DATE NOT NULL,
+
+  techName VARCHAR(100) NULL,
+  account VARCHAR(150) NOT NULL,
+  accountContact VARCHAR(150) NULL,
+  accountAddress VARCHAR(255) NULL,
+
+  actionRequired VARCHAR(255) NOT NULL,
+  numberOfPlants INT NULL,
+
+  plantWanted VARCHAR(150) NULL,
+  plantReplaced VARCHAR(150) NULL,
+  plantSize VARCHAR(50) NULL,
+  plantHeight VARCHAR(50) NULL,
+
+  planterTypeSize VARCHAR(150) NULL,
+  planterColour VARCHAR(100) NULL,
+  stagingMaterial VARCHAR(255) NULL,
+
+  lighting VARCHAR(50) NULL,
+  method VARCHAR(255) NULL,
+  location VARCHAR(150) NULL,
   notes TEXT NULL,
-  due_date DATETIME NULL,
+
+  picturePath VARCHAR(255) NULL,
+
+  assignedTo INT NULL,
+  dueDate DATE NULL,
+  status ENUM('unassigned', 'assigned', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'unassigned',
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_tasks_assigned_to FOREIGN KEY (assigned_to) REFERENCES accounts(id) ON DELETE SET NULL,
-  CONSTRAINT fk_tasks_plant FOREIGN KEY (plant_id) REFERENCES plants(id) ON DELETE SET NULL
+
+  CONSTRAINT fk_workreq_employee
+    FOREIGN KEY (assignedTo) REFERENCES employees(id)
+    ON DELETE SET NULL
 );
 
--- Scheduler / Calendar (basic)
-CREATE TABLE IF NOT EXISTS schedule_events (
+-- Schedule / Calendar
+CREATE TABLE schedule_events (
   id INT AUTO_INCREMENT PRIMARY KEY,
   title VARCHAR(150) NOT NULL,
   start_time DATETIME NOT NULL,
   end_time DATETIME NOT NULL,
-  account_id INT NULL,
-  task_id INT NULL,
+  employee_id INT NULL,
+  work_req_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_sched_account FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
-  CONSTRAINT fk_sched_task FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL
+  CONSTRAINT fk_sched_employee
+    FOREIGN KEY (employee_id) REFERENCES employees(id)
+    ON DELETE SET NULL,
+  CONSTRAINT fk_sched_workreq
+    FOREIGN KEY (work_req_id) REFERENCES work_reqs(id)
+    ON DELETE SET NULL
 );
 
--- E-commerce (lightweight): products + orders -> ticket-like orders (no shipping)
-CREATE TABLE IF NOT EXISTS products (
+-- Notifications
+CREATE TABLE notifications (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(150) NOT NULL,
-  description TEXT NULL,
-  price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-  active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS orders (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  account_id INT NULL,
-  status ENUM('pending','received','completed','cancelled') NOT NULL DEFAULT 'pending',
-  notes TEXT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_orders_account FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL
-);
-
-CREATE TABLE IF NOT EXISTS order_items (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  order_id INT NOT NULL,
-  product_id INT NOT NULL,
-  quantity INT NOT NULL DEFAULT 1,
-  price_each DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-  CONSTRAINT fk_item_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-  CONSTRAINT fk_item_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
-);
-
--- Notifications (basic)
-CREATE TABLE IF NOT EXISTS notifications (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  account_id INT NULL,
+  employee_id INT NULL,
   message VARCHAR(255) NOT NULL,
   is_read BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_notif_account FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL
+  CONSTRAINT fk_notif_employee
+    FOREIGN KEY (employee_id) REFERENCES employees(id)
+    ON DELETE SET NULL
 );
