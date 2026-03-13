@@ -49,7 +49,7 @@ export default function AssignmentsPage() {
    */
   async function loadData() {
     setLoading(true);
-    setMessage("");
+    setMessage("Assign a task (REQ) to an employee.");
 
     try {
       const [employeesData, tasksData] = await Promise.all([
@@ -235,15 +235,9 @@ export default function AssignmentsPage() {
   return (
     <AppShell title="Assign Tasks">
       <section className="space-y-6 p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-emerald-900">
-            Assign Tasks to Employees
-          </h1>
-        </div>
 
         {/* Assignment controls */}
-        <div className="rounded-card bg-white p-4 shadow-soft">
+        <div className="bg-white p-4 shadow-soft">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Employee</label>
@@ -294,7 +288,7 @@ export default function AssignmentsPage() {
         </div>
 
         {/* Task selector */}
-        <div className="rounded-card bg-white p-4 shadow-soft">
+        <div className="bg-white p-4 shadow-soft">
           <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="inline-flex gap-1 rounded-md bg-gray-100 p-1">
               {["unassigned", "assigned", "all"].map((k) => (
@@ -391,7 +385,7 @@ export default function AssignmentsPage() {
         </div>
 
         {/* Current assignments */}
-        <div className="rounded-card bg-white p-4 shadow-soft">
+        <div className="bg-white p-4 shadow-soft">
           <h2 className="mb-3 text-lg font-semibold text-gray-900">Current Assignments</h2>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
