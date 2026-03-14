@@ -84,9 +84,7 @@ const MENU_ITEMS = [
 export default function HomePage() {
   const navigation = useNavigation();
 
-  function onMenu() {
-    navigation.navigate('HomePage')
-  }
+
 
   return (
     <SafeAreaView style={styles.safe}>

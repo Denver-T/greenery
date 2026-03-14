@@ -83,119 +83,122 @@ export default function WorkRequestSubmit() {
           </View>
         </View>
 
-        <View style={styles.menuBlockWrap}>
-            <View style={styles.menuBlock}>
-              <Text style={styles.menuBlockText}>Work Request Submission Form</Text>
-            </View>
-        </View>
-
-        <View style={styles.formBlockWrap}>
-          <View style={styles.formBlock}>
-            <Text style={[styles.fieldLabelText, { marginBottom: 10 }, {color: COLORS.black}]}>Please enter the following information:</Text>
-            
-            <View style={styles.fieldRow}>
-              <View style={styles.fieldLabelBox}>
-                <Text style={styles.fieldLabelText}>REQ#</Text>
+        <ScrollView>
+          <View style={styles.menuBlockWrap}>
+              <View style={styles.menuBlock}>
+                <Text style={styles.menuBlockText}>Work Request Submission Form</Text>
               </View>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder='Enter Request Number'
-                onChangeText={setREQ}
-                value={REQ}
-                keyboardType='numeric'
-              />
-            </View>
-
-            <View style={styles.fieldRow}>
-              <View style={styles.fieldLabelBox}>
-                <Text style={styles.fieldLabelText}>Account Name</Text>
-              </View>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder='Enter Account Name'
-                onChangeText={setAccName}
-                value={accName}
-              />
-            </View>
-
-
-            <View style={styles.fieldRow}>
-              <View style={styles.fieldLabelBox}>
-                <Text style={styles.fieldLabelText}>Address</Text>
-              </View>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder='Enter Address'
-                onChangeText={setAddress}
-                value={address}
-              />
-            </View>
-
-            <View style={styles.fieldRow}>
-              <View style={styles.fieldLabelBox}>
-                <Text style={styles.fieldLabelText}>Type of Work</Text>
-              </View>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder='Enter Type of Work Needed'
-                onChangeText={setWorkType}
-                value={workType}
-              />
-            </View>
-
-            <View style={styles.fieldRow}>
-              <View style={styles.fieldLabelBox}>
-                <Text style={styles.fieldLabelText}>Plant Work</Text>
-              </View>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder='Enter Plant(s) that need work'
-                onChangeText={setPlantWork}
-                value={plantWork}
-              />
-            </View>
-
-            <View style={styles.fieldRow}>
-              <View style={styles.fieldLabelBox}>
-                <Text style={styles.fieldLabelText}>Plant Location</Text>
-              </View>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder='Enter Plant Location'
-                onChangeText={setPlantLocation}
-                value={plantLocation}
-              />
-            </View>
-
-            <View style={styles.fieldRow}>
-              <View style={styles.fieldLabelBox}>
-                <Text style={styles.fieldLabelText}>Plant Needed</Text>
-              </View>
-              <TextInput
-                style={styles.fieldInput} 
-                placeholder='Enter any Plant(s) Needed'
-                onChangeText={setPlantNeeded}
-                value={plantNeeded}
-              />
-            </View>
-            
-            <View style={styles.fieldRow}>
-              <View style={styles.fieldLabelBox}>
-                <Text style={styles.fieldLabelText}>Account Contact</Text>
-              </View>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder='Enter Account Contact'
-                onChangeText={setAccContact}
-                value={accContact}
-              />
-            </View>
-
-            <Pressable onPress={handleSubmit} style={styles.submitButton}>
-              <Text style={{ color: COLORS.white, fontWeight: '700', fontSize: 16 }}>Submit</Text>
-            </Pressable>
           </View>
-        </View>        
+
+
+          <View style={styles.formBlockWrap}>
+            <View style={styles.formBlock}>
+              <Text style={[styles.fieldLabelText, { marginBottom: 10 }, {color: COLORS.black}]}>Please enter the following information:</Text>
+              
+              <View style={styles.fieldRow}>
+                <View style={styles.fieldLabelBox}>
+                  <Text style={styles.fieldLabelText}>REQ#</Text>
+                </View>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder='Enter Request Number'
+                  onChangeText={setREQ}
+                  value={REQ}
+                  keyboardType='numeric'
+                />
+              </View>
+
+              <View style={styles.fieldRow}>
+                <View style={styles.fieldLabelBox}>
+                  <Text style={styles.fieldLabelText}>Account Name</Text>
+                </View>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder='Enter Account Name'
+                  onChangeText={setAccName}
+                  value={accName}
+                />
+              </View>
+
+
+              <View style={styles.fieldRow}>
+                <View style={styles.fieldLabelBox}>
+                  <Text style={styles.fieldLabelText}>Address</Text>
+                </View>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder='Enter Address'
+                  onChangeText={setAddress}
+                  value={address}
+                />
+              </View>
+
+              <View style={styles.fieldRow}>
+                <View style={styles.fieldLabelBox}>
+                  <Text style={styles.fieldLabelText}>Type of Work</Text>
+                </View>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder='Enter Type of Work Needed'
+                  onChangeText={setWorkType}
+                  value={workType}
+                />
+              </View>
+
+              <View style={styles.fieldRow}>
+                <View style={styles.fieldLabelBox}>
+                  <Text style={styles.fieldLabelText}>Plant Work</Text>
+                </View>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder='Enter Plant(s) That Need Work'
+                  onChangeText={setPlantWork}
+                  value={plantWork}
+                />
+              </View>
+
+              <View style={styles.fieldRow}>
+                <View style={styles.fieldLabelBox}>
+                  <Text style={styles.fieldLabelText}>Plant Location</Text>
+                </View>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder='Enter Plant Location'
+                  onChangeText={setPlantLocation}
+                  value={plantLocation}
+                />
+              </View>
+
+              <View style={styles.fieldRow}>
+                <View style={styles.fieldLabelBox}>
+                  <Text style={styles.fieldLabelText}>Plant Needed</Text>
+                </View>
+                <TextInput
+                  style={styles.fieldInput} 
+                  placeholder='Enter any Plant(s) Needed'
+                  onChangeText={setPlantNeeded}
+                  value={plantNeeded}
+                />
+              </View>
+              
+              <View style={styles.fieldRow}>
+                <View style={styles.fieldLabelBox}>
+                  <Text style={styles.fieldLabelText}>Account Contact</Text>
+                </View>
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder='Enter Account Contact'
+                  onChangeText={setAccContact}
+                  value={accContact}
+                />
+              </View>
+
+              <Pressable onPress={handleSubmit} style={styles.submitButton}>
+                <Text style={{ color: COLORS.white, fontWeight: '700', fontSize: 16 }}>Submit</Text>
+              </Pressable>
+            </View>
+          </View>
+        </ScrollView>        
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -298,7 +301,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   fieldLabelBox: {
-    width: 130,
+    width: 120,
     height: 44,
     borderWidth: 1,
     borderColor: COLORS.cardBorder,
