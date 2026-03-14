@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   ImageBackground,
   SafeAreaView,
@@ -8,33 +8,26 @@ import {
   ScrollView,
   Pressable,
   StatusBar,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import NavBar from '../components/NavBar';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import NavBar from "../components/NavBar";
 
-const BG = require('../assets/bg.jpg');
+import { requestList } from "../mock/temp";
+
+const BG = require("../assets/bg.jpg");
 
 const COLORS = {
-  green: '#6f8641',
-  greenDark: '#5e7833',
-  blockGreen: '#6f8641',
-  black: '#000000',
-  textOnGreen: '#ffffff',
-  cardFill: '#ffffff',
-  cardBorder: '#d9e1c8',
-  tint: 'rgba(125,145,98,0.25)',
-  mutedText: '#e9efd9',
+  green: "#6f8641",
+  greenDark: "#5e7833",
+  blockGreen: "#6f8641",
+  black: "#000000",
+  textOnGreen: "#ffffff",
+  cardFill: "#ffffff",
+  cardBorder: "#d9e1c8",
+  tint: "rgba(125,145,98,0.25)",
+  mutedText: "#e9efd9",
 };
-
-//Mock data for now, logic to fetch real work requests from the backend will go here.
-const mockRequests = [
-  { id: 1738, submittedBy: 'Magnus Mullen' },
-  { id: 5463, submittedBy: 'Magnus Mullen' },
-  { id: 4123, submittedBy: 'Phil Philerson' },
-  { id: 7453, submittedBy: 'John Doe' },
-  { id: 9999, submittedBy: 'Jane Doe' },
-];
 
 export default function WorkRequestView() {
   const navigation = useNavigation();
@@ -52,7 +45,11 @@ export default function WorkRequestView() {
 
         <View style={styles.topBar}>
           <View style={styles.topBarSide}>
-            <Ionicons name="person-outline" size={22} color={COLORS.textOnGreen} />
+            <Ionicons
+              name="person-outline"
+              size={22}
+              color={COLORS.textOnGreen}
+            />
           </View>
 
           <View style={styles.topBarCenter}>
@@ -60,8 +57,12 @@ export default function WorkRequestView() {
             <Text style={styles.topSubtitle}>Mobile View</Text>
           </View>
 
-          <View style={[styles.topBarSide, { alignItems: 'flex-end' }]}>
-            <Ionicons name="notifications-outline" size={22} color={COLORS.textOnGreen} />
+          <View style={[styles.topBarSide, { alignItems: "flex-end" }]}>
+            <Ionicons
+              name="notifications-outline"
+              size={22}
+              color={COLORS.textOnGreen}
+            />
           </View>
         </View>
 
@@ -75,7 +76,7 @@ export default function WorkRequestView() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {mockRequests.map((req) => (
+          {requestList.map((req) => (
             <View key={req.id} style={styles.card}>
               {/* Row 1: Header */}
               <View style={styles.cardHeader}>
@@ -97,7 +98,10 @@ export default function WorkRequestView() {
                   <Text style={styles.submittedName}>{req.submittedBy}</Text>
                 </View>
 
-                <Pressable style={styles.arrowButton} onPress={() => openRequest(req.id)}>
+                <Pressable
+                  style={styles.arrowButton}
+                  onPress={() => openRequest(req.id)}
+                >
                   <Ionicons name="arrow-forward" size={20} color="#fff" />
                 </Pressable>
               </View>
@@ -123,17 +127,17 @@ const styles = StyleSheet.create({
   topBar: {
     height: 52,
     backgroundColor: COLORS.green,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
     elevation: 6,
   },
   topBarSide: { width: 32 },
-  topBarCenter: { flex: 1, alignItems: 'center' },
+  topBarCenter: { flex: 1, alignItems: "center" },
   topTitle: {
     color: COLORS.textOnGreen,
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0.3,
   },
   topSubtitle: {
@@ -151,14 +155,14 @@ const styles = StyleSheet.create({
     height: 56,
     backgroundColor: COLORS.blockGreen,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     elevation: 6,
   },
   menuBlockText: {
     color: COLORS.textOnGreen,
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 0.5,
   },
 
@@ -178,8 +182,8 @@ const styles = StyleSheet.create({
   },
 
   cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
   },
 
@@ -188,28 +192,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 24,
     borderRadius: 12,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   cardHeaderText: {
     color: COLORS.textOnGreen,
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: "800",
   },
 
   cardBody: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
 
   submittedLabel: {
     fontSize: 15,
-    color: '#6a7b56',
-    fontWeight: '700',
+    color: "#6a7b56",
+    fontWeight: "700",
     marginLeft: 5,
   },
   submittedName: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: "800",
     color: COLORS.greenDark,
     marginTop: 2,
     marginLeft: 5,
@@ -220,18 +224,18 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: COLORS.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 'auto',
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: "auto",
   },
   inlineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
   },
 
   tabBar: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
