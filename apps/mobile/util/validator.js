@@ -54,28 +54,28 @@ export const validateAccContact = (accContact) => {
 
 export const validateWorkRequest = (requestForm) => {
   if (!validateREQ(requestForm.req)) {
-    return { result: false, message: "please input valid REQ!" };
+    return { result: false, message: "Please input valid REQ!" };
   }
   if (!validateAccountName(requestForm.accountName)) {
-    return { result: false, message: "please input valid accountName!" };
+    return { result: false, message: "Please input valid accountName!" };
   }
   if (!validateAddress(requestForm.address)) {
-    return { result: false, message: "please input valid address!" };
+    return { result: false, message: "Please input valid address!" };
   }
   if (!validateWorkType(requestForm.workType)) {
-    return { result: false, message: "please input valid workType!" };
+    return { result: false, message: "Please input valid workType!" };
   }
   if (!validatePlantWork(requestForm.plantWork)) {
-    return { result: false, message: "please input valid plantWork!" };
+    return { result: false, message: "Please input valid plantWork!" };
   }
   if (!validatePlantLocation(requestForm.plantLocation)) {
-    return { result: false, message: "please input valid plantLocation!" };
+    return { result: false, message: "Please input valid plantLocation!" };
   }
   if (!validatePlantNeeded(requestForm.plantNeeded)) {
-    return { result: false, message: "please input valid plantNeeded!" };
+    return { result: false, message: "Please input valid plantNeeded!" };
   }
   if (!validateAccContact(requestForm.accountContact)) {
-    return { result: false, message: "please input valid accountContact!" };
+    return { result: false, message: "Please input valid accountContact!" };
   }
   return { result: true };
 };
