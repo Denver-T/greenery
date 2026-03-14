@@ -194,7 +194,7 @@ exports.getTaskById = async (req, res, next) => {
   }
 };
 
-exports.updateTaskStatus = async (req, res, next) => {
+exports.updateTaskStatus = async (req, res) => {
   try {
     const id = toPositiveInt(req.params.id);
 
