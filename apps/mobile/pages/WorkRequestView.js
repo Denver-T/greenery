@@ -33,7 +33,7 @@ export default function WorkRequestView() {
   const navigation = useNavigation();
 
   const openRequest = () => {
-    //Navigation Logic to open the work request details screen will go here.
+    navigation.navigate("WorkRequestDetails");
   };
 
   return (
