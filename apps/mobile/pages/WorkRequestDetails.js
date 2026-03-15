@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   ImageBackground,
   SafeAreaView,
@@ -12,6 +12,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import NavBar from "../components/NavBar";
+import { getItemByReq } from "../mock/temp";
 
 const BG = require("../assets/bg.jpg");
 const RADIUS = 12;
@@ -29,14 +30,32 @@ const COLORS = {
   red: "#96050d",
 };
 
-export default function WorkRequestDetails() {
-  const navigation = useNavigation();
+export default function WorkRequestDetails({ route, navigation }) {
+  const req = route.params;
+  function onClose() {
+    navigation.goBack();
+  }
 
-    function onClose() {
-        navigation.goBack();
-    }
+  const [detailData, setDetailData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    const fetchDetails = async () => {
+      setIsLoading(true);
 
-  
+      try {
+        const data = getItemByReq(req);
+
+        setDetailData(data);
+      } catch (error) {
+        console.error("Error fetching details:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDetails();
+  }, [req]);
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar backgroundColor={COLORS.green} barStyle="light-content" />
@@ -65,109 +84,124 @@ export default function WorkRequestDetails() {
         <ScrollView>
           <View style={styles.menuBlockWrap}>
             <View style={styles.menuBlock}>
-              <Text style={styles.menuBlockText}>
-                Work Request Details
-              </Text>
+              <Text style={styles.menuBlockText}>Work Request Details</Text>
             </View>
           </View>
-
-          <View style={styles.formBlockWrap}>
-            <View style={styles.formBlock}>
-              <Text
-                style={[
-                  styles.fieldLabelText,
-                  { marginBottom: 10 },
-                  { color: COLORS.black },
-                ]}
-              >
-                "REQ#1738 - Submitted by Magnus Mullen" {/*Replace with actual Request Number and Name of Submitter*/}
-              </Text>
-
-              <View style={styles.fieldRow}>
-                <View style={styles.fieldLabelBox}>
-                  <Text style={styles.fieldLabelText}>REQ#</Text>
-                </View>
-                <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>Import Request ID Here</Text>
-                </View>
-              </View>
-
-              <View style={styles.fieldRow}>
-                <View style={styles.fieldLabelBox}>
-                  <Text style={styles.fieldLabelText}>Account Name</Text>
-                </View>
-                <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>Import Account Name Here</Text>
-                </View>
-              </View>
-
-              <View style={styles.fieldRow}>
-                <View style={styles.fieldLabelBox}>
-                  <Text style={styles.fieldLabelText}>Address</Text>
-                </View>
-                <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>Import Address Here</Text>
-                </View>
-              </View>
-
-              <View style={styles.fieldRow}>
-                <View style={styles.fieldLabelBox}>
-                  <Text style={styles.fieldLabelText}>Type of Work</Text>
-                </View>
-                <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>Import Type of Work Here</Text>
-                </View>
-              </View>
-
-              <View style={styles.fieldRow}>
-                <View style={styles.fieldLabelBox}>
-                  <Text style={styles.fieldLabelText}>Plant Work</Text>
-                </View>
-                <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>Import Plant Work Here</Text>
-                </View>
-              </View>
-
-              <View style={styles.fieldRow}>
-                <View style={styles.fieldLabelBox}>
-                  <Text style={styles.fieldLabelText}>Plant Location</Text>
-                </View>
-                <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>Import Plant Location Here</Text>
-                </View>
-              </View>
-
-              <View style={styles.fieldRow}>
-                <View style={styles.fieldLabelBox}>
-                  <Text style={styles.fieldLabelText}>Plant Needed</Text>
-                </View>
-                <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>Import Plant Needed Here</Text>
-                </View>
-              </View>
-
-              <View style={styles.fieldRow}>
-                <View style={styles.fieldLabelBox}>
-                  <Text style={styles.fieldLabelText}>Account Contact</Text>
-                </View>
-                <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>Import Account Contact Here</Text>
-                </View>
-              </View>
-
-              <Pressable onPress={onClose} style={styles.submitButton}>
+          {isLoading ? (
+            <Text>Loading details...</Text>
+          ) : (
+            <View style={styles.formBlockWrap}>
+              <View style={styles.formBlock}>
                 <Text
-                  style={{
-                    color: COLORS.white,
-                    fontWeight: "700",
-                    fontSize: 16,
-                  }}
+                  style={[
+                    styles.fieldLabelText,
+                    { marginBottom: 10 },
+                    { color: COLORS.black },
+                  ]}
                 >
-                  Close
+                  REQ#{detailData.req} - Submitted by {detailData.accountName}
                 </Text>
-              </Pressable>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>REQ#</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>{detailData.req}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Account Name</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.accountName}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Address</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.address}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Type of Work</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.workType}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Plant Work</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.plantWork}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Plant Location</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.plantLocation}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Plant Needed</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.plantNeeded}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Account Contact</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.accountContact}
+                    </Text>
+                  </View>
+                </View>
+
+                <Pressable onPress={onClose} style={styles.submitButton}>
+                  <Text
+                    style={{
+                      color: COLORS.white,
+                      fontWeight: "700",
+                      fontSize: 16,
+                    }}
+                  >
+                    Close
+                  </Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
+          )}
         </ScrollView>
 
         <ScrollView

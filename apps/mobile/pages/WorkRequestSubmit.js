@@ -57,6 +57,7 @@ export default function WorkRequestSubmit() {
     // Return true if valid, false if not
     const validateRes = validateWorkRequest(item);
     if (!validateRes.result) {
+      console.log(validateRes.message);
       return false;
     } else {
       return true;

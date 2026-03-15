@@ -32,8 +32,8 @@ const COLORS = {
 export default function WorkRequestView() {
   const navigation = useNavigation();
 
-  const openRequest = () => {
-    navigation.navigate("WorkRequestDetails");
+  const openRequest = (req) => {
+    navigation.navigate("WorkRequestDetails", req);
   };
 
   return (
@@ -77,7 +77,7 @@ export default function WorkRequestView() {
           showsVerticalScrollIndicator={false}
         >
           {requestList.map((req) => (
-            <View key={req.id} style={styles.card}>
+            <View key={req.req} style={styles.card}>
               {/* Row 1: Header */}
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderPill}>
@@ -87,7 +87,7 @@ export default function WorkRequestView() {
                 <View style={{ flex: 1 }} />
 
                 <View style={styles.cardHeaderPill}>
-                  <Text style={styles.cardHeaderText}>#{req.id}</Text>
+                  <Text style={styles.cardHeaderText}>#{req.req}</Text>
                 </View>
               </View>
 
@@ -95,12 +95,12 @@ export default function WorkRequestView() {
               <View style={styles.cardBody}>
                 <View style={styles.inlineRow}>
                   <Text style={styles.submittedLabel}>Submitted By:</Text>
-                  <Text style={styles.submittedName}>{req.submittedBy}</Text>
+                  <Text style={styles.submittedName}>{req.accountName}</Text>
                 </View>
 
                 <Pressable
                   style={styles.arrowButton}
-                  onPress={() => openRequest(req.id)}
+                  onPress={() => openRequest(req.req)}
                 >
                   <Ionicons name="arrow-forward" size={20} color="#fff" />
                 </Pressable>
