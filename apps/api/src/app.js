@@ -16,6 +16,7 @@
 
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 
 // Route Modules
 const healthRoutes = require("./routes/health");
@@ -26,6 +27,7 @@ const taskRoutes = require("./routes/tasks");
 const plantRoutes = require("./routes/plants");
 const userRoutes = require("./routes/users");
 const employeeRoutes = require("./routes/employees");
+const reqRoutes = require("./routes/reqs");
 
 // Global Middleware
 const notFound = require("./middleware/notFound");
@@ -45,6 +47,7 @@ const app = express();
  */
 app.use(cors());
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 /**
  * Route Mounting
@@ -59,6 +62,7 @@ app.use("/tasks", taskRoutes);         // Task domain
 app.use("/plants", plantRoutes);       // Plant domain
 app.use("/users", userRoutes);         // User domain
 app.use("/employees", employeeRoutes); // Employee domain
+app.use("/reqs", reqRoutes);           // Work Requests domain
 
 
 // User

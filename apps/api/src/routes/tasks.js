@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-
+const db = require("../db");
 const taskController = require("../controllers/taskController");
 
 /**
@@ -204,42 +204,34 @@ router.post("/", taskController.createTask);
  */
 router.patch("/:id", taskController.updateTaskStatus);
 
-/**
- * @swagger
- * /tasks/{id}/assign:
- *   patch:
- *     summary: Assign task to a user
- *     description: Updates the assigned user of a task
- *     tags:
- *       - Tasks
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         description: Task ID
- *         schema:
- *           type: integer
- *           example: 101
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - assignedUserId
- *             properties:
- *               assignedUserId:
- *                 type: integer
- *                 example: 3
- *     responses:
- *       200:
- *         description: Task assigned successfully
- *       400:
- *         description: Invalid input
- *       404:
- *         description: Task not found
- */
-router.patch("/:id/assign", taskController.assignTask);
+router.post("/assign", async (req, res, next) => {
+  try {
+    const { employeeId, dueDate, taskIds } = req.body || {};
+
+    if (!employeeId || !dueDate || !Array.isArray(taskIds) || taskIds.length === 0) {
+      return res.status(400).json({
+        error: "employeeId, dueDate, and taskIds are required",
+      });
+    }
+
+    const placeholders = taskIds.map(() => "?").join(",");
+
+    const [result] = await db.query(
+      `
+      UPDATE work_reqs
+      SET assignedTo = ?, dueDate = ?, status = 'assigned'
+      WHERE id IN (${placeholders})
+      `,
+      [employeeId, dueDate, ...taskIds]
+    );
+
+    res.json({
+      ok: true,
+      updated: result.affectedRows,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;
