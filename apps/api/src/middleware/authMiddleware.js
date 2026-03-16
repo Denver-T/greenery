@@ -1,4 +1,4 @@
-const admin = require("../config/firebase");
+const admin = require("../../config/firebase");
 const { httpError } = require("../utils/httpError");
 
 /**
@@ -42,7 +42,10 @@ async function verifyToken(req, res, next) {
 
     return next();
   } catch (err) {
-    console.error("verifyToken failed:", err);
+    console.error("verifyToken failed");
+    console.error("code:", err?.code);
+    console.error("message:", err?.message);
+    console.error("stack:", err?.stack);
 
     return next(
       httpError(401, "Invalid authentication token", "AUTH_TOKEN_INVALID")

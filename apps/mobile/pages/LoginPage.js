@@ -1,5 +1,6 @@
-//This is the login page
-//Aka what the user first sees when they open the app.
+// pages/LoginScreen.js
+// This is the login page
+// Aka what the user first sees when they open the app.
 
 import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
@@ -18,7 +19,9 @@ import {
   Alert,
 } from 'react-native';
 
-const BG = require('../assets/bg.jpg');    // leafy background
+import { login, auth } from '../util/firebase';
+
+const BG = require('../assets/bg.jpg'); // leafy background
 const LOGO = require('../assets/logo.png'); // poster/logo image
 
 export default function LoginScreen() {
@@ -30,17 +33,48 @@ export default function LoginScreen() {
   const navigation = useNavigation();
 
   async function onSignIn() {
-    if (!email.trim() || !password) {
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedEmail || !password) {
       Alert.alert('Missing info', 'Please enter both email and password.');
       return;
     }
+
     setLoading(true);
+
     try {
-      /* 
-      Login Functionality
-      */
+      // 1) Sign in with Firebase Auth
+      const user = await login(trimmedEmail, password);
+
+      // 2) Get a Firebase ID token for backend verification
+      const token = await user.getIdToken(true);
+      console.log("Token exists:", !!token);
+      console.log("Token preview:", token?.slice(0, 20));
+
+      // 3) Ask the backend who this user is in the local accounts table
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/me`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.message || 'Unable to verify account with API');
+      }
+
+      console.log('Firebase user:', auth.currentUser?.email);
+      console.log('Backend account:', result?.data);
+
+      // 4) Navigate after successful auth + backend verification
+      navigation.navigate('HomePage');
     } catch (err) {
-      Alert.alert('Error', (err && err.message) || 'Unable to sign in');
+      Alert.alert('Error', err?.message || 'Unable to sign in');
     } finally {
       setLoading(false);
     }
@@ -49,27 +83,24 @@ export default function LoginScreen() {
   function onForgotPassword() {
     navigation.navigate('ForgotPassword');
   }
-  
-  function onHomePage(){
-        navigation.navigate('HomePage');
-    }
+
+  function onHomePage() {
+    navigation.navigate('HomePage');
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
       <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
-        {/* green tint overlay */}
         <View style={styles.tint} />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === 'android' ? 'padding' : undefined}
           style={styles.container}
         >
-          {/* Top logo card */}
           <View style={styles.logoCard}>
             <Image source={LOGO} style={styles.logoImage} resizeMode="cover" />
           </View>
 
-          {/* Login card */}
           <View style={styles.formCard}>
             <Text style={styles.label}>Email</Text>
             <View style={styles.inputShell}>
@@ -118,6 +149,7 @@ export default function LoginScreen() {
               <Text style={styles.forgotText}>Forgot password?</Text>
             </Pressable>
           </View>
+
           <View>
             <Pressable onPress={onHomePage}>
               <Text>To Home Screen</Text>
@@ -129,9 +161,9 @@ export default function LoginScreen() {
   );
 }
 
-const GREEN = '#556f26';     // button green
-const CARD_BG = '#f2f2f2';   // light card fill
-const BORDER = '#c8c8c8';    // input border
+const GREEN = '#556f26';
+const CARD_BG = '#f2f2f2';
+const BORDER = '#c8c8c8';
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#2f4f2f' },
