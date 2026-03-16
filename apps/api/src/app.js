@@ -1,3 +1,5 @@
+// apps/api/src/app.js
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -17,21 +19,6 @@ const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
-
-/**
- * Express Application Configuration
- * ---------------------------------
- * Responsible for:
- * - Initializing global middleware
- * - Mounting route modules
- * - Registering Swagger documentation
- * - Registering final error handlers
- *
- * This file does NOT:
- * - Start the HTTP server
- * - Contain business logic
- * - Contain database logic
- */
 
 /**
  * Core middleware

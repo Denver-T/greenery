@@ -1,56 +1,76 @@
-import {
-  listEmployees,
-  createEmployee,
-  updateEmployee,
-  deleteEmployee,
-} from "../services/employees.service.js";
+// apps/api/src/controllers/employeesController.js
 
-export async function getAll(req, res) {
+const employeesService = require("../services/employeesService");
+
+async function getAll(req, res, next) {
   try {
-    const rows = await listEmployees();
+    const rows = await employeesService.listEmployees();
     res.json(rows);
   } catch (err) {
-    console.error("GET /api/employees error:", err);
-    res.status(500).json({ error: "Failed to load employees" });
+    next(err);
   }
 }
 
-export async function create(req, res) {
+async function create(req, res, next) {
   try {
-    const created = await createEmployee(req.body);
+    const created = await employeesService.createEmployee(req.body);
     res.status(201).json(created);
   } catch (err) {
-    const msg = err?.message || "Failed to create employee";
-    res.status(msg.includes("required") ? 400 : 500).json({ error: msg });
+    if (err.message === "Name is required") {
+      return res.status(400).json({ error: err.message });
+    }
+
+    next(err);
   }
 }
 
-export async function update(req, res) {
+async function update(req, res, next) {
   try {
     const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid id" });
 
-    const affected = await updateEmployee(id, req.body);
-    if (!affected) return res.status(404).json({ error: "Not found" });
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ error: "Invalid id" });
+    }
+
+    const updated = await employeesService.updateEmployee(id, req.body);
+
+    if (!updated) {
+      return res.status(404).json({ error: "Not found" });
+    }
 
     res.json({ ok: true });
   } catch (err) {
-    const msg = err?.message || "Failed to update employee";
-    res.status(msg.includes("required") ? 400 : 500).json({ error: msg });
+    if (err.message === "Name is required") {
+      return res.status(400).json({ error: err.message });
+    }
+
+    next(err);
   }
 }
 
-export async function remove(req, res) {
+async function remove(req, res, next) {
   try {
     const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return res.status(400).json({ error: "Invalid id" });
 
-    const affected = await deleteEmployee(id);
-    if (!affected) return res.status(404).json({ error: "Not found" });
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ error: "Invalid id" });
+    }
+
+    const deleted = await employeesService.deleteEmployee(id);
+
+    if (!deleted) {
+      return res.status(404).json({ error: "Not found" });
+    }
 
     res.json({ ok: true });
   } catch (err) {
-    console.error("DELETE /api/employees error:", err);
-    res.status(500).json({ error: "Failed to delete employee" });
+    next(err);
   }
 }
+
+module.exports = {
+  getAll,
+  create,
+  update,
+  remove,
+};
