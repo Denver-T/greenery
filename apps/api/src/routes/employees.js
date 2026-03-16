@@ -2,11 +2,52 @@
 
 const express = require("express");
 const router = express.Router();
-const employeesController = require("../controllers/employeesController");
 
-router.get("/", employeesController.getAll);
-router.post("/", employeesController.create);
-router.put("/:id", employeesController.update);
-router.delete("/:id", employeesController.remove);
+const employeesController = require("../controllers/employeesController");
+const { verifyToken } = require("../middleware/authMiddleware");
+const { authorize } = require("../middleware/authorize");
+const { writeLimiter } = require("../middleware/rateLimiters");
+
+/**
+ * Employees Routes
+ * ----------------
+ * Protected employee resource endpoints.
+ *
+ * Access model:
+ * - technicians, managers, admins can read
+ * - managers and admins can create/update
+ * - admins can delete
+ */
+
+router.get(
+  "/",
+  verifyToken,
+  authorize("technician", "manager", "admin"),
+  employeesController.getAll
+);
+
+router.post(
+  "/",
+  writeLimiter,
+  verifyToken,
+  authorize("manager", "admin"),
+  employeesController.create
+);
+
+router.put(
+  "/:id",
+  writeLimiter,
+  verifyToken,
+  authorize("manager", "admin"),
+  employeesController.update
+);
+
+router.delete(
+  "/:id",
+  writeLimiter,
+  verifyToken,
+  authorize("admin"),
+  employeesController.remove
+);
 
 module.exports = router;

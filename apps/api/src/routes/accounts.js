@@ -1,5 +1,7 @@
 const express = require("express");
 const accountController = require("../controllers/accountController");
+const { verifyToken } = require("../middleware/authMiddleware");
+const { authorize } = require("../middleware/authorize");
 const { writeLimiter } = require("../middleware/rateLimiters");
 
 const router = express.Router();
@@ -152,7 +154,7 @@ const router = express.Router();
  *                   items:
  *                     $ref: '#/components/schemas/Account'
  */
-router.get("/", accountController.getAccounts);
+router.get("/", verifyToken, authorize("manager", "admin"), accountController.getAccounts);
 
 /**
  * @swagger
@@ -192,7 +194,12 @@ router.get("/", accountController.getAccounts);
  *             schema:
  *               $ref: '#/components/schemas/NotFoundError'
  */
-router.get("/:id", accountController.getAccountById);
+router.get(
+  "/:id",
+  verifyToken,
+  authorize("manager", "admin"),
+  accountController.getAccountById
+);
 
 /**
  * @swagger
@@ -233,7 +240,13 @@ router.get("/:id", accountController.getAccountById);
  *       429:
  *         description: Too many requests
  */
-router.post("/", writeLimiter, accountController.createAccount);
+router.post(
+  "/",
+  writeLimiter,
+  verifyToken,
+  authorize("admin"),
+  accountController.createAccount
+);
 
 /**
  * @swagger
@@ -287,7 +300,13 @@ router.post("/", writeLimiter, accountController.createAccount);
  *       429:
  *         description: Too many requests
  */
-router.put("/:id", writeLimiter, accountController.updateAccount);
+router.put(
+  "/:id",
+  writeLimiter,
+  verifyToken,
+  authorize("admin"),
+  accountController.updateAccount
+);
 
 /**
  * @swagger
@@ -330,6 +349,12 @@ router.put("/:id", writeLimiter, accountController.updateAccount);
  *       429:
  *         description: Too many requests
  */
-router.delete("/:id", writeLimiter, accountController.deleteAccount);
+router.delete(
+  "/:id",
+  writeLimiter,
+  verifyToken,
+  authorize("admin"),
+  accountController.deleteAccount
+);
 
 module.exports = router;
