@@ -1,227 +1,103 @@
 -- apps/api/db/init/01_schema.sql
--- Enhanced schema with constraints, regex validation, and input checks.
 
--- ============================================
--- ACCOUNTS
--- ============================================
+SET FOREIGN_KEY_CHECKS = 0;
 
-CREATE TABLE IF NOT EXISTS accounts (
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS schedule_events;
+DROP TABLE IF EXISTS work_reqs;
+DROP TABLE IF EXISTS plants;
+DROP TABLE IF EXISTS employees;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- Employees
+CREATE TABLE employees (
   id INT AUTO_INCREMENT PRIMARY KEY,
-
-  name VARCHAR(100) NOT NULL
-    CHECK (CHAR_LENGTH(name) >= 2),
-
-  role ENUM('technician','manager','admin') NOT NULL,
-
-  email VARCHAR(255) NULL UNIQUE
-    CHECK (
-      email IS NULL OR
-      email REGEXP '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
-    ),
-
-  phone VARCHAR(12) NULL
-    CHECK (
-      phone IS NULL OR
-      phone REGEXP '^[0-9-]{0,12}$'
-    ),
-
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  name VARCHAR(100) NOT NULL,
+  role ENUM('Technician', 'Manager', 'Administrator') NOT NULL DEFAULT 'Technician',
+  email VARCHAR(255) NULL,
+  phone VARCHAR(50) NULL,
+  status ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active',
+  permissionLevel ENUM('Technician', 'Manager', 'Administrator') NOT NULL DEFAULT 'Technician',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- ============================================
--- PLANTS
--- ============================================
-
-CREATE TABLE IF NOT EXISTS plants (
+-- Plants
+CREATE TABLE plants (
   id INT AUTO_INCREMENT PRIMARY KEY,
-
-  name VARCHAR(100) NOT NULL
-    CHECK (CHAR_LENGTH(name) >= 2),
-
+  name VARCHAR(100) NOT NULL,
   location VARCHAR(150) NULL,
-
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- TASKS
--- ============================================
-
-CREATE TABLE IF NOT EXISTS tasks (
+-- Work_reqs
+CREATE TABLE IF NOT EXISTS work_reqs (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  referenceNumber VARCHAR(50) NOT NULL,
+  requestDate DATE NOT NULL,
 
-  title VARCHAR(150) NOT NULL
-    CHECK (CHAR_LENGTH(title) >= 3),
+  techName VARCHAR(100) NULL,
+  account VARCHAR(150) NOT NULL,
+  accountContact VARCHAR(150) NULL,
+  accountAddress VARCHAR(255) NULL,
 
-  status ENUM('assigned','in_progress','completed','cancelled')
-    NOT NULL DEFAULT 'assigned',
+  actionRequired VARCHAR(255) NOT NULL,
+  numberOfPlants INT NULL,
 
-  assigned_to INT NULL,
+  plantWanted VARCHAR(150) NULL,
+  plantReplaced VARCHAR(150) NULL,
+  plantSize VARCHAR(50) NULL,
+  plantHeight VARCHAR(50) NULL,
 
-  plant_id INT NULL,
+  planterTypeSize VARCHAR(150) NULL,
+  planterColour VARCHAR(100) NULL,
+  stagingMaterial VARCHAR(255) NULL,
 
+  lighting VARCHAR(50) NULL,
+  method VARCHAR(255) NULL,
+  location VARCHAR(150) NULL,
   notes TEXT NULL,
 
-  due_date DATETIME NULL
-    CHECK (due_date IS NULL OR due_date >= '2000-01-01'),
+  picturePath VARCHAR(255) NULL,
+
+  assignedTo INT NULL,
+  dueDate DATE NULL,
+  status ENUM('unassigned', 'assigned', 'in_progress', 'completed', 'cancelled') NOT NULL DEFAULT 'unassigned',
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    ON UPDATE CURRENT_TIMESTAMP,
-
-  CONSTRAINT fk_tasks_assigned_to
-    FOREIGN KEY (assigned_to)
-    REFERENCES accounts(id)
+  CONSTRAINT fk_workreq_employee
+    FOREIGN KEY (assignedTo) REFERENCES employees(id)
     ON DELETE SET NULL
-    ON UPDATE CASCADE,
-
-  CONSTRAINT fk_tasks_plant
-    FOREIGN KEY (plant_id)
-    REFERENCES plants(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE
 );
 
--- ============================================
--- SCHEDULE EVENTS
--- ============================================
-
-CREATE TABLE IF NOT EXISTS schedule_events (
+-- Schedule / Calendar
+CREATE TABLE schedule_events (
   id INT AUTO_INCREMENT PRIMARY KEY,
-
-  title VARCHAR(150) NOT NULL
-    CHECK (CHAR_LENGTH(title) >= 3),
-
+  title VARCHAR(150) NOT NULL,
   start_time DATETIME NOT NULL,
-
   end_time DATETIME NOT NULL,
-
-  account_id INT NULL,
-
-  task_id INT NULL,
-
+  employee_id INT NULL,
+  work_req_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-  CONSTRAINT chk_schedule_time
-    CHECK (end_time >= start_time),
-
-  CONSTRAINT fk_sched_account
-    FOREIGN KEY (account_id)
-    REFERENCES accounts(id)
+  CONSTRAINT fk_sched_employee
+    FOREIGN KEY (employee_id) REFERENCES employees(id)
+    ON DELETE SET NULL,
+  CONSTRAINT fk_sched_workreq
+    FOREIGN KEY (work_req_id) REFERENCES work_reqs(id)
     ON DELETE SET NULL
-    ON UPDATE CASCADE,
-
-  CONSTRAINT fk_sched_task
-    FOREIGN KEY (task_id)
-    REFERENCES tasks(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE
 );
 
--- ============================================
--- PRODUCTS
--- ============================================
-
-CREATE TABLE IF NOT EXISTS products (
+-- Notifications
+CREATE TABLE notifications (
   id INT AUTO_INCREMENT PRIMARY KEY,
-
-  name VARCHAR(150) NOT NULL
-    CHECK (CHAR_LENGTH(name) >= 2),
-
-  description TEXT NULL,
-
-  price DECIMAL(10,2) NOT NULL DEFAULT 0.00
-    CHECK (price >= 0),
-
-  active BOOLEAN NOT NULL DEFAULT TRUE,
-
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================
--- ORDERS
--- ============================================
-
-CREATE TABLE IF NOT EXISTS orders (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-
-  account_id INT NULL,
-
-  status ENUM('pending','received','completed','cancelled')
-    NOT NULL DEFAULT 'pending',
-
-  notes TEXT NULL,
-
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-  CONSTRAINT fk_orders_account
-    FOREIGN KEY (account_id)
-    REFERENCES accounts(id)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE
-);
-
--- ============================================
--- ORDER ITEMS
--- ============================================
-
-CREATE TABLE IF NOT EXISTS order_items (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-
-  order_id INT NOT NULL,
-
-  product_id INT NOT NULL,
-
-  quantity INT NOT NULL DEFAULT 1
-    CHECK (quantity > 0 AND quantity <= 10000),
-
-  price_each DECIMAL(10,2) NOT NULL DEFAULT 0.00
-    CHECK (price_each >= 0),
-
-  CONSTRAINT fk_item_order
-    FOREIGN KEY (order_id)
-    REFERENCES orders(id)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-
-  CONSTRAINT fk_item_product
-    FOREIGN KEY (product_id)
-    REFERENCES products(id)
-    ON DELETE RESTRICT
-    ON UPDATE CASCADE
-);
-
--- ============================================
--- NOTIFICATIONS
--- ============================================
-
-CREATE TABLE IF NOT EXISTS notifications (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-
-  account_id INT NULL,
-
-  message VARCHAR(255) NOT NULL
-    CHECK (CHAR_LENGTH(message) >= 1),
-
+  employee_id INT NULL,
+  message VARCHAR(255) NOT NULL,
   is_read BOOLEAN NOT NULL DEFAULT FALSE,
-
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-  CONSTRAINT fk_notif_account
-    FOREIGN KEY (account_id)
-    REFERENCES accounts(id)
+  CONSTRAINT fk_notif_employee
+    FOREIGN KEY (employee_id) REFERENCES employees(id)
     ON DELETE SET NULL
-    ON UPDATE CASCADE
 );
-
--- ============================================
--- INDEXES (performance)
--- ============================================
-
-CREATE INDEX idx_accounts_email ON accounts(email);
-CREATE INDEX idx_tasks_assigned_to ON tasks(assigned_to);
-CREATE INDEX idx_tasks_plant_id ON tasks(plant_id);
-CREATE INDEX idx_orders_account ON orders(account_id);
-CREATE INDEX idx_order_items_order ON order_items(order_id);
-CREATE INDEX idx_notifications_account ON notifications(account_id);

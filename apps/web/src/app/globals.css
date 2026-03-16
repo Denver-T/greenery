@@ -83,3 +83,31 @@ a, button {
     0 2px 3px rgba(0,0,0,.08),
     0 6px 12px rgba(0,0,0,.16);
 }
+
+/* === Form control defaults ===
+   Make actual text dark, and keep placeholders lighter.
+   Works for light & dark themes because the inputs are on white cards. */
+:is(input, textarea, select) {
+  color: #111827;            /* gray-900 */
+}
+
+/* Placeholder should be visually distinct (lighter) */
+:is(input, textarea)::placeholder {
+  color: #9ca3af;            /* gray-400 */
+}
+
+/* Improve disabled/read-only contrast a touch */
+:is(input, textarea, select):disabled,
+:is(input, textarea, select)[readonly] {
+  color: #6b7280;            /* gray-500 */
+}
+
+
+/* Tailwind v4: simple custom utility for fields */
+@utility field {
+  color: #111827;            /* text-gray-900 */
+}
+@utility field-placeholder {
+  /* Use together with "placeholder:field-placeholder" if you want */
+  color: #9ca3af;            /* text-gray-400 */
+}

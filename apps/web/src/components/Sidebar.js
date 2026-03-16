@@ -2,13 +2,13 @@ import NavItem from "./NavItem";
 import UserChip from "./UserChip";
 
 const items = [
-  { href: "/dashboard", label: "Dashboard Analytics", icon: "📊" },
-  { href: "/req",       label: "REQ List",            icon: "📝" },
-  { href: "/taskSets", label: "Create Task Sets",    icon: "🧩" },
-  { href: "/employees", label: "Manage Employees",    icon: "👥" },
-  { href: "/calendar",  label: "View Calendar",       icon: "📅" },
-  { href: "/tasks",     label: "View Tasks",          icon: "✅" },
-  { href: "/inventory",     label: "View Inventory",          icon: "📦" },
+  { href: "/dashboard", label: "Dashboard Analytics"},
+  { href: "/req",       label: "REQ List"},
+  { href: "/assigntasks", label: "Assign Tasks"},
+  { href: "/employees", label: "Manage Employees"},
+  { href: "/calendar",  label: "View Calendar"},
+  { href: "/tasks",     label: "View Tasks"},
+  { href: "/inventory",     label: "View Inventory"},
 
 ];
 

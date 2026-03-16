@@ -1,4 +1,5 @@
 const { getPool } = require("../db");
+const { validateString, validateEmail, validatePhone, validateEnum } = require("../utils/validators");
 
 async function listEmployees() {
   const pool = getPool();
@@ -11,14 +12,19 @@ async function listEmployees() {
 async function createEmployee(emp) {
   const pool = getPool();
 
-  const name = (emp.name || "").trim();
-  if (!name) throw new Error("Name is required");
+  // Validate and sanitize inputs
+  const name = validateString(emp.name, { required: true, maxLength: 30 });
+  if (!name) throw new Error("Name is required and must be 30 characters or less");
 
-  const role = emp.role || "Technician";
-  const email = emp.email || null;
-  const phone = emp.phone || null;
-  const status = emp.status || "Active";
-  const permissionLevel = emp.permissionLevel || role;
+  const role = validateEnum(emp.role, ['Technician', 'Manager', 'Administrator'], 'Technician');
+  const email = validateEmail(emp.email);
+  if (email === null) throw new Error("Invalid email format");
+
+  const phone = validatePhone(emp.phone);
+  if (phone === null) throw new Error("Invalid phone format");
+
+  const status = validateEnum(emp.status, ['Active', 'Inactive'], 'Active');
+  const permissionLevel = validateEnum(emp.permissionLevel || emp.role, ['Technician', 'Manager', 'Administrator'], role);
 
   const [result] = await pool.query(
     `INSERT INTO employees (name, role, email, phone, status, permissionLevel)
@@ -32,14 +38,19 @@ async function createEmployee(emp) {
 async function updateEmployee(id, emp) {
   const pool = getPool();
 
-  const name = (emp.name || "").trim();
-  if (!name) throw new Error("Name is required");
+  // Validate and sanitize inputs
+  const name = validateString(emp.name, { required: true, maxLength: 30 });
+  if (!name) throw new Error("Name is required and must be 30 characters or less");
 
-  const role = emp.role || "Technician";
-  const email = emp.email || null;
-  const phone = emp.phone || null;
-  const status = emp.status || "Active";
-  const permissionLevel = emp.permissionLevel || role;
+  const role = validateEnum(emp.role, ['Technician', 'Manager', 'Administrator'], 'Technician');
+  const email = validateEmail(emp.email);
+  if (email === null) throw new Error("Invalid email format");
+
+  const phone = validatePhone(emp.phone);
+  if (phone === null) throw new Error("Invalid phone format");
+
+  const status = validateEnum(emp.status, ['Active', 'Inactive'], 'Active');
+  const permissionLevel = validateEnum(emp.permissionLevel || emp.role, ['Technician', 'Manager', 'Administrator'], role);
 
   const [result] = await pool.query(
     `UPDATE employees

@@ -1,51 +1,89 @@
-"use client";
 
+"use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-/**
- * Firebase placeholder:
- * Later you’ll replace mockLogin() with Firebase signInWithEmailAndPassword()
- * and optionally Google sign-in.
- *
- * Example later:
- *   import { signInWithEmailAndPassword } from "firebase/auth";
- *   import { auth } from "@/lib/firebase";
- */
+import { auth } from "./lib/firebaseClient"; 
+import {
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  sendPasswordResetEmail,
+} from "firebase/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function mockLogin() {
-    // Replace this with Firebase later.
-    // For now, this just simulates login and routes to your dashboard.
-    await new Promise((r) => setTimeout(r, 600));
-
-    // Simple validation so it feels real
-    if (!email.includes("@") || password.length < 4) {
-      throw new Error("Please enter a valid email and password.");
+  function translateFirebaseError(code) {
+    switch (code) {
+      case "auth/invalid-email": return "That email address looks invalid.";
+      case "auth/user-disabled": return "This account has been disabled.";
+      case "auth/user-not-found": return "No account found with that email.";
+      case "auth/wrong-password": return "Incorrect password. Try again.";
+      case "auth/popup-blocked": return "Popup was blocked. Allow popups and try again.";
+      case "auth/popup-closed-by-user": return "Popup closed before completing sign in.";
+      case "auth/too-many-requests": return "Too many attempts. Please wait and try again.";
+      default: return "Login failed. Please try again.";
     }
+  }
 
-    // Optional: simple role routing later
-    // router.push("/dashboard");
-    router.push("apps\web\src\app\dashboard\page.js");
+  async function withPersistence(fn) {
+    await setPersistence(
+      auth,
+      rememberMe ? browserLocalPersistence : browserSessionPersistence
+    );
+    return fn();
   }
 
   async function onSubmit(e) {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
-      await mockLogin();
+      await withPersistence(() =>
+        signInWithEmailAndPassword(auth, email, password)
+      );
+      router.push("/dashboard"); // change to your target route
     } catch (err) {
-      setError(err?.message || "Login failed.");
+      setError(translateFirebaseError(err?.code));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function onGoogle() {
+    setError("");
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await withPersistence(() => signInWithPopup(auth, provider));
+      router.push("/dashboard");
+    } catch (err) {
+      setError(translateFirebaseError(err?.code));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function onForgotPassword() {
+    if (!email) {
+      setError("Enter your email first, then click Forgot password.");
+      return;
+    }
+    setError("");
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert("If that email exists, a reset link has been sent.");
+    } catch (err) {
+      setError(translateFirebaseError(err?.code));
     } finally {
       setLoading(false);
     }
@@ -54,17 +92,14 @@ export default function LoginPage() {
   return (
     <div style={styles.page}>
       <div style={styles.bgOverlay} />
-
       <div style={styles.card}>
-        <div style={styles.header}>
-          <div style={styles.logoCircle}>
-            <span style={styles.logoLeaf}>🌿</span>
-          </div>
+        <header style={styles.header}>
+          <div style={styles.logoCircle}><span style={styles.logoLeaf}>🌿</span></div>
           <div>
-            <h1 style={styles.title}>Greenery Portal</h1>
+            <h2 style={styles.title}>Greenery Portal</h2>
             <p style={styles.subtitle}>Sign in to access your dashboard</p>
           </div>
-        </div>
+        </header>
 
         <form onSubmit={onSubmit} style={styles.form}>
           <label style={styles.label}>
@@ -77,7 +112,6 @@ export default function LoginPage() {
               autoComplete="email"
             />
           </label>
-
           <label style={styles.label}>
             Password
             <input
@@ -99,58 +133,34 @@ export default function LoginPage() {
               />
               <span style={styles.checkboxText}>Remember me</span>
             </label>
-
-            <button
-              type="button"
-              onClick={() =>
-                alert("Hook this to Firebase password reset later")
-              }
-              style={styles.linkBtn}
-            >
+            <button type="button" onClick={onForgotPassword} style={styles.linkBtn}>
               Forgot password?
             </button>
           </div>
 
           {error ? <div style={styles.error}>{error}</div> : null}
 
-          <button type="submit" style={styles.primaryBtn} disabled={loading}>
+          <button disabled={loading} className="primary" style={styles.primaryBtn}>
             {loading ? "Signing in..." : "Sign In"}
           </button>
-
-          {/* skip logging and go to dashboard */}
-          <button
-            onClick={() => router.push("/dashboard")}
-            style={styles.secondaryBtn}
-          >
-            Skip Login and Go to Dashboard
-          </button>
-
-          <div style={styles.divider}>
-            <span style={styles.dividerLine} />
-            <span style={styles.dividerText}>Firebase Auth Placeholder</span>
-            <span style={styles.dividerLine} />
-          </div>
-
-          <button
-            type="button"
-            style={styles.secondaryBtn}
-            onClick={() =>
-              alert(
-                "Later: connect Firebase Google Sign-In here.\nFor now this is just a placeholder.",
-              )
-            }
-          >
-            Continue with Google (later)
-          </button>
-
-          <p style={styles.footerText}>
-            Don’t have access? Contact your administrator.
-          </p>
         </form>
+
+        <div style={styles.divider}>
+          <div style={styles.dividerLine} />
+          <span style={styles.dividerText}>or</span>
+          <div style={styles.dividerLine} />
+        </div>
+
+        <button disabled={loading} onClick={onGoogle} style={styles.secondaryBtn}>
+          Continue with Google
+        </button>
+
+        <p style={styles.footerText}>Don’t have access? Contact your administrator.</p>
       </div>
     </div>
   );
 }
+
 
 const styles = {
   page: {
