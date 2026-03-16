@@ -1,11 +1,7 @@
-// web/src/lib/firebase.js
+// apps/web/src/lib/firebase.js
+
 import { initializeApp, getApps, getApp } from "firebase/app";
-import {
-  getAuth,
-  setPersistence,
-  browserLocalPersistence,
-  GoogleAuthProvider,
-} from "firebase/auth";
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -16,12 +12,22 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+const requiredKeys = [
+  "apiKey",
+  "authDomain",
+  "projectId",
+  "storageBucket",
+  "messagingSenderId",
+  "appId",
+];
+
+for (const key of requiredKeys) {
+  if (!firebaseConfig[key]) {
+    throw new Error(`Missing Firebase web config value: ${key}`);
+  }
+}
+
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// keep users signed in across browser refreshes
-setPersistence(auth, browserLocalPersistence).catch(console.error);
-
-const googleProvider = new GoogleAuthProvider();
-
-export { app, auth, googleProvider };
+export { app, auth };
