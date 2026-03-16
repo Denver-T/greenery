@@ -23,8 +23,6 @@
 
 module.exports = (err, req, res, next) => {
   // Express requires 4 args for error middleware.
-  // We intentionally do not call `next()` here because we are the terminal handler.
-  // eslint-disable-next-line no-unused-vars
   void next;
 
   /**
@@ -55,8 +53,6 @@ module.exports = (err, req, res, next) => {
       code: "DATABASE_UNAVAILABLE",
       message:
         "Database service is unavailable. Ensure MySQL is running and environment variables are configured.",
-      // Keep response payloads small but useful for debugging client-side.
-      // If you later adopt `details`, ensure it's always an array.
       details: [],
       timestamp: now,
     });
@@ -88,7 +84,6 @@ module.exports = (err, req, res, next) => {
     status: "error",
     code: err?.code || "INTERNAL_SERVER_ERROR",
     message: err?.message || "Internal Server Error",
-    // Always provide `details` as an array to keep clients consistent.
     details: Array.isArray(err?.details) ? err.details : [],
     timestamp: now,
   });

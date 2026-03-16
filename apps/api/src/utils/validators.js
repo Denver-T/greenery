@@ -1,3 +1,5 @@
+// apps/api/src/utils/validators.js
+
 /**
  * validators.js
  * -------------
@@ -74,7 +76,9 @@ function validateEmail(email) {
   if (!email) return email; // Allow null for optional
 
   // Comprehensive email regex that follows RFC 5322 standards
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  const emailRegex =
+    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:[.][a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
   return validateString(email, { maxLength: 255, pattern: emailRegex });
 }
 
@@ -88,7 +92,9 @@ function validatePhone(phone) {
 
   // Comprehensive phone regex supporting multiple international formats
   // Supports: +1 (555) 555-5555, +44 20 7123 4567, (555) 555-5555, 555-555-5555, 5555555555
-  const phoneRegex = /^[\+]?[1-9][\d]{0,3}?[\s\-\.]?[\(]?[\d]{1,4}[\)]?[\s\-\.]?[\d]{1,4}[\s\-\.]?[\d]{1,4}[\s\-\.]?[\d]{0,4}$/;
+  const phoneRegex =
+    /^[+]?[1-9][\d]{0,3}?[\s.-]?[(]?[\d]{1,4}[)]?[\s.-]?[\d]{1,4}[\s.-]?[\d]{1,4}[\s.-]?[\d]{0,4}$/;
+
   return validateString(phone, { maxLength: 50, pattern: phoneRegex });
 }
 
@@ -114,7 +120,9 @@ function validateEnum(value, allowedValues, defaultValue) {
 function validateUrl(url) {
   if (!url) return url; // Allow null for optional
 
-  const urlRegex = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
+  const urlRegex =
+    /^https?:\/\/(www[.])?[-a-zA-Z0-9@:%._+~#=]{1,256}[.][a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$/;
+
   return validateString(url, { maxLength: 500, pattern: urlRegex });
 }
 
@@ -130,7 +138,7 @@ function validatePassword(password, options = {}) {
     requireUppercase = true,
     requireLowercase = true,
     requireNumbers = true,
-    requireSpecialChars = false
+    requireSpecialChars = false,
   } = options;
 
   if (!password || password.length < minLength) {
@@ -149,9 +157,20 @@ function validatePassword(password, options = {}) {
     return null;
   }
 
-  if (requireSpecialChars && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  if (requireSpecialChars && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
     return null;
   }
 
   return password;
 }
+
+module.exports = {
+  isNonEmptyString,
+  toPositiveInt,
+  validateString,
+  validateEmail,
+  validatePhone,
+  validateEnum,
+  validateUrl,
+  validatePassword,
+};

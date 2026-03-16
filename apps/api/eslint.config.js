@@ -5,12 +5,10 @@ const js = require("@eslint/js");
 const globals = require("globals");
 
 module.exports = [
-  // Ignore generated / vendor folders
   {
     ignores: ["node_modules/**", "coverage/**", "dist/**", "build/**"],
   },
 
-  // Lint all JS files in this package
   {
     files: ["**/*.js"],
     languageOptions: {
@@ -22,9 +20,19 @@ module.exports = [
     },
     rules: {
       ...js.configs.recommended.rules,
-
-      // Team-friendly defaults (not too strict)
       "no-console": "off",
+    },
+  },
+
+  // Optional: only keep this block if employeesController.js truly uses import/export
+  {
+    files: ["src/controllers/employeesController.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: {
+        ...globals.node,
+      },
     },
   },
 ];
