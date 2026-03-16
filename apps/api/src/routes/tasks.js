@@ -1,4 +1,6 @@
 const express = require("express");
+const { verifyToken } = require("../middleware/authMiddleware");
+const { authorize } = require("../middleware/authorize");
 const { writeLimiter } = require("../middleware/rateLimiters");
 const taskController = require("../controllers/taskController");
 
@@ -170,7 +172,12 @@ const router = express.Router();
  *                   items:
  *                     $ref: '#/components/schemas/Task'
  */
-router.get("/", taskController.getTasks);
+router.get(
+  "/",
+  verifyToken,
+  authorize("technician", "manager", "admin"),
+  taskController.getTasks
+);
 
 /**
  * @swagger
@@ -208,7 +215,12 @@ router.get("/", taskController.getTasks);
  *             schema:
  *               $ref: '#/components/schemas/TaskNotFoundError'
  */
-router.get("/:id", taskController.getTaskById);
+router.get(
+  "/:id",
+  verifyToken,
+  authorize("technician", "manager", "admin"),
+  taskController.getTaskById
+);
 
 /**
  * @swagger
@@ -245,7 +257,13 @@ router.get("/:id", taskController.getTaskById);
  *       429:
  *         description: Too many requests
  */
-router.post("/", writeLimiter, taskController.createTask);
+router.post(
+  "/",
+  writeLimiter,
+  verifyToken,
+  authorize("manager", "admin"),
+  taskController.createTask
+);
 
 /**
  * @swagger
@@ -291,7 +309,13 @@ router.post("/", writeLimiter, taskController.createTask);
  *       429:
  *         description: Too many requests
  */
-router.patch("/:id/status", writeLimiter, taskController.updateTaskStatus);
+router.patch(
+  "/:id/status",
+  writeLimiter,
+  verifyToken,
+  authorize("technician", "manager", "admin"),
+  taskController.updateTaskStatus
+);
 
 /**
  * @swagger
@@ -337,6 +361,12 @@ router.patch("/:id/status", writeLimiter, taskController.updateTaskStatus);
  *       429:
  *         description: Too many requests
  */
-router.patch("/:id/assign", writeLimiter, taskController.assignTask);
+router.patch(
+  "/:id/assign",
+  writeLimiter,
+  verifyToken,
+  authorize("manager", "admin"),
+  taskController.assignTask
+);
 
 module.exports = router;

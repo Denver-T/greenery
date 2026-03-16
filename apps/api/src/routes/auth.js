@@ -69,11 +69,16 @@ router.get(
 
 /**
  * GET /auth/health
- * Simple protected-route namespace health check.
+ * Protected-route namespace health check.
  */
-router.get("/health", (req, res) => {
+router.get("/health", verifyToken, (req, res) => {
   return res.status(200).json({
     message: "Auth routes are mounted",
+    user: {
+      uid: req.user?.uid || null,
+      email: req.user?.email || null,
+      role: req.user?.role || null,
+    },
   });
 });
 

@@ -1,4 +1,6 @@
 // apps/api/src/controllers/taskController.js
+// Minimal note change only; the existing controller logic can stay as-is.
+// The service above preserves the task-shaped API.
 
 const taskService = require("../services/taskService");
 const { httpError } = require("../utils/httpError");
@@ -28,13 +30,8 @@ function normalizeOptionalString(value) {
 /**
  * Validate and normalize create-task payload.
  *
- * Supported fields:
- * - title (required)
- * - status (optional)
- * - assigned_to / assignedUserId (optional)
- * - plant_id (optional)
- * - notes (optional)
- * - due_date (optional)
+ * Compatibility shape for the /tasks API.
+ * The service maps this payload into work_reqs internally.
  */
 function validateAndNormalizeCreateTaskPayload(body) {
   const rawTitle = body?.title;
