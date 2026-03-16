@@ -1,21 +1,10 @@
 "use client";
 
 /**
- * Employees page (WEB)
- * ----------------------------------------------------------
- * This is UI only. It does NOT touch the database directly.
+ * Employee management page.
  *
  * Data flow:
  *   Next.js UI -> calls apps/api (HTTP) -> apps/api talks to MySQL
- *
- * API endpoints used:
- *   GET    http://localhost:3001/employees
- *   POST   http://localhost:3001/employees
- *   PUT    http://localhost:3001/employees/:id
- *   DELETE http://localhost:3001/employees/:id
- *
- * Config:
- *   Set NEXT_PUBLIC_API_URL in apps/web/.env.local
  */
 
 import { useEffect, useState } from "react";
@@ -46,11 +35,15 @@ export default function EmployeesPage() {
     permissionLevel: "Technician",
   });
 
+  // ----- Form validation state -----
+  const [formErrors, setFormErrors] = useState({});
+
   // ----- Edit modal state -----
   const [editing, setEditing] = useState(null); // employee object or null
+  const [editErrors, setEditErrors] = useState({});
 
   /**
-   * Load employees from the unified backend.
+   * Loads employees from the unified backend.
    * This is what makes HeidiSQL inserts show up in the UI.
    */
   async function refresh() {
@@ -72,9 +65,52 @@ export default function EmployeesPage() {
   }, []);
 
   /**
+   * Client-side validation functions
+   */
+  function validateEmployeeData(data) {
+    const errors = {};
+
+    // Name validation
+    if (!data.name || !data.name.trim()) {
+      errors.name = "Name is required";
+    } else if (data.name.trim().length > 30) {
+      errors.name = "Name must be 30 characters or less";
+    }
+
+    // Email validation (optional but must be valid if provided)
+    if (data.email && data.email.trim()) {
+      const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+      if (!emailRegex.test(data.email.trim())) {
+        errors.email = "Please enter a valid email address";
+      } else if (data.email.length > 45) {
+        errors.email = "Email must be 45 characters or less";
+      }
+    }
+
+    // Phone validation (optional but must be valid if provided)
+    if (data.phone && data.phone.trim()) {
+      const phoneRegex = /^[\+]?[1-9][\d]{0,3}?[\s\-\.]?[\(]?[\d]{1,4}[\)]?[\s\-\.]?[\d]{1,4}[\s\-\.]?[\d]{1,4}[\s\-\.]?[\d]{0,4}$/;
+      if (!phoneRegex.test(data.phone.trim())) {
+        errors.phone = "Please enter a valid phone number (e.g., (555) 555-5555), 5555555555";
+      } else if (data.phone.length > 12) {
+        errors.phone = "Phone must be 12 characters or less";
+      }
+    }
+    return errors;
+  }
+
+  /**
    * Create employee (POST)
    */
   async function createEmployee() {
+    // Validate form data
+    const errors = validateEmployeeData(form);
+    setFormErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      return; // Don't submit if there are validation errors
+    }
+
     setError("");
     setBusy(true);
     try {
@@ -94,6 +130,7 @@ export default function EmployeesPage() {
         status: "Active",
         permissionLevel: "Technician",
       });
+      setFormErrors({});
       await refresh();
     } catch (e) {
       setError(e.message || "Failed to create employee.");
@@ -107,6 +144,15 @@ export default function EmployeesPage() {
    */
   async function saveEdit() {
     if (!editing) return;
+
+    // Validate editing data
+    const errors = validateEmployeeData(editing);
+    setEditErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      return; // Don't submit if there are validation errors
+    }
+
     setError("");
     setBusy(true);
     try {
@@ -117,6 +163,7 @@ export default function EmployeesPage() {
       });
       await jsonOrThrow(res);
       setEditing(null);
+      setEditErrors({});
       await refresh();
     } catch (e) {
       setError(e.message || "Failed to update employee.");
@@ -156,7 +203,7 @@ export default function EmployeesPage() {
         ) : null}
 
         {/* Create form */}
-        <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="mb-6 2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-3 text-lg font-extrabold text-brand-700">
             Create New Employee
           </div>
@@ -165,17 +212,18 @@ export default function EmployeesPage() {
             <label className="grid gap-1">
               <span className="text-sm font-bold text-gray-700">Name</span>
               <input
-                className="rounded-xl border border-gray-200 px-3 py-2"
+                className={`rounded-xl border px-3 py-2 ${formErrors.name ? 'border-red-500' : 'border-gray-200'}`}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g., Tung Sahur"
+                placeholder="e.g., Magnus Mullen"
               />
+              {formErrors.name && <span className="text-xs text-red-600">{formErrors.name}</span>}
             </label>
 
             <label className="grid gap-1">
               <span className="text-sm font-bold text-gray-700">Role</span>
               <select
-                className="rounded-xl border border-gray-200 px-3 py-2"
+                className={`rounded-xl border px-3 py-2 ${formErrors.role ? 'border-red-500' : 'border-gray-200'}`}
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
               >
@@ -183,44 +231,48 @@ export default function EmployeesPage() {
                 <option>Manager</option>
                 <option>Administrator</option>
               </select>
+              {formErrors.role && <span className="text-xs text-red-600">{formErrors.role}</span>}
             </label>
 
             <label className="grid gap-1">
               <span className="text-sm font-bold text-gray-700">Email</span>
               <input
-                className="rounded-xl border border-gray-200 px-3 py-2"
+                className={`rounded-xl border px-3 py-2 ${formErrors.email ? 'border-red-500' : 'border-gray-200'}`}
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="example@greenery.ca"
               />
+              {formErrors.email && <span className="text-xs text-red-600">{formErrors.email}</span>}
             </label>
 
             <label className="grid gap-1">
               <span className="text-sm font-bold text-gray-700">Phone</span>
               <input
-                className="rounded-xl border border-gray-200 px-3 py-2"
+                className={`rounded-xl border px-3 py-2 ${formErrors.phone ? 'border-red-500' : 'border-gray-200'}`}
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 placeholder="555-555-5555"
               />
+              {formErrors.phone && <span className="text-xs text-red-600">{formErrors.phone}</span>}
             </label>
 
             <label className="grid gap-1">
               <span className="text-sm font-bold text-gray-700">Status</span>
               <select
-                className="rounded-xl border border-gray-200 px-3 py-2"
+                className={`rounded-xl border px-3 py-2 ${formErrors.status ? 'border-red-500' : 'border-gray-200'}`}
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
               >
                 <option>Active</option>
                 <option>Inactive</option>
               </select>
+              {formErrors.status && <span className="text-xs text-red-600">{formErrors.status}</span>}
             </label>
 
             <label className="grid gap-1">
               <span className="text-sm font-bold text-gray-700">Permission Level</span>
               <select
-                className="rounded-xl border border-gray-200 px-3 py-2"
+                className={`rounded-xl border px-3 py-2 ${formErrors.permissionLevel ? 'border-red-500' : 'border-gray-200'}`}
                 value={form.permissionLevel}
                 onChange={(e) => setForm({ ...form, permissionLevel: e.target.value })}
               >
@@ -228,6 +280,7 @@ export default function EmployeesPage() {
                 <option>Manager</option>
                 <option>Administrator</option>
               </select>
+              {formErrors.permissionLevel && <span className="text-xs text-red-600">{formErrors.permissionLevel}</span>}
             </label>
           </div>
 
@@ -248,14 +301,10 @@ export default function EmployeesPage() {
               Refresh
             </button>
           </div>
-
-          <p className="mt-3 text-xs font-semibold text-gray-500">
-            Data comes from <code>{API_BASE}/employees</code> (apps/api). HeidiSQL inserts will appear after Refresh.
-          </p>
         </div>
 
         {/* List */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-3 text-lg font-extrabold text-brand-700">All Employees</div>
 
           {loading ? (
@@ -286,9 +335,12 @@ export default function EmployeesPage() {
 
                   <div className="mt-3 flex gap-2">
                     <button
-                      className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 font-extrabold disabled:opacity-60"
+                      className="flex-1 rounded-xl border border-grey-200 bg-white px-3 py-2 font-extrabold text-black disabled:opacity-60"
                       disabled={busy}
-                      onClick={() => setEditing({ ...emp })}
+                      onClick={() => {
+                        setEditing({ ...emp });
+                        setEditErrors({});
+                      }}
                     >
                       Edit
                     </button>
@@ -322,16 +374,17 @@ export default function EmployeesPage() {
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">Name</span>
                   <input
-                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    className={`rounded-xl border px-3 py-2 ${editErrors.name ? 'border-red-500' : 'border-gray-200'}`}
                     value={editing.name || ""}
                     onChange={(e) => setEditing({ ...editing, name: e.target.value })}
                   />
+                  {editErrors.name && <span className="text-xs text-red-600">{editErrors.name}</span>}
                 </label>
 
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">Role</span>
                   <select
-                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    className={`rounded-xl border px-3 py-2 ${editErrors.role ? 'border-red-500' : 'border-gray-200'}`}
                     value={editing.role || "Technician"}
                     onChange={(e) => setEditing({ ...editing, role: e.target.value })}
                   >
@@ -339,42 +392,46 @@ export default function EmployeesPage() {
                     <option>Manager</option>
                     <option>Administrator</option>
                   </select>
+                  {editErrors.role && <span className="text-xs text-red-600">{editErrors.role}</span>}
                 </label>
 
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">Email</span>
                   <input
-                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    className={`rounded-xl border px-3 py-2 ${editErrors.email ? 'border-red-500' : 'border-gray-200'}`}
                     value={editing.email || ""}
                     onChange={(e) => setEditing({ ...editing, email: e.target.value })}
                   />
+                  {editErrors.email && <span className="text-xs text-red-600">{editErrors.email}</span>}
                 </label>
 
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">Phone</span>
                   <input
-                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    className={`rounded-xl border px-3 py-2 ${editErrors.phone ? 'border-red-500' : 'border-gray-200'}`}
                     value={editing.phone || ""}
                     onChange={(e) => setEditing({ ...editing, phone: e.target.value })}
                   />
+                  {editErrors.phone && <span className="text-xs text-red-600">{editErrors.phone}</span>}
                 </label>
 
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">Status</span>
                   <select
-                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    className={`rounded-xl border px-3 py-2 ${editErrors.status ? 'border-red-500' : 'border-gray-200'}`}
                     value={editing.status || "Active"}
                     onChange={(e) => setEditing({ ...editing, status: e.target.value })}
                   >
                     <option>Active</option>
                     <option>Inactive</option>
                   </select>
+                  {editErrors.status && <span className="text-xs text-red-600">{editErrors.status}</span>}
                 </label>
 
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">Permission Level</span>
                   <select
-                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    className={`rounded-xl border px-3 py-2 ${editErrors.permissionLevel ? 'border-red-500' : 'border-gray-200'}`}
                     value={editing.permissionLevel || editing.role || "Technician"}
                     onChange={(e) =>
                       setEditing({ ...editing, permissionLevel: e.target.value })
@@ -384,6 +441,7 @@ export default function EmployeesPage() {
                     <option>Manager</option>
                     <option>Administrator</option>
                   </select>
+                  {editErrors.permissionLevel && <span className="text-xs text-red-600">{editErrors.permissionLevel}</span>}
                 </label>
               </div>
 
@@ -391,7 +449,10 @@ export default function EmployeesPage() {
                 <button
                   className="rounded-xl border border-gray-200 bg-white px-4 py-2 font-extrabold"
                   disabled={busy}
-                  onClick={() => setEditing(null)}
+                  onClick={() => {
+                    setEditing(null);
+                    setEditErrors({});
+                  }}
                 >
                   Cancel
                 </button>
@@ -403,10 +464,6 @@ export default function EmployeesPage() {
                   {busy ? "Saving..." : "Save"}
                 </button>
               </div>
-
-              <p className="mt-3 text-xs font-semibold text-gray-500">
-                Saves to <code>{API_BASE}/employees/{editing.id}</code>
-              </p>
             </div>
           </div>
         ) : null}

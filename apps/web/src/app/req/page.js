@@ -83,7 +83,7 @@ export default function ReqPage() {
               <label className="mb-1 text-sm font-medium text-gray-700">Date</label>
               <input
                 type="date"
-                name="date"
+                name="requestDate"
                 defaultValue={today}
                 className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900"
                 required
