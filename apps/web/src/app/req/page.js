@@ -1,5 +1,7 @@
 "use client";
 
+"use client";
+
 import AppShell from "@/components/AppShell";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";

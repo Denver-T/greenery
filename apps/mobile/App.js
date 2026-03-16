@@ -12,6 +12,7 @@ import EventCalendar from './pages/EventCalendar';
 import TaskSets from './pages/TaskSets';
 import PTO from './pages/PTO';
 import WeeklySchedule from './pages/WeeklySchedule';
+import WorkRequestDetails from './pages/WorkRequestDetails';
 
 const Stack = createNativeStackNavigator();
 
@@ -35,6 +36,7 @@ export default function App() {
         <Stack.Screen name="TaskSets" component={TaskSets} />
         <Stack.Screen name="PTO" component={PTO} />
         <Stack.Screen name="WeeklySchedule" component={WeeklySchedule} />
+        <Stack.Screen name="WorkRequestDetails" component={WorkRequestDetails} />
       </Stack.Navigator>
     </NavigationContainer>
   );

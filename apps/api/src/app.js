@@ -1,59 +1,51 @@
-// apps/api/src/app.js
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
+
+const healthRoutes = require("./routes/health");
+const dbHealthRoutes = require("./routes/dbHealth");
+const authRoutes = require("./routes/auth");
+const taskRoutes = require("./routes/tasks");
+const plantRoutes = require("./routes/plants");
+const accountRoutes = require("./routes/accounts");
+const employeeRoutes = require("./routes/employees");
+const reqRoutes = require("./routes/reqs");
+
+const notFound = require("./middleware/notFound");
+const errorHandler = require("./middleware/errorHandler");
+
+const app = express();
 
 /**
  * Express Application Configuration
  * ---------------------------------
  * Responsible for:
- * - Initializing middleware
+ * - Initializing global middleware
  * - Mounting route modules
- * - Registering global error handlers
+ * - Registering Swagger documentation
+ * - Registering final error handlers
  *
  * This file does NOT:
- * - Start the server (handled in server.js)
+ * - Start the HTTP server
  * - Contain business logic
  * - Contain database logic
  */
 
-const express = require("express");
-const cors = require("cors");
-const path = require("path");
-
-// Route Modules
-const healthRoutes = require("./routes/health");
-
-const dbHealthRoutes = require("./routes/dbHealth");
-const authRoutes = require("./routes/auth");
-const taskRoutes = require("./routes/tasks");
-const plantRoutes = require("./routes/plants");
-const userRoutes = require("./routes/users");
-const employeeRoutes = require("./routes/employees");
-const reqRoutes = require("./routes/reqs");
-
-// Global Middleware
-const notFound = require("./middleware/notFound");
-const errorHandler = require("./middleware/errorHandler");
-// const userRoutes = require("./api/users/route");
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpecs = require('../config/swagger');
-
-
-const app = express();
-
 /**
- * Core Middleware
+ * Core middleware
  * ---------------
- * cors() → Enables cross-origin requests (required for web/mobile frontend)
- * express.json() → Parses incoming JSON request bodies
+ * cors()        -> Enables cross-origin requests for frontend clients
+ * express.json() -> Parses incoming JSON request bodies
  */
 app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 /**
- * Route Mounting
- * --------------
- * Each route module handles a specific domain.
- * Routes should not contain business logic directly.
+ * API routes
+ * ----------
+ * Each route module owns a specific domain.
+ * Route files should remain thin and delegate work to controllers/services.
  */
 app.use("/health", healthRoutes);      // Basic service health check
 app.use("/db-health", dbHealthRoutes); // Database connectivity check
@@ -71,14 +63,13 @@ app.use("/users", userRoutes);
 // Documents
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 
-// 404 handler
 /**
- * Error Handling (Order Matters)
- * ------------------------------
- * notFound → Catches unmatched routes (404)
- * errorHandler → Centralized error formatting
+ * Final middleware
+ * ----------------
+ * These must be registered last.
  *
- * These MUST be the last middleware registered.
+ * notFound     -> handles unmatched routes
+ * errorHandler -> centralizes all thrown/forwarded errors
  */
 app.use(notFound);
 app.use(errorHandler);
