@@ -22,4 +22,4 @@ coverage/
 
 # OS
 .DS_Store
-__MACOSX/
+__MACOSX/.idea/

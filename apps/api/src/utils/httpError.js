@@ -1,24 +1,62 @@
+// apps/api/src/utils/httpError.js
+
 /**
  * httpError
- * ----------
- * Factory function for creating standardized HTTP errors.
+ * ---------
+ * Creates a standardized Error object that can be forwarded to the global
+ * error-handling middleware for consistent API responses.
  *
- * Why this exists:
- * - Keeps error creation consistent across controllers
- * - Avoids repeating statusCode + message logic everywhere
- * - Allows structured error responses (code + details)
+ * Design goals:
+ * - One consistent shape for all application errors (statusCode, code, details)
+ * - Easy to use in controllers/services: `return next(httpError(...))`
+ * - Safe defaults that encourage predictable client behavior
  *
- * Usage:
- *   throw httpError(400, "Title is required");
+ * Usage patterns:
+ *   // In a controller (preferred: forward to error handler)
+ *   return next(httpError(400, "Email is required", "VALIDATION_ERROR"));
+ *
+ *   // With details (useful for field validation)
+ *   return next(httpError(400, "Invalid input", "VALIDATION_ERROR", [
+ *     { field: "email", message: "Email is required" }
+ *   ]));
+ *
+ * Notes:
+ * - This utility intentionally does NOT send responses. It only creates errors.
+ * - The global error middleware is responsible for formatting the final JSON.
  */
 
-function httpError(statusCode, message, code = "VALIDATION_ERROR", details = []) {
+function httpError(
+  statusCode,
+  message,
+  code = "VALIDATION_ERROR",
+  details = []
+) {
   const err = new Error(message);
 
-  // Custom properties attached to the Error object
-  err.statusCode = statusCode; // HTTP status (400, 404, 500, etc.)
-  err.code = code;             // Internal error classification
-  err.details = details;       // Optional validation details array
+  /**
+   * HTTP status code to be used by the global error handler.
+   * Defaulting is handled by the error middleware (500) if omitted.
+   */
+  err.statusCode = statusCode;
+
+  /**
+   * Internal error classification used by the client and for debugging.
+   * Examples: AUTH_TOKEN_MISSING, AUTH_TOKEN_INVALID, ROUTE_NOT_FOUND
+   */
+  err.code = code;
+
+  /**
+   * Optional structured details (commonly validation errors).
+   * Keep this an array for a predictable shape on the client.
+   */
+  err.details = Array.isArray(details) ? details : [details];
+
+  /**
+   * Mark as "operational" so logging/monitoring can distinguish
+   * expected app errors (4xx) from programmer bugs (5xx).
+   * (This is optional but common in production codebases.)
+   */
+  err.isOperational = true;
 
   return err;
 }

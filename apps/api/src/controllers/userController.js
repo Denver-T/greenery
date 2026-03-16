@@ -1,25 +1,45 @@
+// apps/api/src/controllers/userController.js
+
 /**
  * User Controller
  * ---------------
- * Responsibilities:
- * - Validate request inputs (params/body)
- * - Call the service layer
- * - Return consistent API responses
+ * Controllers are responsible for HTTP concerns only:
+ * - Validate/normalize request inputs (params/body)
+ * - Call the service layer for business logic / data access
+ * - Return successful responses (never error responses directly)
+ * - Forward all errors to the global error handler via `next(err)`
+ *
+ * Important conventions:
+ * - Do NOT send error JSON from controllers (no `res.status(...).json({ error: ... })`)
+ * - Use `httpError()` for predictable error codes + details
+ * - Keep success response shapes consistent (this file returns `{ data: ... }`)
  */
 
 const userService = require("../services/userService");
 const { httpError } = require("../utils/httpError");
 const { isNonEmptyString, toPositiveInt } = require("../utils/validators");
 
+/**
+ * GET /users
+ * Returns a list of all users.
+ */
 exports.getUsers = async (req, res, next) => {
   try {
+    // Service layer is the single source of truth for data retrieval.
     const users = await userService.getUsers();
-    res.status(200).json({ data: users });
+
+    // Success responses are allowed directly from controllers.
+    return res.status(200).json({ data: users });
   } catch (err) {
-    next(err);
+    // Always forward to centralized error middleware for uniform formatting.
+    return next(err);
   }
 };
 
+/**
+ * GET /users/:id
+ * Returns a single user by numeric ID.
+ */
 exports.getUserById = async (req, res, next) => {
   try {
     const id = toPositiveInt(req.params.id);
@@ -37,15 +57,20 @@ exports.getUserById = async (req, res, next) => {
       return next(httpError(404, "User not found", "USER_NOT_FOUND"));
     }
 
-    res.status(200).json({ data: user });
+    return res.status(200).json({ data: user });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 };
 
+/**
+ * POST /users
+ * Creates a new user.
+ *
+ */
 exports.createUser = async (req, res, next) => {
   try {
-    const { name, role } = req.body;
+    const { name, role, email, phone } = req.body;
 
     if (!isNonEmptyString(name)) {
       return next(
@@ -55,7 +80,15 @@ exports.createUser = async (req, res, next) => {
       );
     }
 
-    // role optional for now; if present must be non-empty
+    // Password is referenced in the service call; validate it here to avoid surprises downstream.
+    // if (!isNonEmptyString(password)) {
+    //   return next(
+    //     httpError(400, "Field 'password' is required", "VALIDATION_ERROR", [
+    //       { field: "password", issue: "required" },
+    //     ])
+    //   );
+    // }
+
     if (role !== undefined && !isNonEmptyString(role)) {
       return next(
         httpError(400, "Field 'role' must be a non-empty string", "VALIDATION_ERROR", [
@@ -64,9 +97,12 @@ exports.createUser = async (req, res, next) => {
       );
     }
 
-    const created = await userService.createUser({ name, role });
+    const created = await userService.createUser({ name, role, email, phone });
     res.status(201).json({ data: created });
+
+    // 201 Created for successful resource creation.
+    return res.status(201).json({ data: created });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 };
