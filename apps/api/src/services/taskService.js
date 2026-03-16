@@ -1,10 +1,34 @@
+// apps/api/src/services/taskService.js
+
 const db = require("../../config/db");
-const accountService = require("./accountService");
 const { httpError } = require("../utils/httpError");
 const { isNonEmptyString, toPositiveInt } = require("../utils/validators");
 
-const TASKS_TABLE = "tasks";
+const WORK_REQS_TABLE = "work_reqs";
+const EMPLOYEES_TABLE = "employees";
 const VALID_STATUSES = ["assigned", "in_progress", "completed", "cancelled"];
+
+/**
+ * Convert a work_reqs row into the task-shaped response
+ * expected by the existing /tasks API.
+ */
+function mapWorkReqToTask(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    title: row.actionRequired,
+    status: row.status,
+    assigned_to: row.assignedTo,
+    plant_id: null,
+    notes: row.notes,
+    due_date: row.dueDate,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
 
 /**
  * Normalize optional string input.
@@ -100,7 +124,7 @@ function normalizeDueDate(value) {
 
   if (typeof value !== "string") {
     throw httpError(400, "Field 'due_date' must be a string", "VALIDATION_ERROR", [
-      { field: "due_date", issue: "must be a valid datetime string" },
+      { field: "due_date", issue: "must be a valid date string" },
     ]);
   }
 
@@ -108,7 +132,7 @@ function normalizeDueDate(value) {
 
   if (Number.isNaN(parsed.getTime())) {
     throw httpError(400, "Invalid due_date", "VALIDATION_ERROR", [
-      { field: "due_date", issue: "must be a valid datetime string" },
+      { field: "due_date", issue: "must be a valid date string" },
     ]);
   }
 
@@ -116,30 +140,59 @@ function normalizeDueDate(value) {
 }
 
 /**
+ * Verify assigned employee exists.
+ *
+ * @param {number|null} employeeId
+ * @returns {Promise<void>}
+ */
+async function ensureEmployeeExists(employeeId) {
+  if (!employeeId) {
+    return;
+  }
+
+  const sql = `
+    SELECT id
+    FROM ${EMPLOYEES_TABLE}
+    WHERE id = ?
+    LIMIT 1
+  `;
+
+  const [rows] = await db.query(sql, [employeeId]);
+
+  if (!rows.length) {
+    throw httpError(404, "Assigned employee does not exist", "EMPLOYEE_NOT_FOUND", [
+      { field: "assigned_to", issue: "no such employee" },
+    ]);
+  }
+}
+
+/**
  * GET all tasks
+ * Backed by work_reqs rows that are already in the task lifecycle.
  */
 async function getTasks() {
   const sql = `
     SELECT
       id,
-      title,
+      actionRequired,
       status,
-      assigned_to,
-      plant_id,
+      assignedTo,
       notes,
-      due_date,
+      dueDate,
       created_at,
       updated_at
-    FROM ${TASKS_TABLE}
-    ORDER BY created_at DESC, id DESC
+    FROM ${WORK_REQS_TABLE}
+    WHERE status IN ('assigned', 'in_progress', 'completed', 'cancelled')
+    ORDER BY updated_at DESC, id DESC
   `;
 
   const [rows] = await db.query(sql);
-  return rows;
+  return rows.map(mapWorkReqToTask);
 }
 
 /**
  * GET task by ID
+ * Reads from work_reqs and maps to the task-shaped response.
  */
 async function getTaskById(id) {
   const taskId = toPositiveInt(id);
@@ -153,46 +206,41 @@ async function getTaskById(id) {
   const sql = `
     SELECT
       id,
-      title,
+      actionRequired,
       status,
-      assigned_to,
-      plant_id,
+      assignedTo,
       notes,
-      due_date,
+      dueDate,
       created_at,
       updated_at
-    FROM ${TASKS_TABLE}
+    FROM ${WORK_REQS_TABLE}
     WHERE id = ?
+      AND status IN ('assigned', 'in_progress', 'completed', 'cancelled')
     LIMIT 1
   `;
 
   const [rows] = await db.query(sql, [taskId]);
-  return rows[0] || null;
+  return mapWorkReqToTask(rows[0] || null);
 }
 
 /**
  * CREATE task
  *
- * Accepted fields:
- * - title (required)
- * - status (optional, defaults to assigned)
- * - assigned_to (optional)
- * - plant_id (optional)
- * - notes (optional)
- * - due_date (optional)
+ * Compatibility layer:
+ * - keeps the /tasks API shape
+ * - persists into work_reqs
+ * - generates the req-style required fields internally
  */
 async function createTask(taskData) {
   const rawTitle = taskData?.title;
   const rawStatus = taskData?.status;
   const rawAssignedTo = taskData?.assigned_to ?? taskData?.assignedUserId;
-  const rawPlantId = taskData?.plant_id;
   const rawNotes = taskData?.notes;
   const rawDueDate = taskData?.due_date;
 
   const title = typeof rawTitle === "string" ? rawTitle.trim() : rawTitle;
   const status = normalizeStatus(rawStatus ?? "assigned", true);
   const assignedTo = normalizeOptionalId(rawAssignedTo, "assigned_to");
-  const plantId = normalizeOptionalId(rawPlantId, "plant_id");
   const notes = normalizeOptionalString(rawNotes);
   const dueDate = normalizeDueDate(rawDueDate);
 
@@ -208,35 +256,65 @@ async function createTask(taskData) {
     ]);
   }
 
-  if (assignedTo) {
-    const account = await accountService.getAccountById(assignedTo);
+  await ensureEmployeeExists(assignedTo);
 
-    if (!account) {
-      throw httpError(404, "Assigned account does not exist", "ACCOUNT_NOT_FOUND", [
-        { field: "assigned_to", issue: "no such account" },
-      ]);
-    }
-  }
+  const now = new Date();
+  const isoDate = now.toISOString().slice(0, 10);
+  const referenceNumber = `TASK-${Date.now()}`;
 
   const sql = `
-    INSERT INTO ${TASKS_TABLE} (
-      title,
-      status,
-      assigned_to,
-      plant_id,
+    INSERT INTO ${WORK_REQS_TABLE} (
+      referenceNumber,
+      requestDate,
+      techName,
+      account,
+      accountContact,
+      accountAddress,
+      actionRequired,
+      numberOfPlants,
+      plantWanted,
+      plantReplaced,
+      plantSize,
+      plantHeight,
+      planterTypeSize,
+      planterColour,
+      stagingMaterial,
+      lighting,
+      method,
+      location,
       notes,
-      due_date
+      picturePath,
+      assignedTo,
+      dueDate,
+      status
     )
-    VALUES (?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const [result] = await db.query(sql, [
+    referenceNumber,
+    isoDate,
+    null,
+    "Internal Task",
+    null,
+    null,
     title,
-    status,
-    assignedTo,
-    plantId,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
     notes,
+    null,
+    assignedTo,
     dueDate,
+    status,
   ]);
 
   return getTaskById(result.insertId);
@@ -244,6 +322,7 @@ async function createTask(taskData) {
 
 /**
  * UPDATE task status only
+ * Updates work_reqs.status.
  */
 async function updateTaskStatus(id, status) {
   const taskId = toPositiveInt(id);
@@ -257,7 +336,7 @@ async function updateTaskStatus(id, status) {
   const normalizedStatus = normalizeStatus(status, true);
 
   const sql = `
-    UPDATE ${TASKS_TABLE}
+    UPDATE ${WORK_REQS_TABLE}
     SET
       status = ?,
       updated_at = CURRENT_TIMESTAMP
@@ -274,7 +353,8 @@ async function updateTaskStatus(id, status) {
 }
 
 /**
- * ASSIGN task to an account
+ * ASSIGN task to an employee
+ * Updates work_reqs.assignedTo.
  */
 async function assignTask(id, assignedTo) {
   const taskId = toPositiveInt(id);
@@ -285,31 +365,29 @@ async function assignTask(id, assignedTo) {
     ]);
   }
 
-  const accountId = normalizeOptionalId(assignedTo, "assigned_to");
+  const employeeId = normalizeOptionalId(assignedTo, "assigned_to");
 
-  if (!accountId) {
+  if (!employeeId) {
     throw httpError(400, "Invalid assigned_to", "VALIDATION_ERROR", [
       { field: "assigned_to", issue: "must be a positive integer" },
     ]);
   }
 
-  const account = await accountService.getAccountById(accountId);
-
-  if (!account) {
-    throw httpError(404, "Assigned account does not exist", "ACCOUNT_NOT_FOUND", [
-      { field: "assigned_to", issue: "no such account" },
-    ]);
-  }
+  await ensureEmployeeExists(employeeId);
 
   const sql = `
-    UPDATE ${TASKS_TABLE}
+    UPDATE ${WORK_REQS_TABLE}
     SET
-      assigned_to = ?,
+      assignedTo = ?,
+      status = CASE
+        WHEN status = 'unassigned' THEN 'assigned'
+        ELSE status
+      END,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `;
 
-  const [result] = await db.query(sql, [accountId, taskId]);
+  const [result] = await db.query(sql, [employeeId, taskId]);
 
   if (result.affectedRows === 0) {
     return null;
