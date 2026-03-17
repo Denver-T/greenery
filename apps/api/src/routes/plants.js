@@ -12,14 +12,14 @@ router.get(
   "/",
   verifyToken,
   authorize("technician", "manager", "admin"),
-  plantController.getPlants
+  plantController.getPlants,
 );
 
 router.get(
   "/:id",
   verifyToken,
   authorize("technician", "manager", "admin"),
-  plantController.getPlantById
+  plantController.getPlantById,
 );
 
 router.post(
@@ -27,7 +27,7 @@ router.post(
   writeLimiter,
   verifyToken,
   authorize("manager", "admin"),
-  plantController.createPlant
+  plantController.createPlant,
 );
 
 module.exports = router;
