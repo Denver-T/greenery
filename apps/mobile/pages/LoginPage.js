@@ -72,7 +72,7 @@ export default function LoginScreen() {
       console.log("Backend account:", result?.data);
 
       // 4) Navigate after successful auth + backend verification
-      navigation.navigate("HomePage");
+      ToHomePage();
     } catch (err) {
       Alert.alert("Error", err?.message || "Unable to sign in");
     } finally {
@@ -84,7 +84,7 @@ export default function LoginScreen() {
     navigation.navigate("ForgotPassword");
   }
 
-  function onHomePage() {
+  function ToHomePage() {
     navigation.navigate("HomePage");
   }
 
