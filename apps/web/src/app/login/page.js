@@ -25,11 +25,7 @@ export default function LoginPage() {
     <div className="mx-auto max-w-md p-6">
       <h1 className="mb-4 text-2xl font-bold">Login</h1>
 
-      {error && (
-        <div className="mb-4 text-red-600">
-          {error}
-        </div>
-      )}
+      {error && <div className="mb-4 text-red-600">{error}</div>}
 
       <form onSubmit={handleLogin} className="grid gap-3">
         <input
@@ -48,10 +44,7 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button
-          className="bg-green-700 text-white p-2 rounded"
-          type="submit"
-        >
+        <button className="bg-green-700 text-white p-2 rounded" type="submit">
           Login
         </button>
       </form>

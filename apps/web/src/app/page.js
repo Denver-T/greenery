@@ -1,8 +1,7 @@
-
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "./lib/firebaseClient"; 
+import { auth } from "./lib/firebaseClient";
 import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
@@ -23,21 +22,29 @@ export default function LoginPage() {
 
   function translateFirebaseError(code) {
     switch (code) {
-      case "auth/invalid-email": return "That email address looks invalid.";
-      case "auth/user-disabled": return "This account has been disabled.";
-      case "auth/user-not-found": return "No account found with that email.";
-      case "auth/wrong-password": return "Incorrect password. Try again.";
-      case "auth/popup-blocked": return "Popup was blocked. Allow popups and try again.";
-      case "auth/popup-closed-by-user": return "Popup closed before completing sign in.";
-      case "auth/too-many-requests": return "Too many attempts. Please wait and try again.";
-      default: return "Login failed. Please try again.";
+      case "auth/invalid-email":
+        return "That email address looks invalid.";
+      case "auth/user-disabled":
+        return "This account has been disabled.";
+      case "auth/user-not-found":
+        return "No account found with that email.";
+      case "auth/wrong-password":
+        return "Incorrect password. Try again.";
+      case "auth/popup-blocked":
+        return "Popup was blocked. Allow popups and try again.";
+      case "auth/popup-closed-by-user":
+        return "Popup closed before completing sign in.";
+      case "auth/too-many-requests":
+        return "Too many attempts. Please wait and try again.";
+      default:
+        return "Login failed. Please try again.";
     }
   }
 
   async function withPersistence(fn) {
     await setPersistence(
       auth,
-      rememberMe ? browserLocalPersistence : browserSessionPersistence
+      rememberMe ? browserLocalPersistence : browserSessionPersistence,
     );
     return fn();
   }
@@ -48,7 +55,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await withPersistence(() =>
-        signInWithEmailAndPassword(auth, email, password)
+        signInWithEmailAndPassword(auth, email, password),
       );
       router.push("/dashboard"); // change to your target route
     } catch (err) {
@@ -89,12 +96,19 @@ export default function LoginPage() {
     }
   }
 
+  setTimeout(() => {
+    setEmail("denvertimlick@gmail.com");
+    setPassword("GreeneryTest123");
+  }, 1000);
+
   return (
     <div style={styles.page}>
       <div style={styles.bgOverlay} />
       <div style={styles.card}>
         <header style={styles.header}>
-          <div style={styles.logoCircle}><span style={styles.logoLeaf}>🌿</span></div>
+          <div style={styles.logoCircle}>
+            <span style={styles.logoLeaf}>🌿</span>
+          </div>
           <div>
             <h2 style={styles.title}>Greenery Portal</h2>
             <p style={styles.subtitle}>Sign in to access your dashboard</p>
@@ -133,14 +147,22 @@ export default function LoginPage() {
               />
               <span style={styles.checkboxText}>Remember me</span>
             </label>
-            <button type="button" onClick={onForgotPassword} style={styles.linkBtn}>
+            <button
+              type="button"
+              onClick={onForgotPassword}
+              style={styles.linkBtn}
+            >
               Forgot password?
             </button>
           </div>
 
           {error ? <div style={styles.error}>{error}</div> : null}
 
-          <button disabled={loading} className="primary" style={styles.primaryBtn}>
+          <button
+            disabled={loading}
+            className="primary"
+            style={styles.primaryBtn}
+          >
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
@@ -151,16 +173,21 @@ export default function LoginPage() {
           <div style={styles.dividerLine} />
         </div>
 
-        <button disabled={loading} onClick={onGoogle} style={styles.secondaryBtn}>
+        <button
+          disabled={loading}
+          onClick={onGoogle}
+          style={styles.secondaryBtn}
+        >
           Continue with Google
         </button>
 
-        <p style={styles.footerText}>Don’t have access? Contact your administrator.</p>
+        <p style={styles.footerText}>
+          Don’t have access? Contact your administrator.
+        </p>
       </div>
     </div>
   );
 }
-
 
 const styles = {
   page: {

@@ -29,12 +29,20 @@ async function login(email, password) {
 }
 
 async function register(email, password) {
-  const credential = await createUserWithEmailAndPassword(auth, email, password);
+  const credential = await createUserWithEmailAndPassword(
+    auth,
+    email,
+    password,
+  );
   return credential.user;
 }
 
 async function logout() {
   await signOut(auth);
+}
+export async function getBearerToken() {
+  if (!auth.currentUser) return null;
+  return await auth.currentUser.getIdToken();
 }
 
 export { auth, login, register, logout };
