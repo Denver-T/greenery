@@ -9,10 +9,9 @@ import {
   ScrollView,
   StatusBar,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import NavBar from "../components/NavBar";
-import { getItemByReq } from "../mock/temp";
+import { getWorkRequestById } from "../util/workRequest";
 
 const BG = require("../assets/bg.jpg");
 const RADIUS = 12;
@@ -31,7 +30,7 @@ const COLORS = {
 };
 
 export default function WorkRequestDetails({ route, navigation }) {
-  const req = route.params;
+  const id = route.params;
   function onClose() {
     navigation.goBack();
   }
@@ -43,8 +42,8 @@ export default function WorkRequestDetails({ route, navigation }) {
       setIsLoading(true);
 
       try {
-        const data = getItemByReq(req);
-
+        const data = await getWorkRequestById(id);
+        console.log(data);
         setDetailData(data);
       } catch (error) {
         console.error("Error fetching details:", error);
@@ -54,7 +53,7 @@ export default function WorkRequestDetails({ route, navigation }) {
     };
 
     fetchDetails();
-  }, [req]);
+  }, [id]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -99,7 +98,7 @@ export default function WorkRequestDetails({ route, navigation }) {
                     { color: COLORS.black },
                   ]}
                 >
-                  REQ#{detailData.req} - Submitted by {detailData.accountName}
+                  REQ#{detailData.req} - Submitted by {detailData.techName}
                 </Text>
 
                 <View style={styles.fieldRow}>
@@ -107,7 +106,9 @@ export default function WorkRequestDetails({ route, navigation }) {
                     <Text style={styles.fieldLabelText}>REQ#</Text>
                   </View>
                   <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>{detailData.req}</Text>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.referenceNumber}
+                    </Text>
                   </View>
                 </View>
 
