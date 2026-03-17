@@ -3,18 +3,10 @@ const db = require("../../config/db");
 /**
  * Account Service
  * ---------------
- * Handles all database access for accounts.
- *
- * Notes:
- * - This service only talks to the database.
- * - It does not know anything about Express req/res objects.
- * - Controllers should call this service and handle HTTP concerns.
+ * In the current repo state, authentication identity is backed by the
+ * employees table even though some code still uses the word "account".
  */
 
-/**
- * Return all accounts.
- * Ordered by newest first so recent records show up first in admin tools.
- */
 async function getAccounts() {
   const sql = `
     SELECT
@@ -24,7 +16,7 @@ async function getAccounts() {
       email,
       phone,
       created_at
-    FROM accounts
+    FROM employees
     ORDER BY created_at DESC, id DESC
   `;
 
@@ -32,11 +24,6 @@ async function getAccounts() {
   return rows;
 }
 
-/**
- * Return one account by primary key.
- * @param {number} id
- * @returns {object|null}
- */
 async function getAccountById(id) {
   const sql = `
     SELECT
@@ -46,7 +33,7 @@ async function getAccountById(id) {
       email,
       phone,
       created_at
-    FROM accounts
+    FROM employees
     WHERE id = ?
     LIMIT 1
   `;
@@ -55,12 +42,6 @@ async function getAccountById(id) {
   return rows[0] || null;
 }
 
-/**
- * Return one account by email.
- * Useful for auth-related lookups and duplicate checking.
- * @param {string} email
- * @returns {object|null}
- */
 async function getAccountByEmail(email) {
   const sql = `
     SELECT
@@ -70,7 +51,7 @@ async function getAccountByEmail(email) {
       email,
       phone,
       created_at
-    FROM accounts
+    FROM employees
     WHERE email = ?
     LIMIT 1
   `;
@@ -79,20 +60,11 @@ async function getAccountByEmail(email) {
   return rows[0] || null;
 }
 
-/**
- * Create a new account.
- * @param {object} accountData
- * @param {string} accountData.name
- * @param {string} accountData.role
- * @param {string} accountData.email
- * @param {string|null} [accountData.phone]
- * @returns {object}
- */
 async function createAccount(accountData) {
   const { name, role, email, phone = null } = accountData;
 
   const sql = `
-    INSERT INTO accounts (
+    INSERT INTO employees (
       name,
       role,
       email,
@@ -102,25 +74,14 @@ async function createAccount(accountData) {
   `;
 
   const [result] = await db.query(sql, [name, role, email, phone]);
-
   return getAccountById(result.insertId);
 }
 
-/**
- * Update an existing account.
- * @param {number} id
- * @param {object} updates
- * @param {string} updates.name
- * @param {string} updates.role
- * @param {string} updates.email
- * @param {string|null} [updates.phone]
- * @returns {object|null}
- */
 async function updateAccount(id, updates) {
   const { name, role, email, phone = null } = updates;
 
   const sql = `
-    UPDATE accounts
+    UPDATE employees
     SET
       name = ?,
       role = ?,
@@ -138,14 +99,8 @@ async function updateAccount(id, updates) {
   return getAccountById(id);
 }
 
-/**
- * Delete an account by id.
- * Returns true if a row was deleted, otherwise false.
- * @param {number} id
- * @returns {boolean}
- */
 async function deleteAccount(id) {
-  const sql = `DELETE FROM accounts WHERE id = ?`;
+  const sql = `DELETE FROM employees WHERE id = ?`;
   const [result] = await db.query(sql, [id]);
 
   return result.affectedRows > 0;
