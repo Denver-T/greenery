@@ -175,6 +175,8 @@ async function getTasks() {
     SELECT
       id,
       actionRequired,
+      account,
+      location,
       status,
       assignedTo,
       notes,
@@ -207,6 +209,8 @@ async function getTaskById(id) {
     SELECT
       id,
       actionRequired,
+      account,
+      location,
       status,
       assignedTo,
       notes,

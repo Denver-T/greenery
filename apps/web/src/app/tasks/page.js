@@ -1,34 +1,10 @@
 "use client";
 
-/**
- * View Tasks / Work Requests Page
- * ---------------------------------------------------------
- * PURPOSE:
- * - Display submitted work requests from the backend
- * - Allow admin/manager to review them
- * - Open a full details modal for each request
- *
- * CURRENT DATA SOURCE:
- * - GET /reqs        -> summary list
- * - GET /reqs/:id    -> full details for one request
- *
- * IMPORTANT:
- * - This page does NOT talk to MySQL directly
- * - It talks to the Express API only
- */
-
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import { fetchApi } from "@/lib/api/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-async function jsonOrThrow(res) {
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(body?.error || `Request failed (${res.status})`);
-  }
-  return body;
-}
 
 export default function TasksPage() {
   const [reqs, setReqs] = useState([]);
@@ -37,18 +13,14 @@ export default function TasksPage() {
   const [error, setError] = useState("");
   const [detailsLoading, setDetailsLoading] = useState(false);
 
-  /**
-   * Load all submitted work requests
-   */
   async function loadReqs() {
     setError("");
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/reqs`, {
+      const data = await fetchApi("/reqs", {
         cache: "no-store",
       });
-      const data = await jsonOrThrow(res);
       setReqs(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || "Failed to load work requests.");
@@ -57,18 +29,14 @@ export default function TasksPage() {
     }
   }
 
-  /**
-   * Load one request in full detail
-   */
   async function openReqDetails(id) {
     setError("");
     setDetailsLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/reqs/${id}`, {
+      const data = await fetchApi(`/reqs/${id}`, {
         cache: "no-store",
       });
-      const data = await jsonOrThrow(res);
       setSelectedReq(data);
     } catch (err) {
       setError(err.message || "Failed to load request details.");
@@ -84,7 +52,6 @@ export default function TasksPage() {
   return (
     <AppShell title="View Tasks">
       <div className="p-6">
-        {/* Page intro */}
         <section className="mb-6 rounded-card bg-white p-6 shadow-soft">
           <h2 className="mb-2 text-xl font-extrabold text-brand-700">
             Submitted Work Requests
@@ -95,14 +62,12 @@ export default function TasksPage() {
           </p>
         </section>
 
-        {/* Error banner */}
         {error ? (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-sm font-medium text-red-700">
             {error}
           </div>
         ) : null}
 
-        {/* Requests list */}
         <section className="rounded-card bg-white p-6 shadow-soft">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-extrabold text-brand-700">
@@ -140,7 +105,7 @@ export default function TasksPage() {
                     <tr key={req.id} className="border-b text-sm text-gray-800">
                       <td className="px-3 py-3">{req.referenceNumber}</td>
                       <td className="px-3 py-3">
-                        {req.date ? String(req.date).slice(0, 10) : "-"}
+                        {req.requestDate ? String(req.requestDate).slice(0, 10) : "-"}
                       </td>
                       <td className="px-3 py-3">{req.techName || "-"}</td>
                       <td className="px-3 py-3">{req.account || "-"}</td>
@@ -162,7 +127,6 @@ export default function TasksPage() {
           )}
         </section>
 
-        {/* Request details modal */}
         {selectedReq && (
           <div
             className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-6"
@@ -192,7 +156,7 @@ export default function TasksPage() {
                     <Info label="Reference Number" value={selectedReq.referenceNumber} />
                     <Info
                       label="Date"
-                      value={selectedReq.date ? String(selectedReq.date).slice(0, 10) : "-"}
+                      value={selectedReq.requestDate ? String(selectedReq.requestDate).slice(0, 10) : "-"}
                     />
                     <Info label="Tech Name" value={selectedReq.techName} />
                     <Info label="Account" value={selectedReq.account} />
@@ -237,25 +201,6 @@ export default function TasksPage() {
                       No image uploaded for this request.
                     </div>
                   )}
-
-                  {/* Future extension area */}
-                  <div className="mt-6 flex gap-3">
-                    <button
-                      type="button"
-                      className="rounded-lg bg-emerald-700 px-4 py-2 font-medium text-white hover:bg-emerald-800"
-                      onClick={() => alert("Later: create task from this REQ")}
-                    >
-                      Create Task From REQ
-                    </button>
-
-                    <button
-                      type="button"
-                      className="rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-800 hover:bg-gray-300"
-                      onClick={() => setSelectedReq(null)}
-                    >
-                      Back
-                    </button>
-                  </div>
                 </>
               )}
             </div>
@@ -266,9 +211,6 @@ export default function TasksPage() {
   );
 }
 
-/**
- * Small reusable label/value display block
- */
 function Info({ label, value }) {
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">

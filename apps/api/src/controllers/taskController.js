@@ -136,19 +136,31 @@ function validateAndNormalizeStatusPayload(body) {
  * Validate and normalize assign payload.
  *
  * @param {object} body
- * @returns {number}
+ * @returns {{ assigned_to: number|null, due_date: string|null }}
  */
 function validateAndNormalizeAssignPayload(body) {
-  const rawAssignedTo = body?.assigned_to ?? body?.assignedUserId;
-  const assignedTo = toPositiveInt(rawAssignedTo);
-
-  if (!assignedTo) {
+  const rawAssignedTo = body?.assigned_to ?? body?.assignedTo ?? body?.assignedUserId;
+  const rawDueDate = body?.due_date ?? body?.dueDate ?? body?.date;
+  const assignedTo =
+    rawAssignedTo === undefined || rawAssignedTo === null || rawAssignedTo === ""
+      ? null
+      : toPositiveInt(rawAssignedTo);
+  if (rawAssignedTo !== undefined && rawAssignedTo !== null && rawAssignedTo !== "" && !assignedTo) {
     throw httpError(400, "Invalid assigned_to", "VALIDATION_ERROR", [
       { field: "assigned_to", issue: "must be a positive integer" },
     ]);
   }
-
-  return assignedTo;
+  if (rawDueDate !== undefined && rawDueDate !== null && rawDueDate !== "") {
+    if (typeof rawDueDate !== "string" || Number.isNaN(new Date(rawDueDate).getTime())) {
+      throw httpError(400, "Invalid due_date", "VALIDATION_ERROR", [
+        { field: "due_date", issue: "must be a valid date string" },
+      ]);
+    }
+  }
+  return {
+    assigned_to: assignedTo,
+    due_date: rawDueDate ?? null,
+  };
 }
 
 /**
@@ -156,7 +168,7 @@ function validateAndNormalizeAssignPayload(body) {
  */
 async function getTasks(req, res, next) {
   try {
-    const tasks = await taskService.getTasks();
+    const tasks = await taskService.getTasks({ scope: req.query.scope });
 
     return res.status(200).json({
       data: tasks,
@@ -256,8 +268,8 @@ async function assignTask(req, res, next) {
       );
     }
 
-    const assignedTo = validateAndNormalizeAssignPayload(req.body);
-    const updatedTask = await taskService.assignTask(id, assignedTo);
+    const assignment = validateAndNormalizeAssignPayload(req.body);
+    const updatedTask = await taskService.assignTask(id, assignment);
 
     if (!updatedTask) {
       return next(httpError(404, "Task not found", "TASK_NOT_FOUND"));
@@ -278,3 +290,4 @@ module.exports = {
   updateTaskStatus,
   assignTask,
 };
+

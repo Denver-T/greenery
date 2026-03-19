@@ -1,12 +1,9 @@
 "use client";
-
-"use client";
-
 import AppShell from "@/components/AppShell";
+import { fetchApi } from "@/lib/api/api";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export default function ReqPage() {
   const router = useRouter();
@@ -43,15 +40,10 @@ export default function ReqPage() {
        * This sends multipart/form-data to apps/api
        * because the form contains a file input.
        */
-      const res = await fetch(`${API_BASE}/reqs`, {
+      await fetchApi("/reqs", {
         method: "POST",
         body: fd,
       });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Failed to submit");
-      }
 
       router.push("/tasks?created=1");
     } catch (err) {
@@ -319,3 +311,4 @@ export default function ReqPage() {
     </AppShell>
   );
 }
+
