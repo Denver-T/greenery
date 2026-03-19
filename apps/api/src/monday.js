@@ -20,6 +20,30 @@ const query = `
   }
 `;
 
+// List users
+
+const users = {
+  "query": "{ users(limit: 50, page: 1) { id name email is_admin is_guest enabled }}"
+}
+
+// Get user by ID
+
+const getUserById = {
+  "data": "{ users(ids) { id name email title phone time_zone_identifier teams { id name } } }"
+}
+
+const inviteUser = {
+  "query": "mutation { invite_user_to_account(email, user_role) {id name email } }"
+}
+
+const updateUser = {
+  "query": "mutation { update_user(id, user_details: { title, phone}) { id title phone } }"
+}
+
+const deactivateUser = {
+  "query": "mutation { deactivate_user(user_id) { id enabled } }"
+}
+
 // Exception handling
 try { 
     fetch ("https://api.monday.com", {
@@ -43,6 +67,7 @@ const del = `
     board_id {
   }
 `;
+
 
 try {
     fetch ("https://api.monday.com", {
