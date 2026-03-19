@@ -5,20 +5,32 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL; // Replace with actual ba
 export async function apiFetch(path, options = {}) {
   const token = await getBearerToken();
   const { method = "GET", body, ...customConfig } = options;
+
   const headers = {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
     ...(options.headers || {}),
   };
-  const defaultHeaders = {
-    "Content-Type": "application/json",
-  };
+  const isFormData = body instanceof FormData;
+
+  if (isFormData) {
+    // ⚠️ CRITICAL: We MUST remove Content-Type so React Native can auto-generate the boundary
+    delete headers["Content-Type"];
+  } else if (!headers["Content-Type"]) {
+    // If it's normal text data, default to JSON
+    headers["Content-Type"] = "application/json";
+  }
 
   const config = {
     method,
-    headers: { ...defaultHeaders, ...headers },
+    headers,
     ...customConfig,
   };
+
+  if (body) {
+    // If it's FormData, pass it raw. Otherwise, stringify it for JSON.
+    config.body = isFormData ? body : JSON.stringify(body);
+  }
 
   try {
     const response = await fetch(`${BASE_URL}${path}`, config);

@@ -9,3 +9,8 @@ export const getAllWorkRequest = async () => {
 export const getWorkRequestById = async (id) => {
   return await apiFetch(`/reqs/${id}`);
 };
+
+//create new work request
+export const createWorkRequest = async (formData) => {
+  return await apiFetch("/reqs", { method: "POST", body: formData });
+};
