@@ -43,34 +43,46 @@ export default function LoginPage() {
   }
 
   async function onSubmit(e) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      await withPersistence(() =>
-        signInWithEmailAndPassword(auth, email, password)
-      );
-      router.push("/dashboard"); // change to your target route
-    } catch (err) {
-      setError(translateFirebaseError(err?.code));
-    } finally {
-      setLoading(false);
-    }
+  e.preventDefault();
+  setError("");
+  setLoading(true);
+
+  try {
+    const credential = await withPersistence(() =>
+      signInWithEmailAndPassword(auth, email.trim(), password)
+    );
+
+    const token = await credential.user.getIdToken(true);
+    localStorage.setItem("token", token);
+
+    router.push("/dashboard");
+  } catch (err) {
+    setError(translateFirebaseError(err?.code));
+  } finally {
+    setLoading(false);
   }
+}
 
   async function onGoogle() {
-    setError("");
-    setLoading(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      await withPersistence(() => signInWithPopup(auth, provider));
-      router.push("/dashboard");
-    } catch (err) {
-      setError(translateFirebaseError(err?.code));
-    } finally {
-      setLoading(false);
-    }
+  setError("");
+  setLoading(true);
+
+  try {
+    const provider = new GoogleAuthProvider();
+    const credential = await withPersistence(() =>
+      signInWithPopup(auth, provider)
+    );
+
+    const token = await credential.user.getIdToken(true);
+    localStorage.setItem("token", token);
+
+    router.push("/dashboard");
+  } catch (err) {
+    setError(translateFirebaseError(err?.code));
+  } finally {
+    setLoading(false);
   }
+}
 
   async function onForgotPassword() {
     if (!email) {

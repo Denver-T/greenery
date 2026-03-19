@@ -261,6 +261,7 @@ router.get(
           status,
           created_at
         FROM work_reqs
+        WHERE referenceNumber LIKE 'REQ-%'
         ORDER BY id DESC`
       );
 
