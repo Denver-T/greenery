@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import AppShell from "@/components/AppShell";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -34,23 +32,34 @@ export default function ReqPage() {
     setError("");
 
     try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        throw new Error("You are not logged in. Please sign in again.");
+      }
+
       const fd = new FormData(e.currentTarget);
 
-      /**
-       * ---------------------------------------------------------
-       * Submit to the unified backend API
-       * ---------------------------------------------------------
-       * This sends multipart/form-data to apps/api
-       * because the form contains a file input.
-       */
       const res = await fetch(`${API_BASE}/reqs`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: fd,
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Failed to submit");
+        let message = "Failed to submit";
+
+        try {
+          const data = await res.json();
+          message = data?.message || data?.error || message;
+        } catch {
+          const text = await res.text();
+          message = text || message;
+        }
+
+        throw new Error(message);
       }
 
       router.push("/tasks?created=1");
@@ -68,8 +77,6 @@ export default function ReqPage() {
 
         <form onSubmit={onSubmit} encType="multipart/form-data" className="space-y-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-
-            {/* Reference Number */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Reference Number</label>
               <input
@@ -80,7 +87,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Date */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Date</label>
               <input
@@ -92,7 +98,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Tech Name */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Tech Name</label>
               <input
@@ -103,7 +108,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Account */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Account</label>
               <input
@@ -114,7 +118,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Account Contact */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Account Contact</label>
               <input
@@ -124,7 +127,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Account Address */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Account Address</label>
               <input
@@ -134,7 +136,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Action Required */}
             <div className="flex flex-col md:col-span-2">
               <label className="mb-1 text-sm font-medium text-gray-700">Action Required</label>
               <input
@@ -144,7 +145,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Number of Plants */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Number of Plants</label>
               <input
@@ -156,7 +156,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Which plant is wanted? */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Which plant is wanted?</label>
               <input
@@ -166,7 +165,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Which plant is getting replaced? */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Which plant is getting replaced?</label>
               <input
@@ -176,7 +174,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Plant Size */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Plant Size</label>
               <select
@@ -191,7 +188,6 @@ export default function ReqPage() {
               </select>
             </div>
 
-            {/* Plant Height */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Plant Height</label>
               <select
@@ -206,7 +202,6 @@ export default function ReqPage() {
               </select>
             </div>
 
-            {/* Planter Type and Size */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Planter Type and Size</label>
               <input
@@ -216,7 +211,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Planter Colour */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Planter Colour</label>
               <input
@@ -226,7 +220,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Type and Colour of Staging Material */}
             <div className="flex flex-col md:col-span-2">
               <label className="mb-1 text-sm font-medium text-gray-700">Type and Colour of Staging Material</label>
               <input
@@ -236,7 +229,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Lighting */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Lighting</label>
               <select
@@ -250,7 +242,6 @@ export default function ReqPage() {
               </select>
             </div>
 
-            {/* Method */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Method</label>
               <input
@@ -260,7 +251,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Location */}
             <div className="flex flex-col">
               <label className="mb-1 text-sm font-medium text-gray-700">Location</label>
               <input
@@ -270,7 +260,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Notes */}
             <div className="flex flex-col md:col-span-2">
               <label className="mb-1 text-sm font-medium text-gray-700">Notes</label>
               <textarea
@@ -281,7 +270,6 @@ export default function ReqPage() {
               />
             </div>
 
-            {/* Picture Upload */}
             <div className="flex flex-col md:col-span-2">
               <label className="mb-1 text-sm font-medium text-gray-700">Picture Upload</label>
               <input
