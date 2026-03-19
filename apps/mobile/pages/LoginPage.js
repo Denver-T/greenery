@@ -2,8 +2,8 @@
 // This is the login page
 // Aka what the user first sees when they open the app.
 
-import React, { useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState } from "react";
+import { useNavigation } from "@react-navigation/native";
 import {
   Image,
   ImageBackground,
@@ -17,16 +17,16 @@ import {
   View,
   ActivityIndicator,
   Alert,
-} from 'react-native';
+} from "react-native";
 
-import { login, auth } from '../util/firebase';
+import { login, auth } from "../util/firebase";
 
-const BG = require('../assets/bg.jpg'); // leafy background
-const LOGO = require('../assets/logo.png'); // poster/logo image
+const BG = require("../assets/bg.jpg"); // leafy background
+const LOGO = require("../assets/logo.png"); // poster/logo image
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [secure, setSecure] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -36,7 +36,7 @@ export default function LoginScreen() {
     const trimmedEmail = email.trim().toLowerCase();
 
     if (!trimmedEmail || !password) {
-      Alert.alert('Missing info', 'Please enter both email and password.');
+      Alert.alert("Missing info", "Please enter both email and password.");
       return;
     }
 
@@ -55,38 +55,43 @@ export default function LoginScreen() {
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/me`,
         {
-          method: 'GET',
+          method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result?.message || 'Unable to verify account with API');
+        throw new Error(result?.message || "Unable to verify account with API");
       }
 
-      console.log('Firebase user:', auth.currentUser?.email);
-      console.log('Backend account:', result?.data);
+      console.log("Firebase user:", auth.currentUser?.email);
+      console.log("Backend account:", result?.data);
 
       // 4) Navigate after successful auth + backend verification
-      navigation.navigate('HomePage');
+      ToHomePage();
     } catch (err) {
-      Alert.alert('Error', err?.message || 'Unable to sign in');
+      Alert.alert("Error", err?.message || "Unable to sign in");
     } finally {
       setLoading(false);
     }
   }
 
   function onForgotPassword() {
-    navigation.navigate('ForgotPassword');
+    navigation.navigate("ForgotPassword");
   }
 
-  function onHomePage() {
-    navigation.navigate('HomePage');
+  function ToHomePage() {
+    navigation.navigate("HomePage");
   }
+
+  setTimeout(() => {
+    setEmail("denvertimlick@gmail.com");
+    setPassword("GreeneryTest123");
+  }, 1000);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -94,7 +99,7 @@ export default function LoginScreen() {
         <View style={styles.tint} />
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'android' ? 'padding' : undefined}
+          behavior={Platform.OS === "android" ? "padding" : undefined}
           style={styles.container}
         >
           <View style={styles.logoCard}>
@@ -151,7 +156,7 @@ export default function LoginScreen() {
           </View>
 
           <View>
-            <Pressable onPress={onHomePage}>
+            <Pressable onPress={ToHomePage}>
               <Text>To Home Screen</Text>
             </Pressable>
           </View>
@@ -161,50 +166,50 @@ export default function LoginScreen() {
   );
 }
 
-const GREEN = '#556f26';
-const CARD_BG = '#f2f2f2';
-const BORDER = '#c8c8c8';
+const GREEN = "#556f26";
+const CARD_BG = "#f2f2f2";
+const BORDER = "#c8c8c8";
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#2f4f2f' },
-  bg: { flex: 1, justifyContent: 'flex-start' },
+  safe: { flex: 1, backgroundColor: "#2f4f2f" },
+  bg: { flex: 1, justifyContent: "flex-start" },
   tint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(88, 110, 50, 0.35)',
+    backgroundColor: "rgba(88, 110, 50, 0.35)",
   },
   container: {
     flex: 1,
     paddingHorizontal: 18,
-    alignItems: 'center',
+    alignItems: "center",
   },
   logoCard: {
     marginTop: 48,
     width: 260,
     height: 320,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 10,
     padding: 14,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 8,
   },
   logoImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
     borderRadius: 6,
   },
   formCard: {
-    width: '94%',
+    width: "94%",
     marginTop: 22,
     backgroundColor: CARD_BG,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderWidth: 1,
-    borderColor: '#bdbdbd',
-    shadowColor: '#000',
+    borderColor: "#bdbdbd",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -212,36 +217,36 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#5b6e30',
+    fontWeight: "700",
+    color: "#5b6e30",
   },
   inputShell: {
     marginTop: 8,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: BORDER,
-    backgroundColor: '#e6e6e6',
+    backgroundColor: "#e6e6e6",
     paddingHorizontal: 12,
     height: 44,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   input: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   signInBtn: {
     marginTop: 16,
     height: 44,
     backgroundColor: GREEN,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  signInText: { color: '#fff', fontWeight: '800', fontSize: 18 },
+  signInText: { color: "#fff", fontWeight: "800", fontSize: 18 },
   forgotWrap: { marginTop: 12 },
   forgotText: {
-    color: '#4b6424',
-    textDecorationLine: 'underline',
+    color: "#4b6424",
+    textDecorationLine: "underline",
     fontSize: 16,
   },
 });

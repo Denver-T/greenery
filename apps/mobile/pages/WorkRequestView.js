@@ -1,4 +1,4 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import {
   ImageBackground,
   SafeAreaView,
@@ -12,9 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import NavBar from "../components/NavBar";
-
-import { requestList } from "../mock/temp";
-
+import { getAllWorkRequest } from "../util/workRequest";
 const BG = require("../assets/bg.jpg");
 
 const COLORS = {
@@ -31,15 +29,30 @@ const COLORS = {
 
 export default function WorkRequestView() {
   const navigation = useNavigation();
+  const [reqs, setReqs] = useState([]);
+  // const [loading, setLoading] = useState(true);
 
-  const openRequest = (req) => {
-    navigation.navigate("WorkRequestDetails", req);
+  const openRequest = (id) => {
+    navigation.navigate("WorkRequestDetails", id);
   };
+
+  async function fetchWorkRequestList() {
+    try {
+      const res = await getAllWorkRequest();
+      console.log(res);
+      setReqs(res);
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  useEffect(() => {
+    fetchWorkRequestList();
+  }, []);
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar backgroundColor={COLORS.green} barStyle="light-content" />
-
       <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
         <View style={styles.tint} />
 
@@ -76,8 +89,8 @@ export default function WorkRequestView() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {requestList.map((req) => (
-            <View key={req.req} style={styles.card}>
+          {reqs.map((req) => (
+            <View key={req.id} style={styles.card}>
               {/* Row 1: Header */}
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderPill}>
@@ -87,7 +100,9 @@ export default function WorkRequestView() {
                 <View style={{ flex: 1 }} />
 
                 <View style={styles.cardHeaderPill}>
-                  <Text style={styles.cardHeaderText}>#{req.req}</Text>
+                  <Text style={styles.cardHeaderText}>
+                    #{req.referenceNumber}
+                  </Text>
                 </View>
               </View>
 
@@ -95,12 +110,12 @@ export default function WorkRequestView() {
               <View style={styles.cardBody}>
                 <View style={styles.inlineRow}>
                   <Text style={styles.submittedLabel}>Submitted By:</Text>
-                  <Text style={styles.submittedName}>{req.accountName}</Text>
+                  <Text style={styles.submittedName}>{req.techName}</Text>
                 </View>
 
                 <Pressable
                   style={styles.arrowButton}
-                  onPress={() => openRequest(req.req)}
+                  onPress={() => openRequest(req.id)}
                 >
                   <Ionicons name="arrow-forward" size={20} color="#fff" />
                 </Pressable>
@@ -207,14 +222,14 @@ const styles = StyleSheet.create({
 
   submittedLabel: {
     fontSize: 15,
-    color: "#6a7b56",
+    color: COLORS.black,
     fontWeight: "700",
     marginLeft: 5,
   },
   submittedName: {
     fontSize: 18,
     fontWeight: "800",
-    color: COLORS.greenDark,
+    color: COLORS.black,
     marginTop: 2,
     marginLeft: 5,
   },

@@ -9,10 +9,9 @@ import {
   ScrollView,
   StatusBar,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import NavBar from "../components/NavBar";
-import { getItemByReq } from "../mock/temp";
+import { getWorkRequestById } from "../util/workRequest";
 
 const BG = require("../assets/bg.jpg");
 const RADIUS = 12;
@@ -31,7 +30,7 @@ const COLORS = {
 };
 
 export default function WorkRequestDetails({ route, navigation }) {
-  const req = route.params;
+  const id = route.params;
   function onClose() {
     navigation.goBack();
   }
@@ -43,8 +42,8 @@ export default function WorkRequestDetails({ route, navigation }) {
       setIsLoading(true);
 
       try {
-        const data = getItemByReq(req);
-
+        const data = await getWorkRequestById(id);
+        console.log(data);
         setDetailData(data);
       } catch (error) {
         console.error("Error fetching details:", error);
@@ -54,7 +53,7 @@ export default function WorkRequestDetails({ route, navigation }) {
     };
 
     fetchDetails();
-  }, [req]);
+  }, [id]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -99,7 +98,7 @@ export default function WorkRequestDetails({ route, navigation }) {
                     { color: COLORS.black },
                   ]}
                 >
-                  REQ#{detailData.req} - Submitted by {detailData.accountName}
+                  REQ#{detailData.req} - Submitted by {detailData.techName}
                 </Text>
 
                 <View style={styles.fieldRow}>
@@ -107,7 +106,20 @@ export default function WorkRequestDetails({ route, navigation }) {
                     <Text style={styles.fieldLabelText}>REQ#</Text>
                   </View>
                   <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>{detailData.req}</Text>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.referenceNumber}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Submitted By</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.techName}
+                    </Text>
                   </View>
                 </View>
 
@@ -118,6 +130,17 @@ export default function WorkRequestDetails({ route, navigation }) {
                   <View style={styles.fieldInfo}>
                     <Text style={styles.fieldInfoText}>
                       {detailData.accountName}
+                    </Text>
+                  </View>
+                </View>
+                
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Account Contact</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.accountContact}
                     </Text>
                   </View>
                 </View>
@@ -146,15 +169,114 @@ export default function WorkRequestDetails({ route, navigation }) {
 
                 <View style={styles.fieldRow}>
                   <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Plant Work</Text>
+                    <Text style={styles.fieldLabelText}>Number of Plants</Text>
                   </View>
                   <View style={styles.fieldInfo}>
                     <Text style={styles.fieldInfoText}>
-                      {detailData.plantWork}
+                      {detailData.numPlants}
                     </Text>
                   </View>
                 </View>
 
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Plant Wanted</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.plantWanted}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Plant Getting Replaced</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.plantGettingReplaced}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Plant Size</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.plantSize}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Plant Height</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.plantHeight}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Planter Type/Size</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.planterTypeSize}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Planter Colour</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.planterColour}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Staging Material Type/Colour</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.stagingMaterialTypeColour}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Lighting</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.lighting}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.fieldRow}>
+                  <View style={styles.fieldLabelBox}>
+                    <Text style={styles.fieldLabelText}>Method</Text>
+                  </View>
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldInfoText}>
+                      {detailData.method}
+                    </Text>
+                  </View>
+                </View>
+                
                 <View style={styles.fieldRow}>
                   <View style={styles.fieldLabelBox}>
                     <Text style={styles.fieldLabelText}>Plant Location</Text>
@@ -168,22 +290,11 @@ export default function WorkRequestDetails({ route, navigation }) {
 
                 <View style={styles.fieldRow}>
                   <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Plant Needed</Text>
+                    <Text style={styles.fieldLabelText}>Notes</Text>
                   </View>
                   <View style={styles.fieldInfo}>
                     <Text style={styles.fieldInfoText}>
-                      {detailData.plantNeeded}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Account Contact</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.accountContact}
+                      {detailData.notes}
                     </Text>
                   </View>
                 </View>
