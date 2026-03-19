@@ -155,11 +155,11 @@ export default function LoginScreen() {
             </Pressable>
           </View>
 
-          {/* <View>
-            <Pressable onPress={onHomePage}>
+          <View>
+            <Pressable onPress={ToHomePage}>
               <Text>To Home Screen</Text>
             </Pressable>
-          </View> */}
+          </View>
         </KeyboardAvoidingView>
       </ImageBackground>
     </SafeAreaView>

@@ -65,7 +65,7 @@ const MENU_ITEMS = [
     key: 'tasks',
     label: 'Task Sets',
     leftIcon: (props) => <MaterialCommunityIcons name="clipboard-text-outline" {...props} />,
-    route: 'TaskSets',
+    route: 'TaskSetList',
   },
   {
     key: 'pto',

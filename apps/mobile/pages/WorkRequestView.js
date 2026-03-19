@@ -222,14 +222,14 @@ const styles = StyleSheet.create({
 
   submittedLabel: {
     fontSize: 15,
-    color: "#6a7b56",
+    color: COLORS.black,
     fontWeight: "700",
     marginLeft: 5,
   },
   submittedName: {
     fontSize: 18,
     fontWeight: "800",
-    color: COLORS.greenDark,
+    color: COLORS.black,
     marginTop: 2,
     marginLeft: 5,
   },
