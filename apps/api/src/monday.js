@@ -1,5 +1,4 @@
-import { useRouter } from 'next/router';
-const router = useRouter();
+const router = require('next/router');
 const rateLimit = require('express-rate-limit');
 const token = process.env.api_token;
 const app = require('express');
