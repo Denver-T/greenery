@@ -55,8 +55,7 @@ export default function WorkRequestSubmit() {
   const [plantHeight, setPlantHeight] = React.useState("");
   const [planterTypeSize, setPlanterTypeSize] = React.useState("");
   const [planterColour, setPlanterColour] = React.useState("");
-  const [stagingMaterialTypeColor, setStagingMaterialTypeColor] =
-    React.useState("");
+  const [stagingMaterialTypeColor, setStagingMaterialTypeColor] = React.useState("");
   const [lighting, setLighting] = React.useState("");
   const [method, setMethod] = React.useState("");
   const [plantLocation, setPlantLocation] = React.useState("");
@@ -101,6 +100,7 @@ export default function WorkRequestSubmit() {
       lighting: lighting,
       method: method,
       location: plantLocation,
+      notes: notes,
       picture: photoUri,
     };
 
@@ -121,7 +121,14 @@ export default function WorkRequestSubmit() {
         }
         const response = await createWorkRequest(formData);
         if (response && response.ok) {
-          navigation.navigate("WorkRequestView");
+          Alert.alert(
+            "Submission Successful!", 
+            "Work Request submitted successfully!",
+            [
+              { text: "Go to Work Requests", onPress: () => navigation.navigate("WorkRequestView"), style: "default"}
+            ],
+            { cancelable: true }
+          );
         }
       } catch (error) {
         console.error(error);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
   ImageBackground,
+  Image,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -8,13 +9,14 @@ import {
   Pressable,
   ScrollView,
   StatusBar,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import NavBar from "../components/NavBar";
 import { getWorkRequestById } from "../util/workRequest";
 
 const BG = require("../assets/bg.jpg");
-const RADIUS = 12;
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const COLORS = {
   green: "#6f8641",
   greenDark: "#5e7833",
@@ -80,7 +82,7 @@ export default function WorkRequestDetails({ route, navigation }) {
           </View>
         </View>
 
-        <ScrollView>
+        
           <View style={styles.menuBlockWrap}>
             <View style={styles.menuBlock}>
               <Text style={styles.menuBlockText}>Work Request Details</Text>
@@ -89,231 +91,253 @@ export default function WorkRequestDetails({ route, navigation }) {
           {isLoading ? (
             <Text>Loading details...</Text>
           ) : (
-            <View style={styles.formBlockWrap}>
-              <View style={styles.formBlock}>
-                <Text
-                  style={[
-                    styles.fieldLabelText,
-                    { marginBottom: 10 },
-                    { color: COLORS.black },
-                  ]}
-                >
-                  REQ#{detailData.req} - Submitted by {detailData.techName}
-                </Text>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>REQ#</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.referenceNumber}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Submitted By</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.techName}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Account Name</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.accountName}
-                    </Text>
-                  </View>
-                </View>
-                
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Account Contact</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.accountContact}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Address</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.address}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Type of Work</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.workType}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Number of Plants</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.numPlants}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Plant Wanted</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.plantWanted}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Plant Getting Replaced</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.plantGettingReplaced}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Plant Size</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.plantSize}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Plant Height</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.plantHeight}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Planter Type/Size</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.planterTypeSize}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Planter Colour</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.planterColour}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Staging Material Type/Colour</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.stagingMaterialTypeColour}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Lighting</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.lighting}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Method</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.method}
-                    </Text>
-                  </View>
-                </View>
-                
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Plant Location</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.plantLocation}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.fieldRow}>
-                  <View style={styles.fieldLabelBox}>
-                    <Text style={styles.fieldLabelText}>Notes</Text>
-                  </View>
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldInfoText}>
-                      {detailData.notes}
-                    </Text>
-                  </View>
-                </View>
-
-                <Pressable onPress={onClose} style={styles.submitButton}>
+            
+              <View style={styles.formBlockWrap}>
+                <View style={styles.formBlock}>
+                  <ScrollView>
                   <Text
-                    style={{
-                      color: COLORS.white,
-                      fontWeight: "700",
-                      fontSize: 16,
-                    }}
+                    style={[
+                      styles.fieldLabelText,
+                      { marginBottom: 10 },
+                      { color: COLORS.black },
+                      { paddingTop: 15 },
+                    ]}
                   >
-                    Close
+                    REQ#{detailData.req} - Submitted by {detailData.techName}
                   </Text>
-                </Pressable>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>REQ#</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.referenceNumber}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Submitted By</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.techName}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Account Name</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.account}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Account Contact</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.accountContact}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Address</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.accountAddress}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Type of Work</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.actionRequired}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Number of Plants</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.numberOfPlants}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Plant Wanted</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.plantWanted}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Plant Getting Replaced</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.plantReplaced}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Plant Size</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.plantSize}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Plant Height</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.plantHeight}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Planter Type/Size</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.planterTypeSize}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Planter Colour</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.planterColour}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Staging Material Type/Colour</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.stagingMaterial}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Lighting</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.lighting}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Method</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.method}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Plant Location</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.location}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Notes</Text>
+                    </View>
+                    <View style={styles.fieldInfo}>
+                      <Text style={styles.fieldInfoText}>
+                        {detailData.notes}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.fieldRow}>
+                    <View style={styles.fieldLabelBox}>
+                      <Text style={styles.fieldLabelText}>Photo</Text>
+                    </View>
+                    <View style={[styles.fieldInfo, { height: 150 }]}>
+                      {detailData.picturePath ? (
+                        <Image
+                            source={{ uri: `${process.env.EXPO_PUBLIC_API_BASE_URL}/${detailData.picturePath}` }}
+                            style={{ width: '100%', height: '100%', borderRadius: 8 }}
+                            resizeMode="cover"
+                        />
+                      ) : (
+                        <Text style={styles.fieldInfoText}>No photo uploaded</Text>
+                      )}
+                    </View>
+                  </View>
+                  
+                  <View style={{ alignItems: "center", marginBottom: 20 }}>
+                    <Pressable onPress={onClose} style={styles.submitButton}>
+                      <Text
+                        style={{
+                          color: COLORS.white,
+                          fontWeight: "700",
+                          fontSize: 16,
+                        }}
+                      >
+                        Close
+                      </Text>
+                    </Pressable>
+                  </View>
+                  </ScrollView>
+                </View>
               </View>
-            </View>
           )}
-        </ScrollView>
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -387,12 +411,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   formBlock: {
-    height: 700,
-    backgroundColor: COLORS.white,
     width: 370,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: COLORS.white,
     borderRadius: 10,
+    borderWidth: 0,
+    maxHeight: SCREEN_HEIGHT * 0.65,
+    overflow: "hidden",
   },
   submitButton: {
     borderRadius: 10,
@@ -445,5 +469,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     color: COLORS.black,
     fontWeight: "500",
+    fontSize: 15,
   },
 });

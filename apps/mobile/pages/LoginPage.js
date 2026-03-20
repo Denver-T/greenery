@@ -17,6 +17,7 @@ import {
   View,
   ActivityIndicator,
   Alert,
+  ScrollView,
 } from "react-native";
 
 import { login, auth } from "../util/firebase";
@@ -98,69 +99,72 @@ export default function LoginScreen() {
       <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
         <View style={styles.tint} />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "android" ? "padding" : undefined}
-          style={styles.container}
-        >
-          <View style={styles.logoCard}>
-            <Image source={LOGO} style={styles.logoImage} resizeMode="cover" />
-          </View>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "android" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+            style={[styles.container, { marginTop: 60 }]}
+          >
+            <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: "center"}} keyboardShouldPersistTaps="handled">
+              <View style={styles.logoCard}>
+                <Image source={LOGO} style={styles.logoImage} resizeMode="cover" />
+              </View>
 
-          <View style={styles.formCard}>
-            <Text style={styles.label}>Email</Text>
-            <View style={styles.inputShell}>
-              <TextInput
-                placeholder="Enter Email:"
-                placeholderTextColor="#b9b9b9"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                textContentType="emailAddress"
-                value={email}
-                onChangeText={setEmail}
-                style={styles.input}
-                accessibilityLabel="Email"
-              />
-            </View>
+              <View style={styles.formCard}>
+                <Text style={styles.label}>Email</Text>
+                <View style={styles.inputShell}>
+                  <TextInput
+                    placeholder="Enter Email:"
+                    placeholderTextColor="#b9b9b9"
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    textContentType="emailAddress"
+                    value={email}
+                    onChangeText={setEmail}
+                    style={styles.input}
+                    accessibilityLabel="Email"
+                  />
+                </View>
 
-            <Text style={[styles.label, { marginTop: 16 }]}>Password</Text>
-            <View style={styles.inputShell}>
-              <TextInput
-                placeholder="Enter Password:"
-                placeholderTextColor="#b9b9b9"
-                secureTextEntry={secure}
-                textContentType="password"
-                value={password}
-                onChangeText={setPassword}
-                style={styles.input}
-                accessibilityLabel="Password"
-              />
-            </View>
+                <Text style={[styles.label, { marginTop: 16 }]}>Password</Text>
+                <View style={styles.inputShell}>
+                  <TextInput
+                    placeholder="Enter Password:"
+                    placeholderTextColor="#b9b9b9"
+                    secureTextEntry={secure}
+                    textContentType="password"
+                    value={password}
+                    onChangeText={setPassword}
+                    style={styles.input}
+                    accessibilityLabel="Password"
+                  />
+                </View>
 
-            <Pressable
-              style={[styles.signInBtn, loading && { opacity: 0.7 }]}
-              disabled={loading}
-              onPress={onSignIn}
-              accessibilityRole="button"
-              accessibilityLabel="Sign In"
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.signInText}>Sign In</Text>
-              )}
-            </Pressable>
+                <Pressable
+                  style={[styles.signInBtn, loading && { opacity: 0.7 }]}
+                  disabled={loading}
+                  onPress={onSignIn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Sign In"
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.signInText}>Sign In</Text>
+                  )}
+                </Pressable>
 
-            <Pressable onPress={onForgotPassword} style={styles.forgotWrap}>
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </Pressable>
-          </View>
+                <Pressable onPress={onForgotPassword} style={styles.forgotWrap}>
+                  <Text style={styles.forgotText}>Forgot password?</Text>
+                </Pressable>
+              </View>
 
-          <View>
-            <Pressable onPress={ToHomePage}>
-              <Text>To Home Screen</Text>
-            </Pressable>
-          </View>
-        </KeyboardAvoidingView>
+              <View>
+                <Pressable onPress={ToHomePage}>
+                  <Text>To Home Screen</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
       </ImageBackground>
     </SafeAreaView>
   );
@@ -172,7 +176,7 @@ const BORDER = "#c8c8c8";
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#2f4f2f" },
-  bg: { flex: 1, justifyContent: "flex-start" },
+  bg: { flex: 1, justifyContent: "flex-start", height: "110%", marginTop: -60 },
   tint: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(88, 110, 50, 0.35)",
@@ -180,7 +184,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 18,
-    alignItems: "center",
   },
   logoCard: {
     marginTop: 48,
