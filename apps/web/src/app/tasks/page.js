@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { fetchApi } from "@/lib/api/api";
 
@@ -9,6 +9,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export default function TasksPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const openReqId = searchParams.get("open");
   const [reqs, setReqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedReq, setSelectedReq] = useState(null);
@@ -51,6 +53,13 @@ export default function TasksPage() {
     loadReqs();
   }, []);
 
+  useEffect(() => {
+    if (!openReqId) {
+      return;
+    }
+
+    openReqDetails(openReqId);
+  }, [openReqId]);
   async function deleteReq(id) {
     if (!confirm("Delete this REQ?")) {
       return;
@@ -257,3 +266,4 @@ function Info({ label, value }) {
     </div>
   );
 }
+

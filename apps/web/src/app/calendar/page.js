@@ -300,16 +300,16 @@ export default function Page() {
 
                     <div className="mt-4 flex gap-2">
                       <button
-                        onClick={() => router.push(`/tasks/${task.id}`)}
+                        onClick={() => router.push(`/tasks?open=${task.id}`)}
                         className="app-button app-button-primary px-4 py-2 text-sm"
                       >
-                        View
+                        View REQ
                       </button>
                       <button
-                        onClick={() => router.push(`/tasks/${task.id}/edit`)}
+                        onClick={() => router.push(`/req?edit=${task.id}`)}
                         className="app-button app-button-secondary px-4 py-2 text-sm"
                       >
-                        Edit
+                        Edit REQ
                       </button>
                     </div>
                   </li>
@@ -322,3 +322,4 @@ export default function Page() {
     </AppShell>
   );
 }
+

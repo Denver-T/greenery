@@ -181,29 +181,29 @@ async function getTasks(options = {}) {
   const whereClause =
     scope === "assignment"
       ? ""
-      : "WHERE status IN ('assigned', 'in_progress', 'completed', 'cancelled')";
+      : "WHERE work_reqs.status IN ('assigned', 'in_progress', 'completed', 'cancelled')";
 
   const sql = `
     SELECT
-      id,
-      referenceNumber,
-      requestDate,
-      techName,
-      actionRequired,
-      account,
-      location,
-      status,
-      assignedTo,
+      work_reqs.id,
+      work_reqs.referenceNumber,
+      work_reqs.requestDate,
+      work_reqs.techName,
+      work_reqs.actionRequired,
+      work_reqs.account,
+      work_reqs.location,
+      work_reqs.status,
+      work_reqs.assignedTo,
       employees.name AS assignedEmployeeName,
-      notes,
-      dueDate,
-      created_at,
-      updated_at
-    FROM ${WORK_REQS_TABLE}
+      work_reqs.notes,
+      work_reqs.dueDate,
+      work_reqs.created_at,
+      work_reqs.updated_at
+    FROM ${WORK_REQS_TABLE} work_reqs
     LEFT JOIN ${EMPLOYEES_TABLE} employees
-      ON employees.id = ${WORK_REQS_TABLE}.assignedTo
+      ON employees.id = work_reqs.assignedTo
     ${whereClause}
-    ORDER BY updated_at DESC, id DESC
+    ORDER BY work_reqs.updated_at DESC, work_reqs.id DESC
   `;
 
   const [rows] = await db.query(sql);
@@ -225,24 +225,24 @@ async function getTaskById(id) {
 
   const sql = `
     SELECT
-      id,
-      referenceNumber,
-      requestDate,
-      techName,
-      actionRequired,
-      account,
-      location,
-      status,
-      assignedTo,
+      work_reqs.id,
+      work_reqs.referenceNumber,
+      work_reqs.requestDate,
+      work_reqs.techName,
+      work_reqs.actionRequired,
+      work_reqs.account,
+      work_reqs.location,
+      work_reqs.status,
+      work_reqs.assignedTo,
       employees.name AS assignedEmployeeName,
-      notes,
-      dueDate,
-      created_at,
-      updated_at
-    FROM ${WORK_REQS_TABLE}
+      work_reqs.notes,
+      work_reqs.dueDate,
+      work_reqs.created_at,
+      work_reqs.updated_at
+    FROM ${WORK_REQS_TABLE} work_reqs
     LEFT JOIN ${EMPLOYEES_TABLE} employees
-      ON employees.id = ${WORK_REQS_TABLE}.assignedTo
-    WHERE id = ?
+      ON employees.id = work_reqs.assignedTo
+    WHERE work_reqs.id = ?
     LIMIT 1
   `;
 
