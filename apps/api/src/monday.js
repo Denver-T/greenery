@@ -158,14 +158,7 @@ export default function User() {
   }
 
 // Fetch boards by ID (Must use POST)
-const query = `
-  query {
-    board_id {
-        priority
-        task
-        }
-  }
-`;
+const query = `query { boards (ids: [1234567890]) { name state permissions items_page { items { id name }}}}`
 
 // Exception handling
 try { 
@@ -176,6 +169,23 @@ try {
         'Authorization' : token
       },
       body: JSON.stringify({ query })
+    })
+    .then(res => res.json())
+    .then(data => console.log(data));
+} catch (error) {
+    console.error('An error occured while fetching boards from Monday.com.', error.message);
+}
+
+// Update board
+const updateBoard = `mutation ($desc: String!) { update_board (board_id: 1234567890, board_attribute: description, new_value: $desc)}`
+try { 
+    fetch ("https://api.monday.com", {
+      method: 'post',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization' : token
+      },
+      body: JSON.stringify({ updateBoard })
     })
     .then(res => res.json())
     .then(data => console.log(data));
