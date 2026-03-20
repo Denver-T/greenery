@@ -310,6 +310,8 @@ export default function WorkRequestDetails({ route, navigation }) {
                     </View>
                     <View style={[styles.fieldInfo, { height: 150 }]}>
                       {detailData.picturePath ? (
+                        
+                        /* Currently not working, will fix soon */
                         <Image
                             source={{ uri: `${process.env.EXPO_PUBLIC_API_BASE_URL}/${detailData.picturePath}` }}
                             style={{ width: '100%', height: '100%', borderRadius: 8 }}
