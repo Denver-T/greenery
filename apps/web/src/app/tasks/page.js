@@ -25,9 +25,21 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 async function jsonOrThrow(res) {
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(body?.error || `Request failed (${res.status})`);
+    throw new Error(body?.message || body?.error || `Request failed (${res.status})`);
   }
   return body;
+}
+
+function getAuthHeaders() {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    throw new Error("You are not logged in. Please sign in again.");
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+  };
 }
 
 export default function TasksPage() {
@@ -47,7 +59,9 @@ export default function TasksPage() {
     try {
       const res = await fetch(`${API_BASE}/reqs`, {
         cache: "no-store",
+        headers: getAuthHeaders(),
       });
+
       const data = await jsonOrThrow(res);
       setReqs(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -67,7 +81,9 @@ export default function TasksPage() {
     try {
       const res = await fetch(`${API_BASE}/reqs/${id}`, {
         cache: "no-store",
+        headers: getAuthHeaders(),
       });
+
       const data = await jsonOrThrow(res);
       setSelectedReq(data);
     } catch (err) {
@@ -84,7 +100,6 @@ export default function TasksPage() {
   return (
     <AppShell title="View Tasks">
       <div className="p-6">
-        {/* Page intro */}
         <section className="mb-6 rounded-card bg-white p-6 shadow-soft">
           <h2 className="mb-2 text-xl font-extrabold text-brand-700">
             Submitted Work Requests
@@ -95,14 +110,12 @@ export default function TasksPage() {
           </p>
         </section>
 
-        {/* Error banner */}
         {error ? (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-sm font-medium text-red-700">
             {error}
           </div>
         ) : null}
 
-        {/* Requests list */}
         <section className="rounded-card bg-white p-6 shadow-soft">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-extrabold text-brand-700">
@@ -162,7 +175,6 @@ export default function TasksPage() {
           )}
         </section>
 
-        {/* Request details modal */}
         {selectedReq && (
           <div
             className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-6"
@@ -238,7 +250,6 @@ export default function TasksPage() {
                     </div>
                   )}
 
-                  {/* Future extension area */}
                   <div className="mt-6 flex gap-3">
                     <button
                       type="button"
@@ -266,9 +277,6 @@ export default function TasksPage() {
   );
 }
 
-/**
- * Small reusable label/value display block
- */
 function Info({ label, value }) {
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
