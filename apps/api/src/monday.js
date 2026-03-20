@@ -11,7 +11,7 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // List users
-export default function User() {
+function User() {
   const users = {
   "query": "{ users(limit: 50, page: 1) { id name email is_admin is_guest enabled }}"
 }
