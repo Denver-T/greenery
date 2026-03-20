@@ -11,20 +11,49 @@ import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { fetchApi } from "@/lib/api/api";
 
+const ROLE_OPTIONS = [
+  { label: "Employee", value: "Employee" },
+  { label: "Manager", value: "Manager" },
+  { label: "Admin", value: "Admin" },
+];
+
+const STATUS_OPTIONS = ["Active", "Inactive"];
+
+function normalizeRoleForForm(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  switch (normalized) {
+    case "admin":
+    case "administrator":
+      return "Admin";
+    case "manager":
+      return "Manager";
+    default:
+      return "Employee";
+  }
+}
+
+function toEmployeeForm(employee = {}) {
+  return {
+    ...employee,
+    name: employee.name || "",
+    role: normalizeRoleForForm(employee.role),
+    email: employee.email || "",
+    phone: employee.phone || "",
+    status: employee.status || "Active",
+    permissionLevel: normalizeRoleForForm(
+      employee.permissionLevel || employee.role
+    ),
+  };
+}
+
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const [form, setForm] = useState({
-    name: "",
-    role: "Technician",
-    email: "",
-    phone: "",
-    status: "Active",
-    permissionLevel: "Technician",
-  });
+  const [form, setForm] = useState(toEmployeeForm());
 
   const [formErrors, setFormErrors] = useState({});
   const [editing, setEditing] = useState(null);
@@ -95,14 +124,7 @@ export default function EmployeesPage() {
         body: form,
       });
 
-      setForm({
-        name: "",
-        role: "Technician",
-        email: "",
-        phone: "",
-        status: "Active",
-        permissionLevel: "Technician",
-      });
+      setForm(toEmployeeForm());
       setFormErrors({});
       await refresh();
     } catch (e) {
@@ -197,9 +219,11 @@ export default function EmployeesPage() {
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
               >
-                <option>Technician</option>
-                <option>Manager</option>
-                <option>Administrator</option>
+                {ROLE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </label>
 
@@ -240,8 +264,11 @@ export default function EmployeesPage() {
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
               >
-                <option>Active</option>
-                <option>Inactive</option>
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
               </select>
             </label>
 
@@ -254,9 +281,11 @@ export default function EmployeesPage() {
                   setForm({ ...form, permissionLevel: e.target.value })
                 }
               >
-                <option>Technician</option>
-                <option>Manager</option>
-                <option>Administrator</option>
+                {ROLE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </label>
           </div>
@@ -305,7 +334,7 @@ export default function EmployeesPage() {
                         {emp.name}
                       </div>
                       <div className="text-sm font-bold text-gray-600">
-                        {emp.role}
+                        {normalizeRoleForForm(emp.role)}
                       </div>
                       <div className="text-xs font-semibold text-gray-500">
                         ID: {emp.id}
@@ -324,7 +353,7 @@ export default function EmployeesPage() {
                       Status: <span className="font-normal">{emp.status || "Active"}</span>
                     </div>
                     <div>
-                      Permission: <span className="font-normal">{emp.permissionLevel || emp.role}</span>
+                      Permission: <span className="font-normal">{normalizeRoleForForm(emp.permissionLevel || emp.role)}</span>
                     </div>
                   </div>
 
@@ -333,7 +362,7 @@ export default function EmployeesPage() {
                       className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 font-extrabold text-black disabled:opacity-60"
                       disabled={busy}
                       onClick={() => {
-                        setEditing({ ...emp });
+                        setEditing(toEmployeeForm(emp));
                         setEditErrors({});
                       }}
                     >
@@ -387,14 +416,16 @@ export default function EmployeesPage() {
                   <span className="text-sm font-bold text-gray-700">Role</span>
                   <select
                     className="rounded-xl border border-gray-200 px-3 py-2"
-                    value={editing.role || "Technician"}
+                    value={editing.role || "Employee"}
                     onChange={(e) =>
                       setEditing({ ...editing, role: e.target.value })
                     }
                   >
-                    <option>Technician</option>
-                    <option>Manager</option>
-                    <option>Administrator</option>
+                    {ROLE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </label>
 
@@ -439,8 +470,11 @@ export default function EmployeesPage() {
                       setEditing({ ...editing, status: e.target.value })
                     }
                   >
-                    <option>Active</option>
-                    <option>Inactive</option>
+                    {STATUS_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
                   </select>
                 </label>
 
@@ -448,14 +482,16 @@ export default function EmployeesPage() {
                   <span className="text-sm font-bold text-gray-700">Permission Level</span>
                   <select
                     className="rounded-xl border border-gray-200 px-3 py-2"
-                    value={editing.permissionLevel || editing.role || "Technician"}
+                    value={editing.permissionLevel || editing.role || "Employee"}
                     onChange={(e) =>
                       setEditing({ ...editing, permissionLevel: e.target.value })
                     }
                   >
-                    <option>Technician</option>
-                    <option>Manager</option>
-                    <option>Administrator</option>
+                    {ROLE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </label>
               </div>

@@ -2,6 +2,35 @@
 
 const admin = require("../../config/firebase");
 const { httpError } = require("../utils/httpError");
+const accountService = require("../services/accountService");
+
+function normalizeRole(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+
+  switch (normalized) {
+    case "admin":
+    case "administrator":
+      return "admin";
+    case "manager":
+      return "manager";
+    case "employee":
+    case "technician":
+      return "technician";
+    default:
+      return null;
+  }
+}
+
+function normalizeStatus(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function parseBootstrapAdminEmails() {
+  return String(process.env.BOOTSTRAP_ADMIN_EMAILS || "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
 
 /**
  * Authentication Middleware
@@ -36,16 +65,72 @@ async function verifyToken(req, res, next) {
 
     const decoded = await admin.auth().verifyIdToken(token);
 
+    const email =
+      typeof decoded.email === "string"
+        ? decoded.email.trim().toLowerCase()
+        : null;
+
+    if (!email) {
+      return next(
+        httpError(
+          401,
+          "Authenticated token is missing an email claim",
+          "AUTH_INVALID_TOKEN"
+        )
+      );
+    }
+
+    const bootstrapAdminEmails = parseBootstrapAdminEmails();
+
+    let account = await accountService.getAccountByEmail(email);
+
+    if (!account && bootstrapAdminEmails.includes(email)) {
+      account = await accountService.ensureBootstrapAdminAccount(
+        email,
+        decoded.name || decoded.email
+      );
+    }
+
+    if (!account) {
+      return next(
+        httpError(
+          403,
+          "Your account is not authorized for this application",
+          "AUTH_ACCOUNT_NOT_FOUND"
+        )
+      );
+    }
+
+    if (normalizeStatus(account.status) !== "active") {
+      return next(
+        httpError(
+          403,
+          "Your account is inactive",
+          "AUTH_ACCOUNT_INACTIVE"
+        )
+      );
+    }
+
+    const role =
+      normalizeRole(account.permissionLevel) ||
+      normalizeRole(account.role) ||
+      normalizeRole(decoded.role);
+
+    if (!role) {
+      return next(
+        httpError(
+          403,
+          "Your account does not have a valid permission level",
+          "AUTH_ROLE_INVALID"
+        )
+      );
+    }
+
     req.user = {
       uid: decoded.uid,
-      email:
-        typeof decoded.email === "string"
-          ? decoded.email.trim().toLowerCase()
-          : null,
-      role:
-        typeof decoded.role === "string"
-          ? decoded.role.trim().toLowerCase()
-          : null,
+      email,
+      role,
+      account,
       claims: decoded,
     };
 

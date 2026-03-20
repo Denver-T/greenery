@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/app/lib/firebaseClient";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function LoginPage() {
+  const { error: authError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -25,9 +27,9 @@ export default function LoginPage() {
     <div className="mx-auto max-w-md p-6">
       <h1 className="mb-4 text-2xl font-bold">Login</h1>
 
-      {error && (
+      {(error || authError) && (
         <div className="mb-4 text-red-600">
-          {error}
+          {error || authError}
         </div>
       )}
 

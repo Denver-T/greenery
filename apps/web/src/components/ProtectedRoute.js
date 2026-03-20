@@ -2,19 +2,19 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useFirebaseUser } from "@/app/lib/useFirebaseUser";
+import { useAuth } from "./AuthProvider";
 
 export default function ProtectedRoute({ children }) {
   const router = useRouter();
-  const { user, loading } = useFirebaseUser();
+  const { isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !isAuthenticated) {
       router.push("/login");
     }
-  }, [user, loading]);
+  }, [isAuthenticated, loading, router]);
 
-  if (loading || !user) {
+  if (loading || !isAuthenticated) {
     return <div className="p-6">Checking authentication...</div>;
   }
 

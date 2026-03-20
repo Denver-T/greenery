@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "./lib/firebaseClient"; 
+import { useAuth } from "@/components/AuthProvider";
 import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
@@ -15,6 +16,7 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { error: authError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
@@ -138,7 +140,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {error ? <div style={styles.error}>{error}</div> : null}
+          {error || authError ? <div style={styles.error}>{error || authError}</div> : null}
 
           <button disabled={loading} className="primary" style={styles.primaryBtn}>
             {loading ? "Signing in..." : "Sign In"}

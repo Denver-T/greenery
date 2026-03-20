@@ -17,7 +17,24 @@ const { isNonEmptyString, toPositiveInt } = require("../utils/validators");
  * Controllers should not manually shape database queries.
  */
 
-const VALID_ROLES = ["technician", "manager", "admin"];
+const VALID_ROLES = ["technician", "employee", "manager", "admin", "administrator"];
+
+function normalizeRole(value) {
+  const normalized = typeof value === "string" ? value.trim().toLowerCase() : value;
+
+  switch (normalized) {
+    case "employee":
+    case "technician":
+      return "technician";
+    case "manager":
+      return "manager";
+    case "admin":
+    case "administrator":
+      return "admin";
+    default:
+      return normalized;
+  }
+}
 
 /**
  * Normalize optional string input.
@@ -58,8 +75,8 @@ function validateAndNormalizeAccountPayload(body) {
   const rawPhone = body?.phone;
 
   const name = typeof rawName === "string" ? rawName.trim() : rawName;
-  const role = typeof rawRole === "string" ? rawRole.trim().toLowerCase() : rawRole;
-  const email = normalizeOptionalString(rawEmail);
+  const role = normalizeRole(rawRole);
+  const email = normalizeOptionalString(rawEmail)?.toLowerCase() || null;
   const phone = normalizeOptionalString(rawPhone);
 
   const details = [];
@@ -73,7 +90,7 @@ function validateAndNormalizeAccountPayload(body) {
   } else if (!VALID_ROLES.includes(role)) {
     details.push({
       field: "role",
-      issue: "must be one of: technician, manager, admin",
+      issue: "must be one of: employee, manager, admin",
     });
   }
 

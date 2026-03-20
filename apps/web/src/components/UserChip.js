@@ -1,9 +1,29 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth } from "./AuthProvider";
+
+function formatRole(role) {
+  const normalized = String(role || "").trim().toLowerCase();
+
+  switch (normalized) {
+    case "administrator":
+    case "admin":
+      return "Admin";
+    case "manager":
+      return "Manager";
+    case "technician":
+    case "employee":
+      return "Employee";
+    default:
+      return "Active";
+  }
+}
 
 export default function UserChip({ name }) {
-  const initial = name?.[0]?.toUpperCase() ?? "U";
+  const { account } = useAuth();
+  const displayName = account?.name || name || "User";
+  const initial = displayName?.[0]?.toUpperCase() ?? "U";
 
   return (
     <Link
@@ -15,8 +35,8 @@ export default function UserChip({ name }) {
         {initial}
       </div>
       <div className="leading-tight">
-        <div className="font-bold">{name ?? "User"}</div>
-        <div className="text-xs opacity-90">Online</div>
+        <div className="font-bold">{displayName}</div>
+        <div className="text-xs opacity-90">{formatRole(account?.permissionLevel || account?.role)}</div>
       </div>
     </Link>
   );
