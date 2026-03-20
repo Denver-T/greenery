@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { fetchApi } from "@/lib/api/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export default function TasksPage() {
+  const router = useRouter();
   const [reqs, setReqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedReq, setSelectedReq] = useState(null);
@@ -49,48 +51,68 @@ export default function TasksPage() {
     loadReqs();
   }, []);
 
+  async function deleteReq(id) {
+    if (!confirm("Delete this REQ?")) {
+      return;
+    }
+
+    try {
+      await fetchApi(`/reqs/${id}`, {
+        method: "DELETE",
+      });
+
+      if (selectedReq?.id === id) {
+        setSelectedReq(null);
+      }
+
+      await loadReqs();
+    } catch (err) {
+      setError(err.message || "Failed to delete REQ.");
+    }
+  }
+
   return (
     <AppShell title="View Tasks">
-      <div className="p-6">
-        <section className="mb-6 rounded-card bg-white p-6 shadow-soft">
-          <h2 className="mb-2 text-xl font-extrabold text-brand-700">
+      <div>
+        <section className="app-panel shadow-soft mb-6 p-6">
+          <h2 className="app-title mb-2 text-xl">
             Submitted Work Requests
           </h2>
-          <p className="text-sm text-gray-600">
+          <p className="app-copy text-sm">
             This page shows submitted REQ forms from the database. You can review
             each one and later connect them to task creation.
           </p>
         </section>
 
         {error ? (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-sm font-medium text-red-700">
+          <div className="mb-4 rounded-2xl border border-red-300/40 bg-red-100/70 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/35 dark:text-red-200">
             {error}
           </div>
         ) : null}
 
-        <section className="rounded-card bg-white p-6 shadow-soft">
+        <section className="app-panel shadow-soft p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-extrabold text-brand-700">
+            <h3 className="app-title text-lg">
               Work Request Queue
             </h3>
 
             <button
               onClick={loadReqs}
-              className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+              className="app-button app-button-primary px-4 py-2 text-sm"
             >
               Refresh
             </button>
           </div>
 
           {loading ? (
-            <p className="text-gray-600">Loading requests...</p>
+            <p className="text-muted-foreground">Loading requests...</p>
           ) : reqs.length === 0 ? (
-            <p className="text-gray-600">No work requests found.</p>
+            <p className="text-muted-foreground">No work requests found.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse">
                 <thead>
-                  <tr className="border-b text-left text-sm font-bold text-gray-700">
+                  <tr className="border-b border-border text-left text-sm font-bold text-muted-foreground">
                     <th className="px-3 py-3">Reference</th>
                     <th className="px-3 py-3">Date</th>
                     <th className="px-3 py-3">Tech</th>
@@ -102,7 +124,7 @@ export default function TasksPage() {
                 </thead>
                 <tbody>
                   {reqs.map((req) => (
-                    <tr key={req.id} className="border-b text-sm text-gray-800">
+                    <tr key={req.id} className="border-b border-border text-sm text-foreground">
                       <td className="px-3 py-3">{req.referenceNumber}</td>
                       <td className="px-3 py-3">
                         {req.requestDate ? String(req.requestDate).slice(0, 10) : "-"}
@@ -114,7 +136,7 @@ export default function TasksPage() {
                       <td className="px-3 py-3">
                         <button
                           onClick={() => openReqDetails(req.id)}
-                          className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800"
+                          className="app-button app-button-primary px-3 py-1.5 text-sm"
                         >
                           View
                         </button>
@@ -133,23 +155,37 @@ export default function TasksPage() {
             onClick={() => setSelectedReq(null)}
           >
             <div
-              className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+              className="app-panel shadow-elevated-lg max-h-[90vh] w-full max-w-4xl overflow-y-auto p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-xl font-extrabold text-brand-700">
+                <h3 className="app-title text-xl">
                   Work Request Details
                 </h3>
-                <button
-                  onClick={() => setSelectedReq(null)}
-                  className="rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300"
-                >
-                  Close
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => router.push(`/req?edit=${selectedReq.id}`)}
+                    className="app-button app-button-primary px-4 py-2 text-sm"
+                  >
+                    Edit REQ
+                  </button>
+                  <button
+                    onClick={() => deleteReq(selectedReq.id)}
+                    className="app-button border border-red-300/50 bg-red-100/70 px-4 py-2 text-sm text-red-700 hover:bg-red-200/80 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200"
+                  >
+                    Delete REQ
+                  </button>
+                  <button
+                    onClick={() => setSelectedReq(null)}
+                    className="app-button app-button-secondary px-4 py-2 text-sm"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
 
               {detailsLoading ? (
-                <p className="text-gray-600">Loading details...</p>
+                <p className="text-muted-foreground">Loading details...</p>
               ) : (
                 <>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -177,27 +213,27 @@ export default function TasksPage() {
                   </div>
 
                   <div className="mt-4">
-                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                    <label className="mb-1 block text-sm font-medium text-muted-foreground">
                       Notes
                     </label>
-                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800">
+                    <div className="app-inset px-4 py-3 text-sm text-foreground">
                       {selectedReq.notes || "No notes provided."}
                     </div>
                   </div>
 
                   {selectedReq.picturePath ? (
                     <div className="mt-4">
-                      <label className="mb-1 block text-sm font-medium text-gray-700">
+                      <label className="mb-1 block text-sm font-medium text-muted-foreground">
                         Uploaded Image
                       </label>
                       <img
                         src={`${API_BASE}${selectedReq.picturePath}`}
                         alt="REQ upload"
-                        className="max-h-96 rounded-xl border border-gray-200 object-contain"
+                        className="max-h-96 rounded-2xl border border-border object-contain"
                       />
                     </div>
                   ) : (
-                    <div className="mt-4 text-sm text-gray-500">
+                    <div className="mt-4 text-sm text-muted">
                       No image uploaded for this request.
                     </div>
                   )}
@@ -213,11 +249,11 @@ export default function TasksPage() {
 
 function Info({ label, value }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-      <div className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-500">
+    <div className="app-inset px-4 py-3">
+      <div className="mb-1 text-xs font-bold uppercase tracking-wide text-muted">
         {label}
       </div>
-      <div className="text-sm font-medium text-gray-800">{value || "-"}</div>
+      <div className="text-sm font-medium text-foreground">{value || "-"}</div>
     </div>
   );
 }

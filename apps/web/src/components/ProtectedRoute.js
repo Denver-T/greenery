@@ -15,7 +15,7 @@ export default function ProtectedRoute({ children }) {
   }, [isAuthenticated, loading, router]);
 
   if (loading || !isAuthenticated) {
-    return <div className="p-6">Checking authentication...</div>;
+    return <div className="p-6 text-muted-foreground">Checking authentication...</div>;
   }
 
   return children;

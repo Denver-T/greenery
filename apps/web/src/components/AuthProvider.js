@@ -125,11 +125,11 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={value}>
       {!isPublicPath && loading ? (
-        <div className="grid min-h-screen place-items-center bg-[#f7f5ef] p-6 text-center text-gray-700">
+        <div className="grid min-h-screen place-items-center bg-background p-6 text-center text-muted-foreground">
           Checking your employee access...
         </div>
       ) : !isPublicPath && !value.isAuthenticated ? (
-        <div className="grid min-h-screen place-items-center bg-[#f7f5ef] p-6 text-center text-red-700">
+        <div className="grid min-h-screen place-items-center bg-background p-6 text-center text-red-700 dark:text-red-200">
           {error || "Redirecting to login..."}
         </div>
       ) : (

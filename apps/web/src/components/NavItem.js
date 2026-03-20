@@ -12,21 +12,10 @@ export default function NavItem({ href, label, icon }) {
       href={href}
       aria-current={active ? "page" : undefined}
       className={[
-        // layout
-        "flex items-center gap-2 rounded-[12px] px-3 py-2 no-underline",
-
-        // color
-        "text-white",
-
-        // base elevation & subtle border to lift from the green background
-        "shadow-elevated border border-white/10",
-
-        // state styles
+        "flex items-center gap-2 rounded-[16px] px-3 py-3 no-underline text-white shadow-elevated border border-white/10",
         active
-          ? "bg-white/20 shadow-elevated-lg"
-          : "bg-white/10 hover:bg-white/14 hover:shadow-elevated-lg",
-
-        // focus ring (keyboard)
+          ? "bg-white/22 shadow-elevated-lg"
+          : "bg-white/8 hover:bg-white/14 hover:shadow-elevated-lg",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
       ].join(" ")}
     >

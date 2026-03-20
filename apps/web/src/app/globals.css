@@ -1,113 +1,227 @@
-/* 1) Tailwind v4 core */
 @import "tailwindcss";
 
-/* 2) Color variables for light/dark */
 :root {
-  --background: #f8faf8;      /* app background */
-  --foreground: #1f2937;      /* gray-800 */
+  color-scheme: light;
+
+  --background: #f4f6f1;
+  --foreground: #17201a;
+  --muted: #637067;
+  --muted-foreground: #526056;
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-strong: #ffffff;
+  --surface-subtle: #eef3eb;
+  --surface-inset: #f7f9f5;
+  --border: rgba(42, 59, 46, 0.12);
+  --border-strong: rgba(42, 59, 46, 0.2);
+  --brand: #6a8f41;
+  --brand-strong: #4f6c2d;
+  --brand-soft: #dce8cf;
+  --accent: #d97706;
+  --danger: #b42318;
+  --shadow-color: 24 34 26;
+  --radius-card: 20px;
+  --radius-soft: 14px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0b0f0a;
-    --foreground: #e5e7eb;
+    color-scheme: dark;
+
+    --background: #0d120f;
+    --foreground: #edf3eb;
+    --muted: #9caf9f;
+    --muted-foreground: #829383;
+    --surface: rgba(20, 28, 23, 0.84);
+    --surface-strong: #182119;
+    --surface-subtle: #121914;
+    --surface-inset: #0f1511;
+    --border: rgba(205, 228, 208, 0.1);
+    --border-strong: rgba(205, 228, 208, 0.16);
+    --brand: #91bc5d;
+    --brand-strong: #bfdc92;
+    --brand-soft: rgba(145, 188, 93, 0.14);
+    --accent: #f4b660;
+    --danger: #f97066;
+    --shadow-color: 0 0 0;
   }
 }
 
-/* 3) Tailwind v4 @theme: define design tokens you want as Tailwind colors/fonts */
 @theme inline {
-  /* map CSS custom props into Tailwind color tokens */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-
-  /* project brand greens (from your mock) */
-  --color-brand: #6a8f41;
-  --color-brand-700: #50712f;
-
-  /* optional fonts (if you wire them in layout.js) */
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-
-  /* card radius used in examples */
-  --radius-card: 12px;
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-inset: var(--surface-inset);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-brand: var(--brand);
+  --color-brand-700: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans), "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), "SFMono-Regular", monospace;
+  --radius-card: var(--radius-card);
+  --radius-soft: var(--radius-soft);
 }
 
-/* 4) Global defaults */
 html {
   scroll-behavior: smooth;
 }
 
-::selection {
-  background: #a3e635; /* lime-400 */
-  color: #000;
-}
-
 body {
-  background: var(--background);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(154, 197, 110, 0.18), transparent 32%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.42), transparent 24%),
+    linear-gradient(180deg, var(--surface-subtle) 0%, var(--background) 55%, var(--surface-inset) 100%);
   color: var(--foreground);
   font-family: var(--font-sans);
 }
 
-/* 5) High-visibility keyboard focus */
+::selection {
+  background: color-mix(in srgb, var(--brand) 52%, white);
+  color: #102014;
+}
+
 :focus-visible {
-  outline: 2px solid #86efac; /* green-300 */
+  outline: 2px solid color-mix(in srgb, var(--brand) 72%, white);
   outline-offset: 2px;
 }
 
-/* Smooth interactions on links and buttons */
-a, button {
-  transition: all .15s ease;
+a,
+button,
+input,
+textarea,
+select {
+  transition:
+    color 0.18s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
 }
 
-/* 6) Tailwind v4 custom utilities used by components */
-@utility shadow-soft {
-  box-shadow:
-    0 1px 2px rgba(0,0,0,.06),
-    0 1px 3px rgba(0,0,0,.10);
+:is(input, textarea, select) {
+  color: var(--foreground);
+}
+
+:is(input, textarea)::placeholder {
+  color: var(--muted);
+}
+
+:is(input, textarea, select):disabled,
+:is(input, textarea, select)[readonly] {
+  color: var(--muted-foreground);
 }
 
 @utility rounded-card {
   border-radius: var(--radius-card);
 }
 
-/* Subtle, reusable shadow for nav items */
+@utility shadow-soft {
+  box-shadow:
+    0 18px 40px -28px rgb(var(--shadow-color) / 0.45),
+    0 10px 18px -16px rgb(var(--shadow-color) / 0.28);
+}
+
 @utility shadow-elevated {
   box-shadow:
-    0 1px 1px rgba(0,0,0,.06),
-    0 2px 4px rgba(0,0,0,.10);
+    0 14px 30px -24px rgb(var(--shadow-color) / 0.38),
+    0 8px 14px -12px rgb(var(--shadow-color) / 0.22);
 }
 
-/* A bit stronger when hovered/active */
 @utility shadow-elevated-lg {
   box-shadow:
-    0 2px 3px rgba(0,0,0,.08),
-    0 6px 12px rgba(0,0,0,.16);
+    0 20px 40px -24px rgb(var(--shadow-color) / 0.48),
+    0 12px 22px -16px rgb(var(--shadow-color) / 0.3);
 }
 
-/* === Form control defaults ===
-   Make actual text dark, and keep placeholders lighter.
-   Works for light & dark themes because the inputs are on white cards. */
-:is(input, textarea, select) {
-  color: #111827;            /* gray-900 */
+@utility app-shell {
+  min-height: 100vh;
+  background: transparent;
+  color: var(--foreground);
 }
 
-/* Placeholder should be visually distinct (lighter) */
-:is(input, textarea)::placeholder {
-  color: #9ca3af;            /* gray-400 */
+@utility app-surface {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  backdrop-filter: blur(16px);
+  border-radius: var(--radius-card);
 }
 
-/* Improve disabled/read-only contrast a touch */
-:is(input, textarea, select):disabled,
-:is(input, textarea, select)[readonly] {
-  color: #6b7280;            /* gray-500 */
+@utility app-panel {
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
+  border-radius: var(--radius-card);
 }
 
-
-/* Tailwind v4: simple custom utility for fields */
-@utility field {
-  color: #111827;            /* text-gray-900 */
+@utility app-inset {
+  border: 1px solid var(--border);
+  background: var(--surface-inset);
+  border-radius: var(--radius-soft);
 }
-@utility field-placeholder {
-  /* Use together with "placeholder:field-placeholder" if you want */
-  color: #9ca3af;            /* text-gray-400 */
+
+@utility app-title {
+  color: var(--brand-strong);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+@utility app-copy {
+  color: var(--muted-foreground);
+}
+
+@utility app-field {
+  width: 100%;
+  border-radius: var(--radius-soft);
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
+  padding: 0.8rem 0.95rem;
+  color: var(--foreground);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2);
+}
+
+@utility app-field-focus {
+  border-color: color-mix(in srgb, var(--brand) 70%, white);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--brand) 16%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.18);
+  outline: none;
+}
+
+@utility app-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.8rem 1rem;
+  font-weight: 700;
+}
+
+@utility app-button-primary {
+  background: linear-gradient(135deg, var(--brand-strong), var(--brand));
+  color: white;
+  box-shadow: 0 18px 26px -18px color-mix(in srgb, var(--brand-strong) 70%, transparent);
+}
+
+@utility app-button-secondary {
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
+  color: var(--foreground);
+}
+
+@utility app-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
 }

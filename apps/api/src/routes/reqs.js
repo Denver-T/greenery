@@ -118,6 +118,91 @@ function handleUpload(req, res, next) {
   });
 }
 
+function parseReqPayload(body = {}, file = null, existingPicturePath = null) {
+  const referenceNumber = normalizeString(body.referenceNumber, 100);
+  const requestDate = normalizeString(body.requestDate, 100);
+  const techName = normalizeString(body.techName, 120);
+  const account = normalizeString(body.account, 150);
+
+  if (!referenceNumber || !requestDate || !techName || !account) {
+    return {
+      error: {
+        status: 400,
+        body: {
+          error:
+            "referenceNumber, requestDate, techName, and account are required",
+        },
+      },
+    };
+  }
+
+  if (!isValidDateString(requestDate)) {
+    return {
+      error: {
+        status: 400,
+        body: {
+          error: "requestDate must be a valid date",
+        },
+      },
+    };
+  }
+
+  const dueDate = normalizeString(body.dueDate, 100);
+  if (dueDate && !isValidDateString(dueDate)) {
+    return {
+      error: {
+        status: 400,
+        body: {
+          error: "dueDate must be a valid date",
+        },
+      },
+    };
+  }
+
+  const numberOfPlants = parseOptionalPositiveInt(body.numberOfPlants);
+  if (
+    body.numberOfPlants !== undefined &&
+    body.numberOfPlants !== null &&
+    body.numberOfPlants !== "" &&
+    numberOfPlants === null
+  ) {
+    return {
+      error: {
+        status: 400,
+        body: {
+          error: "numberOfPlants must be a valid non-negative integer",
+        },
+      },
+    };
+  }
+
+  return {
+    data: {
+      referenceNumber,
+      requestDate,
+      techName,
+      account,
+      accountContact: normalizeString(body.accountContact, 150),
+      accountAddress: normalizeString(body.accountAddress, 255),
+      actionRequired: normalizeString(body.actionRequired, 255),
+      numberOfPlants,
+      plantWanted: normalizeString(body.plantWanted, 150),
+      plantReplaced: normalizeString(body.plantReplaced, 150),
+      plantSize: normalizeString(body.plantSize, 100),
+      plantHeight: normalizeString(body.plantHeight, 100),
+      planterTypeSize: normalizeString(body.planterTypeSize, 100),
+      planterColour: normalizeString(body.planterColour, 100),
+      stagingMaterial: normalizeString(body.stagingMaterial, 150),
+      lighting: normalizeString(body.lighting, 100),
+      method: normalizeString(body.method, 100),
+      location: normalizeString(body.location, 150),
+      notes: normalizeString(body.notes, 2000),
+      picturePath: file ? `/uploads/${file.filename}` : existingPicturePath,
+      dueDate,
+    },
+  };
+}
+
 /**
  * POST /reqs
  * Creates a new work request
@@ -130,46 +215,12 @@ router.post(
   handleUpload,
   async (req, res, next) => {
     try {
-      const body = req.body || {};
-
-      const referenceNumber = normalizeString(body.referenceNumber, 100);
-      const requestDate = normalizeString(body.requestDate, 100);
-      const techName = normalizeString(body.techName, 120);
-      const account = normalizeString(body.account, 150);
-
-      if (!referenceNumber || !requestDate || !techName || !account) {
-        return res.status(400).json({
-          error:
-            "referenceNumber, requestDate, techName, and account are required",
-        });
+      const parsed = parseReqPayload(req.body || {}, req.file, null);
+      if (parsed.error) {
+        return res.status(parsed.error.status).json(parsed.error.body);
       }
 
-      if (!isValidDateString(requestDate)) {
-        return res.status(400).json({
-          error: "requestDate must be a valid date",
-        });
-      }
-
-      const dueDate = normalizeString(body.dueDate, 100);
-      if (dueDate && !isValidDateString(dueDate)) {
-        return res.status(400).json({
-          error: "dueDate must be a valid date",
-        });
-      }
-
-      const numberOfPlants = parseOptionalPositiveInt(body.numberOfPlants);
-      if (
-        body.numberOfPlants !== undefined &&
-        body.numberOfPlants !== null &&
-        body.numberOfPlants !== "" &&
-        numberOfPlants === null
-      ) {
-        return res.status(400).json({
-          error: "numberOfPlants must be a valid non-negative integer",
-        });
-      }
-
-      const picturePath = req.file ? `/uploads/${req.file.filename}` : null;
+      const payload = parsed.data;
 
       const [result] = await db.query(
         `INSERT INTO work_reqs (
@@ -198,28 +249,28 @@ router.post(
           status
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          referenceNumber,
-          requestDate,
-          techName,
-          account,
-          normalizeString(body.accountContact, 150),
-          normalizeString(body.accountAddress, 255),
-          normalizeString(body.actionRequired, 255),
-          numberOfPlants,
-          normalizeString(body.plantWanted, 150),
-          normalizeString(body.plantReplaced, 150),
-          normalizeString(body.plantSize, 100),
-          normalizeString(body.plantHeight, 100),
-          normalizeString(body.planterTypeSize, 100),
-          normalizeString(body.planterColour, 100),
-          normalizeString(body.stagingMaterial, 150),
-          normalizeString(body.lighting, 100),
-          normalizeString(body.method, 100),
-          normalizeString(body.location, 150),
-          normalizeString(body.notes, 2000),
-          picturePath,
+          payload.referenceNumber,
+          payload.requestDate,
+          payload.techName,
+          payload.account,
+          payload.accountContact,
+          payload.accountAddress,
+          payload.actionRequired,
+          payload.numberOfPlants,
+          payload.plantWanted,
+          payload.plantReplaced,
+          payload.plantSize,
+          payload.plantHeight,
+          payload.planterTypeSize,
+          payload.planterColour,
+          payload.stagingMaterial,
+          payload.lighting,
+          payload.method,
+          payload.location,
+          payload.notes,
+          payload.picturePath,
           null,
-          dueDate,
+          payload.dueDate,
           "unassigned",
         ]
       );
@@ -227,8 +278,8 @@ router.post(
       return res.status(201).json({
         ok: true,
         id: result.insertId,
-        referenceNumber,
-        picturePath,
+        referenceNumber: payload.referenceNumber,
+        picturePath: payload.picturePath,
         status: "unassigned",
       });
     } catch (err) {
@@ -295,6 +346,126 @@ router.get(
       }
 
       return res.json(rows[0]);
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+router.put(
+  "/:id",
+  writeLimiter,
+  verifyToken,
+  authorize("manager", "admin"),
+  handleUpload,
+  async (req, res, next) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ error: "Invalid id" });
+      }
+
+      const [existingRows] = await db.query(`SELECT * FROM work_reqs WHERE id = ?`, [id]);
+      if (!existingRows.length) {
+        return res.status(404).json({ error: "REQ not found" });
+      }
+
+      const existingReq = existingRows[0];
+      const parsed = parseReqPayload(req.body || {}, req.file, existingReq.picturePath);
+      if (parsed.error) {
+        return res.status(parsed.error.status).json(parsed.error.body);
+      }
+
+      const payload = parsed.data;
+
+      const [result] = await db.query(
+        `UPDATE work_reqs
+         SET
+           referenceNumber = ?,
+           requestDate = ?,
+           techName = ?,
+           account = ?,
+           accountContact = ?,
+           accountAddress = ?,
+           actionRequired = ?,
+           numberOfPlants = ?,
+           plantWanted = ?,
+           plantReplaced = ?,
+           plantSize = ?,
+           plantHeight = ?,
+           planterTypeSize = ?,
+           planterColour = ?,
+           stagingMaterial = ?,
+           lighting = ?,
+           method = ?,
+           location = ?,
+           notes = ?,
+           picturePath = ?,
+           dueDate = ?
+         WHERE id = ?`,
+        [
+          payload.referenceNumber,
+          payload.requestDate,
+          payload.techName,
+          payload.account,
+          payload.accountContact,
+          payload.accountAddress,
+          payload.actionRequired,
+          payload.numberOfPlants,
+          payload.plantWanted,
+          payload.plantReplaced,
+          payload.plantSize,
+          payload.plantHeight,
+          payload.planterTypeSize,
+          payload.planterColour,
+          payload.stagingMaterial,
+          payload.lighting,
+          payload.method,
+          payload.location,
+          payload.notes,
+          payload.picturePath,
+          payload.dueDate,
+          id,
+        ]
+      );
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "REQ not found" });
+      }
+
+      return res.json({
+        ok: true,
+        id,
+        referenceNumber: payload.referenceNumber,
+        picturePath: payload.picturePath,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+router.delete(
+  "/:id",
+  writeLimiter,
+  verifyToken,
+  authorize("manager", "admin"),
+  async (req, res, next) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ error: "Invalid id" });
+      }
+
+      const [result] = await db.query(`DELETE FROM work_reqs WHERE id = ?`, [id]);
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "REQ not found" });
+      }
+
+      return res.json({ ok: true });
     } catch (err) {
       return next(err);
     }

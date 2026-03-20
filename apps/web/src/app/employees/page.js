@@ -1,12 +1,5 @@
 "use client";
 
-/**
- * Employee management page.
- *
- * Data flow:
- *   Next.js UI -> calls apps/api (HTTP) -> apps/api talks to MySQL
- */
-
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { fetchApi } from "@/lib/api/api";
@@ -41,10 +34,128 @@ function toEmployeeForm(employee = {}) {
     email: employee.email || "",
     phone: employee.phone || "",
     status: employee.status || "Active",
-    permissionLevel: normalizeRoleForForm(
-      employee.permissionLevel || employee.role
-    ),
+    permissionLevel: normalizeRoleForForm(employee.permissionLevel || employee.role),
   };
+}
+
+function EmployeeField({ label, error, children }) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-sm font-semibold text-muted-foreground">{label}</span>
+      {children}
+      {error ? <span className="text-xs font-medium text-red-600 dark:text-red-300">{error}</span> : null}
+    </label>
+  );
+}
+
+function EmployeeModal({ editing, setEditing, editErrors, setEditErrors, busy, saveEdit }) {
+  if (!editing) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-6" onClick={() => setEditing(null)}>
+      <div
+        className="app-panel shadow-elevated-lg w-full max-w-3xl p-6"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-4">
+          <div className="app-badge mb-2">Employee</div>
+          <h3 className="app-title text-xl">Edit employee</h3>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <EmployeeField label="Name" error={editErrors.name}>
+            <input
+              className="app-field focus:app-field-focus"
+              value={editing.name || ""}
+              onChange={(event) => setEditing({ ...editing, name: event.target.value })}
+            />
+          </EmployeeField>
+
+          <EmployeeField label="Role">
+            <select
+              className="app-field focus:app-field-focus"
+              value={editing.role || "Employee"}
+              onChange={(event) => setEditing({ ...editing, role: event.target.value })}
+            >
+              {ROLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </EmployeeField>
+
+          <EmployeeField label="Email" error={editErrors.email}>
+            <input
+              className="app-field focus:app-field-focus"
+              value={editing.email || ""}
+              onChange={(event) => setEditing({ ...editing, email: event.target.value })}
+            />
+          </EmployeeField>
+
+          <EmployeeField label="Phone" error={editErrors.phone}>
+            <input
+              className="app-field focus:app-field-focus"
+              value={editing.phone || ""}
+              onChange={(event) => setEditing({ ...editing, phone: event.target.value })}
+            />
+          </EmployeeField>
+
+          <EmployeeField label="Status">
+            <select
+              className="app-field focus:app-field-focus"
+              value={editing.status || "Active"}
+              onChange={(event) => setEditing({ ...editing, status: event.target.value })}
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </EmployeeField>
+
+          <EmployeeField label="Permission Level">
+            <select
+              className="app-field focus:app-field-focus"
+              value={editing.permissionLevel || editing.role || "Employee"}
+              onChange={(event) =>
+                setEditing({ ...editing, permissionLevel: event.target.value })
+              }
+            >
+              {ROLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </EmployeeField>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            className="app-button app-button-secondary"
+            disabled={busy}
+            onClick={() => {
+              setEditing(null);
+              setEditErrors({});
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={busy || !editing.name?.trim()}
+            onClick={saveEdit}
+          >
+            {busy ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function EmployeesPage() {
@@ -52,9 +163,7 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-
   const [form, setForm] = useState(toEmployeeForm());
-
   const [formErrors, setFormErrors] = useState({});
   const [editing, setEditing] = useState(null);
   const [editErrors, setEditErrors] = useState({});
@@ -65,8 +174,8 @@ export default function EmployeesPage() {
     try {
       const data = await fetchApi("/employees", { cache: "no-store" });
       setEmployees(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setError(e.message || "Failed to load employees.");
+    } catch (event) {
+      setError(event.message || "Failed to load employees.");
     } finally {
       setLoading(false);
     }
@@ -98,8 +207,7 @@ export default function EmployeesPage() {
     if (data.phone && data.phone.trim()) {
       const phoneRegex = /^[0-9+()\-\.\s]{7,20}$/;
       if (!phoneRegex.test(data.phone.trim())) {
-        errors.phone =
-          "Please enter a valid phone number (e.g., (555) 555-5555 or 5555555555)";
+        errors.phone = "Please enter a valid phone number";
       } else if (data.phone.length > 20) {
         errors.phone = "Phone must be 20 characters or less";
       }
@@ -111,7 +219,6 @@ export default function EmployeesPage() {
   async function createEmployee() {
     const errors = validateEmployeeData(form);
     setFormErrors(errors);
-
     if (Object.keys(errors).length > 0) {
       return;
     }
@@ -123,12 +230,11 @@ export default function EmployeesPage() {
         method: "POST",
         body: form,
       });
-
       setForm(toEmployeeForm());
       setFormErrors({});
       await refresh();
-    } catch (e) {
-      setError(e.message || "Failed to create employee.");
+    } catch (event) {
+      setError(event.message || "Failed to create employee.");
     } finally {
       setBusy(false);
     }
@@ -141,7 +247,6 @@ export default function EmployeesPage() {
 
     const errors = validateEmployeeData(editing);
     setEditErrors(errors);
-
     if (Object.keys(errors).length > 0) {
       return;
     }
@@ -156,8 +261,8 @@ export default function EmployeesPage() {
       setEditing(null);
       setEditErrors({});
       await refresh();
-    } catch (e) {
-      setError(e.message || "Failed to update employee.");
+    } catch (event) {
+      setError(event.message || "Failed to update employee.");
     } finally {
       setBusy(false);
     }
@@ -175,8 +280,8 @@ export default function EmployeesPage() {
         method: "DELETE",
       });
       await refresh();
-    } catch (e) {
-      setError(e.message || "Failed to delete employee.");
+    } catch (event) {
+      setError(event.message || "Failed to delete employee.");
     } finally {
       setBusy(false);
     }
@@ -184,40 +289,37 @@ export default function EmployeesPage() {
 
   return (
     <AppShell title="Manage Employees">
-      <div className="p-6">
+      <div className="space-y-6">
         {error ? (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 font-semibold text-red-700">
+          <div className="rounded-2xl border border-red-300/40 bg-red-100/70 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/35 dark:text-red-200">
             {error}
           </div>
         ) : null}
 
-        <div className="mb-6 2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 text-lg font-extrabold text-brand-700">
-            Create New Employee
+        <section className="app-panel shadow-soft p-6">
+          <div className="mb-6">
+            <div className="app-badge mb-3">Admin Controls</div>
+            <h2 className="app-title text-2xl">Create a new employee</h2>
+            <p className="app-copy mt-2 text-sm">
+              Add employees, managers, and admins with the role and permission level needed for Firebase-protected access.
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="grid gap-1">
-              <span className="text-sm font-bold text-gray-700">Name</span>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <EmployeeField label="Name" error={formErrors.name}>
               <input
-                className={`rounded-xl border px-3 py-2 ${
-                  formErrors.name ? "border-red-500" : "border-gray-200"
-                }`}
+                className="app-field focus:app-field-focus"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(event) => setForm({ ...form, name: event.target.value })}
                 placeholder="e.g., Magnus Mullen"
               />
-              {formErrors.name && (
-                <span className="text-xs text-red-600">{formErrors.name}</span>
-              )}
-            </label>
+            </EmployeeField>
 
-            <label className="grid gap-1">
-              <span className="text-sm font-bold text-gray-700">Role</span>
+            <EmployeeField label="Role">
               <select
-                className="rounded-xl border border-gray-200 px-3 py-2"
+                className="app-field focus:app-field-focus"
                 value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                onChange={(event) => setForm({ ...form, role: event.target.value })}
               >
                 {ROLE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -225,44 +327,31 @@ export default function EmployeesPage() {
                   </option>
                 ))}
               </select>
-            </label>
+            </EmployeeField>
 
-            <label className="grid gap-1">
-              <span className="text-sm font-bold text-gray-700">Email</span>
+            <EmployeeField label="Email" error={formErrors.email}>
               <input
-                className={`rounded-xl border px-3 py-2 ${
-                  formErrors.email ? "border-red-500" : "border-gray-200"
-                }`}
+                className="app-field focus:app-field-focus"
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onChange={(event) => setForm({ ...form, email: event.target.value })}
                 placeholder="example@greenery.ca"
               />
-              {formErrors.email && (
-                <span className="text-xs text-red-600">{formErrors.email}</span>
-              )}
-            </label>
+            </EmployeeField>
 
-            <label className="grid gap-1">
-              <span className="text-sm font-bold text-gray-700">Phone</span>
+            <EmployeeField label="Phone" error={formErrors.phone}>
               <input
-                className={`rounded-xl border px-3 py-2 ${
-                  formErrors.phone ? "border-red-500" : "border-gray-200"
-                }`}
+                className="app-field focus:app-field-focus"
                 value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                onChange={(event) => setForm({ ...form, phone: event.target.value })}
                 placeholder="555-555-5555"
               />
-              {formErrors.phone && (
-                <span className="text-xs text-red-600">{formErrors.phone}</span>
-              )}
-            </label>
+            </EmployeeField>
 
-            <label className="grid gap-1">
-              <span className="text-sm font-bold text-gray-700">Status</span>
+            <EmployeeField label="Status">
               <select
-                className="rounded-xl border border-gray-200 px-3 py-2"
+                className="app-field focus:app-field-focus"
                 value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
+                onChange={(event) => setForm({ ...form, status: event.target.value })}
               >
                 {STATUS_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -270,16 +359,13 @@ export default function EmployeesPage() {
                   </option>
                 ))}
               </select>
-            </label>
+            </EmployeeField>
 
-            <label className="grid gap-1">
-              <span className="text-sm font-bold text-gray-700">Permission Level</span>
+            <EmployeeField label="Permission Level">
               <select
-                className="rounded-xl border border-gray-200 px-3 py-2"
+                className="app-field focus:app-field-focus"
                 value={form.permissionLevel}
-                onChange={(e) =>
-                  setForm({ ...form, permissionLevel: e.target.value })
-                }
+                onChange={(event) => setForm({ ...form, permissionLevel: event.target.value })}
               >
                 {ROLE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -287,91 +373,85 @@ export default function EmployeesPage() {
                   </option>
                 ))}
               </select>
-            </label>
+            </EmployeeField>
           </div>
 
-          <div className="mt-4 flex gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
             <button
-              className="rounded-xl bg-brand-700 px-4 py-2 font-extrabold text-white disabled:opacity-60"
+              className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
               disabled={busy || !form.name.trim()}
               onClick={createEmployee}
             >
               {busy ? "Saving..." : "Create Employee"}
             </button>
-
-            <button
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2 font-extrabold text-gray-800 disabled:opacity-60"
-              disabled={busy}
-              onClick={refresh}
-            >
+            <button className="app-button app-button-secondary" disabled={busy} onClick={refresh}>
               Refresh
             </button>
           </div>
-        </div>
+        </section>
 
-        <div className="2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 text-lg font-extrabold text-brand-700">
-            All Employees
+        <section className="app-panel shadow-soft p-6">
+          <div className="mb-4">
+            <h2 className="app-title text-xl">Employee directory</h2>
+            <p className="app-copy mt-1 text-sm">Current database-backed team members and permission levels.</p>
           </div>
 
           {loading ? (
-            <div className="text-gray-600">Loading...</div>
+            <div className="text-muted-foreground">Loading...</div>
           ) : employees.length === 0 ? (
-            <div className="text-gray-600">No employees found.</div>
+            <div className="text-muted-foreground">No employees found.</div>
           ) : (
-            <div className="grid grid-cols-3 gap-4">
-              {employees.map((emp) => (
-                <div
-                  key={emp.id}
-                  className="rounded-2xl border border-gray-200 p-4 shadow-sm"
-                >
-                  <div className="mb-2 flex items-center gap-3">
-                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-green-50 text-xl">
-                      U
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+              {employees.map((employee) => (
+                <div key={employee.id} className="app-inset p-4">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft text-lg font-black text-brand-700">
+                      {(employee.name?.[0] || "U").toUpperCase()}
                     </div>
-                    <div>
-                      <div className="text-lg font-extrabold text-gray-900">
-                        {emp.name}
+                    <div className="min-w-0">
+                      <div className="truncate text-lg font-extrabold text-foreground">{employee.name}</div>
+                      <div className="text-sm font-semibold text-muted-foreground">
+                        {normalizeRoleForForm(employee.role)}
                       </div>
-                      <div className="text-sm font-bold text-gray-600">
-                        {normalizeRoleForForm(emp.role)}
-                      </div>
-                      <div className="text-xs font-semibold text-gray-500">
-                        ID: {emp.id}
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                        ID {employee.id}
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid gap-2 text-sm font-semibold text-gray-700">
-                    <div>
-                      Email: <span className="font-normal">{emp.email || "-"}</span>
+                  <div className="grid gap-2 text-sm">
+                    <div className="text-muted-foreground">
+                      Email: <span className="text-foreground">{employee.email || "-"}</span>
                     </div>
-                    <div>
-                      Phone: <span className="font-normal">{emp.phone || "-"}</span>
+                    <div className="text-muted-foreground">
+                      Phone: <span className="text-foreground">{employee.phone || "-"}</span>
                     </div>
-                    <div>
-                      Status: <span className="font-normal">{emp.status || "Active"}</span>
+                    <div className="text-muted-foreground">
+                      Status: <span className="text-foreground">{employee.status || "Active"}</span>
                     </div>
-                    <div>
-                      Permission: <span className="font-normal">{normalizeRoleForForm(emp.permissionLevel || emp.role)}</span>
+                    <div className="text-muted-foreground">
+                      Permission:{" "}
+                      <span className="text-foreground">
+                        {normalizeRoleForForm(employee.permissionLevel || employee.role)}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-4 flex gap-2">
                     <button
-                      className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 font-extrabold text-black disabled:opacity-60"
+                      className="app-button app-button-secondary flex-1"
                       disabled={busy}
                       onClick={() => {
-                        setEditing(toEmployeeForm(emp));
+                        setEditing(toEmployeeForm(employee));
                         setEditErrors({});
                       }}
                     >
                       Edit
                     </button>
                     <button
-                      className="flex-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 font-extrabold text-red-700 disabled:opacity-60"
+                      className="app-button flex-1 border border-red-300/50 bg-red-100/70 text-red-700 hover:bg-red-200/80 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200"
                       disabled={busy}
-                      onClick={() => deleteEmployee(emp.id)}
+                      onClick={() => deleteEmployee(employee.id)}
                     >
                       Delete
                     </button>
@@ -380,144 +460,16 @@ export default function EmployeesPage() {
               ))}
             </div>
           )}
-        </div>
+        </section>
 
-        {editing ? (
-          <div
-            className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-6"
-            onClick={() => setEditing(null)}
-          >
-            <div
-              className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="mb-3 text-lg font-extrabold text-brand-700">
-                Edit Employee
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <label className="grid gap-1">
-                  <span className="text-sm font-bold text-gray-700">Name</span>
-                  <input
-                    className={`rounded-xl border px-3 py-2 ${
-                      editErrors.name ? "border-red-500" : "border-gray-200"
-                    }`}
-                    value={editing.name || ""}
-                    onChange={(e) =>
-                      setEditing({ ...editing, name: e.target.value })
-                    }
-                  />
-                  {editErrors.name && (
-                    <span className="text-xs text-red-600">{editErrors.name}</span>
-                  )}
-                </label>
-
-                <label className="grid gap-1">
-                  <span className="text-sm font-bold text-gray-700">Role</span>
-                  <select
-                    className="rounded-xl border border-gray-200 px-3 py-2"
-                    value={editing.role || "Employee"}
-                    onChange={(e) =>
-                      setEditing({ ...editing, role: e.target.value })
-                    }
-                  >
-                    {ROLE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="grid gap-1">
-                  <span className="text-sm font-bold text-gray-700">Email</span>
-                  <input
-                    className={`rounded-xl border px-3 py-2 ${
-                      editErrors.email ? "border-red-500" : "border-gray-200"
-                    }`}
-                    value={editing.email || ""}
-                    onChange={(e) =>
-                      setEditing({ ...editing, email: e.target.value })
-                    }
-                  />
-                  {editErrors.email && (
-                    <span className="text-xs text-red-600">{editErrors.email}</span>
-                  )}
-                </label>
-
-                <label className="grid gap-1">
-                  <span className="text-sm font-bold text-gray-700">Phone</span>
-                  <input
-                    className={`rounded-xl border px-3 py-2 ${
-                      editErrors.phone ? "border-red-500" : "border-gray-200"
-                    }`}
-                    value={editing.phone || ""}
-                    onChange={(e) =>
-                      setEditing({ ...editing, phone: e.target.value })
-                    }
-                  />
-                  {editErrors.phone && (
-                    <span className="text-xs text-red-600">{editErrors.phone}</span>
-                  )}
-                </label>
-
-                <label className="grid gap-1">
-                  <span className="text-sm font-bold text-gray-700">Status</span>
-                  <select
-                    className="rounded-xl border border-gray-200 px-3 py-2"
-                    value={editing.status || "Active"}
-                    onChange={(e) =>
-                      setEditing({ ...editing, status: e.target.value })
-                    }
-                  >
-                    {STATUS_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="grid gap-1">
-                  <span className="text-sm font-bold text-gray-700">Permission Level</span>
-                  <select
-                    className="rounded-xl border border-gray-200 px-3 py-2"
-                    value={editing.permissionLevel || editing.role || "Employee"}
-                    onChange={(e) =>
-                      setEditing({ ...editing, permissionLevel: e.target.value })
-                    }
-                  >
-                    {ROLE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="mt-4 flex justify-end gap-2">
-                <button
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-2 font-extrabold"
-                  disabled={busy}
-                  onClick={() => {
-                    setEditing(null);
-                    setEditErrors({});
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="rounded-xl bg-brand-700 px-4 py-2 font-extrabold text-white disabled:opacity-60"
-                  disabled={busy || !editing.name?.trim()}
-                  onClick={saveEdit}
-                >
-                  {busy ? "Saving..." : "Save"}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <EmployeeModal
+          editing={editing}
+          setEditing={setEditing}
+          editErrors={editErrors}
+          setEditErrors={setEditErrors}
+          busy={busy}
+          saveEdit={saveEdit}
+        />
       </div>
     </AppShell>
   );

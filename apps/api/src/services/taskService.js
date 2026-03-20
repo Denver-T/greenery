@@ -19,9 +19,15 @@ function mapWorkReqToTask(row) {
 
   return {
     id: row.id,
-    title: row.actionRequired,
+    title: row.actionRequired || `REQ ${row.referenceNumber || row.id}`,
+    referenceNumber: row.referenceNumber || null,
+    requestDate: row.requestDate || null,
+    techName: row.techName || null,
+    account: row.account || null,
+    location: row.location || null,
     status: row.status,
     assigned_to: row.assignedTo,
+    assigned_employee_name: row.assignedEmployeeName || null,
     plant_id: null,
     notes: row.notes,
     due_date: row.dueDate,
@@ -170,21 +176,33 @@ async function ensureEmployeeExists(employeeId) {
  * GET all tasks
  * Backed by work_reqs rows that are already in the task lifecycle.
  */
-async function getTasks() {
+async function getTasks(options = {}) {
+  const scope = typeof options.scope === "string" ? options.scope.trim().toLowerCase() : "";
+  const whereClause =
+    scope === "assignment"
+      ? ""
+      : "WHERE status IN ('assigned', 'in_progress', 'completed', 'cancelled')";
+
   const sql = `
     SELECT
       id,
+      referenceNumber,
+      requestDate,
+      techName,
       actionRequired,
       account,
       location,
       status,
       assignedTo,
+      employees.name AS assignedEmployeeName,
       notes,
       dueDate,
       created_at,
       updated_at
     FROM ${WORK_REQS_TABLE}
-    WHERE status IN ('assigned', 'in_progress', 'completed', 'cancelled')
+    LEFT JOIN ${EMPLOYEES_TABLE} employees
+      ON employees.id = ${WORK_REQS_TABLE}.assignedTo
+    ${whereClause}
     ORDER BY updated_at DESC, id DESC
   `;
 
@@ -208,18 +226,23 @@ async function getTaskById(id) {
   const sql = `
     SELECT
       id,
+      referenceNumber,
+      requestDate,
+      techName,
       actionRequired,
       account,
       location,
       status,
       assignedTo,
+      employees.name AS assignedEmployeeName,
       notes,
       dueDate,
       created_at,
       updated_at
     FROM ${WORK_REQS_TABLE}
+    LEFT JOIN ${EMPLOYEES_TABLE} employees
+      ON employees.id = ${WORK_REQS_TABLE}.assignedTo
     WHERE id = ?
-      AND status IN ('assigned', 'in_progress', 'completed', 'cancelled')
     LIMIT 1
   `;
 
@@ -360,7 +383,7 @@ async function updateTaskStatus(id, status) {
  * ASSIGN task to an employee
  * Updates work_reqs.assignedTo.
  */
-async function assignTask(id, assignedTo) {
+async function assignTask(id, assignment = {}) {
   const taskId = toPositiveInt(id);
 
   if (!taskId) {
@@ -369,13 +392,16 @@ async function assignTask(id, assignedTo) {
     ]);
   }
 
-  const employeeId = normalizeOptionalId(assignedTo, "assigned_to");
-
-  if (!employeeId) {
-    throw httpError(400, "Invalid assigned_to", "VALIDATION_ERROR", [
-      { field: "assigned_to", issue: "must be a positive integer" },
-    ]);
-  }
+  const rawAssignedTo =
+    typeof assignment === "object" && assignment !== null
+      ? assignment.assigned_to ?? assignment.assignedTo ?? assignment.assignedUserId
+      : assignment;
+  const rawDueDate =
+    typeof assignment === "object" && assignment !== null
+      ? assignment.due_date ?? assignment.dueDate ?? assignment.date
+      : null;
+  const employeeId = normalizeOptionalId(rawAssignedTo, "assigned_to");
+  const dueDate = normalizeDueDate(rawDueDate);
 
   await ensureEmployeeExists(employeeId);
 
@@ -383,7 +409,9 @@ async function assignTask(id, assignedTo) {
     UPDATE ${WORK_REQS_TABLE}
     SET
       assignedTo = ?,
+      dueDate = ?,
       status = CASE
+        WHEN ? IS NULL THEN 'unassigned'
         WHEN status = 'unassigned' THEN 'assigned'
         ELSE status
       END,
@@ -391,7 +419,7 @@ async function assignTask(id, assignedTo) {
     WHERE id = ?
   `;
 
-  const [result] = await db.query(sql, [employeeId, taskId]);
+  const [result] = await db.query(sql, [employeeId, dueDate, employeeId, taskId]);
 
   if (result.affectedRows === 0) {
     return null;

@@ -2,16 +2,21 @@
 
 export default function TopBar({ title }) {
   return (
-    <header className="flex items-center justify-between border-b border-gray-200 bg-white px-6 shadow-sm">
-      <h1 className="text-[22px] font-extrabold text-brand-700">
-        {title ?? "Page Title"}
-      </h1>
+    <header className="mx-4 mt-4 flex items-center justify-between rounded-[24px] border border-border bg-surface px-5 py-4 shadow-soft backdrop-blur-md md:mx-6 md:px-6">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+          Greenery Workspace
+        </p>
+        <h1 className="app-title text-[22px]">{title ?? "Page Title"}</h1>
+      </div>
 
       <button
         aria-label="Notifications"
-        className="relative inline-grid h-10 w-10 place-items-center rounded-full border border-gray-200 bg-white hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
+        className="relative inline-grid h-11 w-11 place-items-center rounded-full border border-border bg-surface-strong text-foreground hover:-translate-y-0.5 hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
       >
-        <span aria-hidden>🔔</span>
+        <span aria-hidden className="text-lg font-black">
+          !
+        </span>
         <span
           role="status"
           aria-label="1 new notification"

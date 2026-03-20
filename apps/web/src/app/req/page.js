@@ -1,314 +1,361 @@
 "use client";
+
 import AppShell from "@/components/AppShell";
 import { fetchApi } from "@/lib/api/api";
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
+const FIELD_GROUPS = [
+  { name: "referenceNumber", label: "Reference Number", required: true },
+  { name: "requestDate", label: "Request Date", type: "date", required: true },
+  { name: "dueDate", label: "Due Date", type: "date" },
+  { name: "techName", label: "Tech Name", placeholder: "Magnus", required: true },
+  { name: "account", label: "Account", placeholder: "Inter Pipeline", required: true },
+  { name: "accountContact", label: "Account Contact", placeholder: "Georgia Blevins" },
+  { name: "accountAddress", label: "Account Address", placeholder: "123 Sesame St." },
+  { name: "actionRequired", label: "Action Required", placeholder: "Soil top up", span: 2 },
+  { name: "numberOfPlants", label: "Number of Plants", type: "number", min: 0, placeholder: "4" },
+  { name: "plantWanted", label: "Plant Wanted", placeholder: "Aglaonema" },
+  { name: "plantReplaced", label: "Plant Replaced", placeholder: "Aglaonema" },
+];
+
+function buildInitialForm(referenceNumber, requestDate, dueDate = "") {
+  return {
+    referenceNumber,
+    requestDate,
+    dueDate,
+    techName: "",
+    account: "",
+    accountContact: "",
+    accountAddress: "",
+    actionRequired: "",
+    numberOfPlants: "",
+    plantWanted: "",
+    plantReplaced: "",
+    plantSize: "3 Gal",
+    plantHeight: "Shorter than 2 feet",
+    planterTypeSize: "",
+    planterColour: "",
+    stagingMaterial: "",
+    lighting: "Medium",
+    method: "",
+    location: "",
+    notes: "",
+  };
+}
+
+function toDateInputValue(value) {
+  if (!value) {
+    return "";
+  }
+
+  return String(value).slice(0, 10);
+}
 
 export default function ReqPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit");
+  const dueDateParam = searchParams.get("dueDate") || "";
 
   const generatedRef = useMemo(() => {
-    const d = new Date();
-    const pad = (n) => String(n).padStart(2, "0");
-    const y = d.getFullYear();
-    const m = pad(d.getMonth() + 1);
-    const day = pad(d.getDate());
-    const h = pad(d.getHours());
-    const mi = pad(d.getMinutes());
-    const s = pad(d.getSeconds());
-    return `REQ-${y}${m}${day}-${h}${mi}${s}`;
+    const date = new Date();
+    const pad = (value) => String(value).padStart(2, "0");
+    return `REQ-${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
   }, []);
 
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const [form, setForm] = useState(() => buildInitialForm(generatedRef, today, dueDateParam));
+  const [selectedFile, setSelectedFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(Boolean(editId));
   const [error, setError] = useState("");
 
-  const today = new Date().toISOString().slice(0, 10);
+  useEffect(() => {
+    if (!editId) {
+      setForm(buildInitialForm(generatedRef, today, dueDateParam));
+      return;
+    }
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const data = await fetchApi(`/reqs/${editId}`, { cache: "no-store" });
+        if (cancelled) {
+          return;
+        }
+
+        setForm({
+          referenceNumber: data.referenceNumber || generatedRef,
+          requestDate: toDateInputValue(data.requestDate) || today,
+          dueDate: toDateInputValue(data.dueDate),
+          techName: data.techName || "",
+          account: data.account || "",
+          accountContact: data.accountContact || "",
+          accountAddress: data.accountAddress || "",
+          actionRequired: data.actionRequired || "",
+          numberOfPlants: data.numberOfPlants ?? "",
+          plantWanted: data.plantWanted || "",
+          plantReplaced: data.plantReplaced || "",
+          plantSize: data.plantSize || "3 Gal",
+          plantHeight: data.plantHeight || "Shorter than 2 feet",
+          planterTypeSize: data.planterTypeSize || "",
+          planterColour: data.planterColour || "",
+          stagingMaterial: data.stagingMaterial || "",
+          lighting: data.lighting || "Medium",
+          method: data.method || "",
+          location: data.location || "",
+          notes: data.notes || "",
+        });
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || "Failed to load REQ.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dueDateParam, editId, generatedRef, today]);
+
+  function updateField(name, value) {
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
+  async function onSubmit(event) {
+    event.preventDefault();
     setSubmitting(true);
     setError("");
 
     try {
-      const fd = new FormData(e.currentTarget);
+      const formData = new FormData();
 
-      /**
-       * ---------------------------------------------------------
-       * Submit to the unified backend API
-       * ---------------------------------------------------------
-       * This sends multipart/form-data to apps/api
-       * because the form contains a file input.
-       */
-      await fetchApi("/reqs", {
-        method: "POST",
-        body: fd,
+      Object.entries(form).forEach(([key, value]) => {
+        formData.append(key, value ?? "");
       });
 
-      router.push("/tasks?created=1");
+      if (selectedFile) {
+        formData.append("picture", selectedFile);
+      }
+
+      if (editId) {
+        await fetchApi(`/reqs/${editId}`, {
+          method: "PUT",
+          body: formData,
+        });
+      } else {
+        await fetchApi("/reqs", {
+          method: "POST",
+          body: formData,
+        });
+      }
+
+      router.push("/tasks");
     } catch (err) {
       setError(err.message || "Something went wrong");
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
   return (
-    <AppShell title="Create Work REQ">
-      <section className="rounded-card bg-white p-6 shadow-soft">
-        <h2 className="mb-4 text-xl font-extrabold text-brand-700">Work Req Form</h2>
+    <AppShell title={editId ? "Edit Work REQ" : "Create Work REQ"}>
+      <section className="app-panel shadow-soft p-6">
+        <div className="mb-6">
+          <div className="app-badge mb-3">{editId ? "Edit REQ" : "REQ Form"}</div>
+          <h2 className="app-title text-2xl">
+            {editId ? "Update work request" : "Submit a work request"}
+          </h2>
+          <p className="app-copy mt-2 max-w-2xl text-sm">
+            Capture site details, replacement notes, due date, and an optional photo so the team can review and assign the request.
+          </p>
+        </div>
 
-        <form onSubmit={onSubmit} encType="multipart/form-data" className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {loading ? (
+          <div className="text-muted-foreground">Loading REQ...</div>
+        ) : (
+          <form onSubmit={onSubmit} encType="multipart/form-data" className="space-y-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {FIELD_GROUPS.map((field) => (
+                <label
+                  key={field.name}
+                  className={`grid gap-2 ${field.span === 2 ? "md:col-span-2" : ""}`}
+                >
+                  <span className="text-sm font-semibold text-muted-foreground">{field.label}</span>
+                  <input
+                    name={field.name}
+                    type={field.type || "text"}
+                    min={field.min}
+                    required={field.required}
+                    value={form[field.name] ?? ""}
+                    placeholder={field.placeholder}
+                    onChange={(event) => updateField(field.name, event.target.value)}
+                    className="app-field focus:app-field-focus"
+                  />
+                </label>
+              ))}
 
-            {/* Reference Number */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Reference Number</label>
-              <input
-                name="referenceNumber"
-                defaultValue={generatedRef}
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-                required
-              />
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-muted-foreground">Plant Size</span>
+                <select
+                  name="plantSize"
+                  className="app-field focus:app-field-focus"
+                  value={form.plantSize}
+                  onChange={(event) => updateField("plantSize", event.target.value)}
+                >
+                  <option>1 Gal</option>
+                  <option>2 Gal</option>
+                  <option>3 Gal</option>
+                  <option>5 Gal</option>
+                </select>
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-muted-foreground">Plant Height</span>
+                <select
+                  name="plantHeight"
+                  className="app-field focus:app-field-focus"
+                  value={form.plantHeight}
+                  onChange={(event) => updateField("plantHeight", event.target.value)}
+                >
+                  <option>Shorter than 2 feet</option>
+                  <option>2-4 feet</option>
+                  <option>4-6 feet</option>
+                  <option>Taller than 6 feet</option>
+                </select>
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-muted-foreground">Planter Type and Size</span>
+                <input
+                  name="planterTypeSize"
+                  value={form.planterTypeSize}
+                  placeholder="Lechuza 40"
+                  onChange={(event) => updateField("planterTypeSize", event.target.value)}
+                  className="app-field focus:app-field-focus"
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-muted-foreground">Planter Colour</span>
+                <input
+                  name="planterColour"
+                  value={form.planterColour}
+                  placeholder="White"
+                  onChange={(event) => updateField("planterColour", event.target.value)}
+                  className="app-field focus:app-field-focus"
+                />
+              </label>
+
+              <label className="grid gap-2 md:col-span-2">
+                <span className="text-sm font-semibold text-muted-foreground">Type and Colour of Staging Material</span>
+                <input
+                  name="stagingMaterial"
+                  value={form.stagingMaterial}
+                  placeholder="Grey Spanish Moss"
+                  onChange={(event) => updateField("stagingMaterial", event.target.value)}
+                  className="app-field focus:app-field-focus"
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-muted-foreground">Lighting</span>
+                <select
+                  name="lighting"
+                  className="app-field focus:app-field-focus"
+                  value={form.lighting}
+                  onChange={(event) => updateField("lighting", event.target.value)}
+                >
+                  <option>Low</option>
+                  <option>Medium</option>
+                  <option>High</option>
+                </select>
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-muted-foreground">Method</span>
+                <input
+                  name="method"
+                  value={form.method}
+                  placeholder="Use spade to insert soil"
+                  onChange={(event) => updateField("method", event.target.value)}
+                  className="app-field focus:app-field-focus"
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-muted-foreground">Location</span>
+                <input
+                  name="location"
+                  value={form.location}
+                  placeholder="Lobby"
+                  onChange={(event) => updateField("location", event.target.value)}
+                  className="app-field focus:app-field-focus"
+                />
+              </label>
+
+              <label className="grid gap-2 md:col-span-2">
+                <span className="text-sm font-semibold text-muted-foreground">Notes</span>
+                <textarea
+                  name="notes"
+                  rows={4}
+                  value={form.notes}
+                  placeholder="Bring key to get into building"
+                  onChange={(event) => updateField("notes", event.target.value)}
+                  className="app-field focus:app-field-focus resize-y"
+                />
+              </label>
+
+              <label className="grid gap-2 md:col-span-2">
+                <span className="text-sm font-semibold text-muted-foreground">Picture Upload</span>
+                <input
+                  type="file"
+                  name="picture"
+                  accept="image/*"
+                  onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
+                  className="app-field file:mr-4 file:rounded-full file:border-0 file:bg-brand-700 file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-brand"
+                />
+              </label>
             </div>
 
-            {/* Date */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Date</label>
-              <input
-                type="date"
-                name="requestDate"
-                defaultValue={today}
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900"
-                required
-              />
-            </div>
+            {error ? (
+              <p className="rounded-2xl border border-red-300/40 bg-red-100/70 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/35 dark:text-red-200">
+                {error}
+              </p>
+            ) : null}
 
-            {/* Tech Name */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Tech Name</label>
-              <input
-                name="techName"
-                placeholder="Magnus"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-                required
-              />
-            </div>
-
-            {/* Account */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Account</label>
-              <input
-                name="account"
-                placeholder="Inter Pipeline"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-                required
-              />
-            </div>
-
-            {/* Account Contact */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Account Contact</label>
-              <input
-                name="accountContact"
-                placeholder="Georgia Blevins"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Account Address */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Account Address</label>
-              <input
-                name="accountAddress"
-                placeholder="123 Sesame St."
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Action Required */}
-            <div className="flex flex-col md:col-span-2">
-              <label className="mb-1 text-sm font-medium text-gray-700">Action Required</label>
-              <input
-                name="actionRequired"
-                placeholder="Soil top up"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Number of Plants */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Number of Plants</label>
-              <input
-                type="number"
-                min="0"
-                name="numberOfPlants"
-                placeholder="4"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Which plant is wanted? */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Which plant is wanted?</label>
-              <input
-                name="plantWanted"
-                placeholder="Aglaonema"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Which plant is getting replaced? */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Which plant is getting replaced?</label>
-              <input
-                name="plantReplaced"
-                placeholder="Aglaonema"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Plant Size */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Plant Size</label>
-              <select
-                name="plantSize"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900"
-                defaultValue="3 Gal"
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="app-button app-button-primary disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <option>1 Gal</option>
-                <option>2 Gal</option>
-                <option>3 Gal</option>
-                <option>5 Gal</option>
-              </select>
-            </div>
+                {submitting ? "Saving..." : editId ? "Update REQ" : "Submit REQ"}
+              </button>
 
-            {/* Plant Height */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Plant Height</label>
-              <select
-                name="plantHeight"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900"
-                defaultValue="Shorter than 2 feet"
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="app-button app-button-secondary"
               >
-                <option>Shorter than 2 feet</option>
-                <option>2-4 feet</option>
-                <option>4-6 feet</option>
-                <option>Taller than 6 feet</option>
-              </select>
+                Cancel
+              </button>
             </div>
-
-            {/* Planter Type and Size */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Planter Type and Size</label>
-              <input
-                name="planterTypeSize"
-                placeholder="Lechuza 40"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Planter Colour */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Planter Colour</label>
-              <input
-                name="planterColour"
-                placeholder="White"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Type and Colour of Staging Material */}
-            <div className="flex flex-col md:col-span-2">
-              <label className="mb-1 text-sm font-medium text-gray-700">Type and Colour of Staging Material</label>
-              <input
-                name="stagingMaterial"
-                placeholder="Grey Spanish Moss"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Lighting */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Lighting</label>
-              <select
-                name="lighting"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900"
-                defaultValue="Medium"
-              >
-                <option>Low</option>
-                <option>Medium</option>
-                <option>High</option>
-              </select>
-            </div>
-
-            {/* Method */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Method</label>
-              <input
-                name="method"
-                placeholder="Use spade to insert soil"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Location */}
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Location</label>
-              <input
-                name="location"
-                placeholder="Lobby"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Notes */}
-            <div className="flex flex-col md:col-span-2">
-              <label className="mb-1 text-sm font-medium text-gray-700">Notes</label>
-              <textarea
-                name="notes"
-                rows={3}
-                placeholder="Bring key to get into building"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Picture Upload */}
-            <div className="flex flex-col md:col-span-2">
-              <label className="mb-1 text-sm font-medium text-gray-700">Picture Upload</label>
-              <input
-                type="file"
-                name="picture"
-                accept="image/*"
-                className="rounded-md border border-gray-300 bg-white file:mr-4 file:rounded-md file:border-0 file:bg-emerald-700 file:px-4 file:py-2 file:font-medium file:text-white hover:file:bg-emerald-700 text-gray-900"
-              />
-            </div>
-          </div>
-
-          {error && (
-            <p className="rounded bg-red-100 px-3 py-2 text-sm text-red-700">{error}</p>
-          )}
-
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center rounded-lg bg-emerald-700 px-5 py-2.5 font-medium text-white shadow hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? "Submitting..." : "Submit REQ"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-800 hover:bg-gray-300"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+          </form>
+        )}
       </section>
     </AppShell>
   );
 }
-

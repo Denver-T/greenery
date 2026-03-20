@@ -28,15 +28,19 @@ export default function UserChip({ name }) {
   return (
     <Link
       href="/profile"
-      className="grid grid-cols-[40px_1fr] items-center gap-3 rounded-[10px] bg-white/15 px-3 py-2 hover:bg-white/25 transition"
+      className="grid min-w-0 grid-cols-[48px_1fr] items-center gap-3 rounded-[18px] border border-white/12 bg-white/10 px-3 py-3 backdrop-blur-sm hover:bg-white/16"
       aria-label="Open profile"
     >
-      <div className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#4f6c2d] font-bold">
+      <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-[#4f6c2d] font-bold shadow-elevated">
         {initial}
       </div>
-      <div className="leading-tight">
-        <div className="font-bold">{displayName}</div>
-        <div className="text-xs opacity-90">{formatRole(account?.permissionLevel || account?.role)}</div>
+      <div className="min-w-0 leading-tight">
+        <div className="truncate font-bold text-white" title={displayName}>
+          {displayName}
+        </div>
+        <div className="truncate text-xs font-semibold uppercase tracking-[0.16em] text-white/72">
+          {formatRole(account?.permissionLevel || account?.role)}
+        </div>
       </div>
     </Link>
   );
