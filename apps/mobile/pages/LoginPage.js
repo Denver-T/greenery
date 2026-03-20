@@ -1,6 +1,4 @@
 // pages/LoginScreen.js
-// This is the login page
-// Aka what the user first sees when they open the app.
 
 import React, { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -22,8 +20,8 @@ import {
 
 import { login, auth } from "../util/firebase";
 
-const BG = require("../assets/bg.jpg"); // leafy background
-const LOGO = require("../assets/logo.png"); // poster/logo image
+const BG = require("../assets/bg.jpg");
+const LOGO = require("../assets/logo.png");
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -34,25 +32,67 @@ export default function LoginScreen() {
   const navigation = useNavigation();
 
   async function onSignIn() {
-    const trimmedEmail = email.trim().toLowerCase();
+  const trimmedEmail = email.trim().toLowerCase();
 
-    if (!trimmedEmail || !password) {
-      Alert.alert("Missing info", "Please enter both email and password.");
-      return;
+  if (!trimmedEmail || !password) {
+    Alert.alert("Missing info", "Please enter both email and password.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    console.log("1. Starting Firebase login");
+
+    const user = await login(trimmedEmail, password);
+    console.log("2. Firebase login success:", user?.email);
+
+    const token = await user.getIdToken(true);
+    console.log("3. Got token:", !!token);
+    console.log("API URL:", process.env.EXPO_PUBLIC_API_BASE_URL);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(
+      `${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/me`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeout);
+    console.log("4. /auth/me response status:", response.status);
+
+    const result = await response.json();
+    console.log("5. /auth/me response body:", result);
+
+    if (!response.ok) {
+      throw new Error(result?.message || "Unable to verify account with API");
     }
+
+    navigation.navigate("HomePage");
+  } catch (err) {
+    console.error("Login flow error:", err);
+    Alert.alert("Error", err?.message || "Unable to sign in");
+  } finally {
+    setLoading(false);
+  }
+
 
     setLoading(true);
 
     try {
-      // 1) Sign in with Firebase Auth
       const user = await login(trimmedEmail, password);
 
-      // 2) Get a Firebase ID token for backend verification
       const token = await user.getIdToken(true);
       console.log("Token exists:", !!token);
       console.log("Token preview:", token?.slice(0, 20));
 
-      // 3) Ask the backend who this user is in the local accounts table
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/me`,
         {
@@ -60,7 +100,7 @@ export default function LoginScreen() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
 
       const result = await response.json();
@@ -72,8 +112,7 @@ export default function LoginScreen() {
       console.log("Firebase user:", auth.currentUser?.email);
       console.log("Backend account:", result?.data);
 
-      // 4) Navigate after successful auth + backend verification
-      ToHomePage();
+      navigation.navigate("HomePage");
     } catch (err) {
       Alert.alert("Error", err?.message || "Unable to sign in");
     } finally {
@@ -85,14 +124,9 @@ export default function LoginScreen() {
     navigation.navigate("ForgotPassword");
   }
 
-  function ToHomePage() {
+  function goToHomePage() {
     navigation.navigate("HomePage");
   }
-
-  setTimeout(() => {
-    setEmail("denvertimlick@gmail.com");
-    setPassword("GreeneryTest123");
-  }, 1000);
 
   return (
     <SafeAreaView style={styles.safe}>
