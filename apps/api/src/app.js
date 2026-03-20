@@ -42,7 +42,13 @@ app.use("/reqs", reqRoutes);
 /**
  * API documentation
  */
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpecs, {
+    swaggerOptions: { defaultModelsExpandDepth: -1 },
+  }),
+);
 
 /**
  * Final middleware
