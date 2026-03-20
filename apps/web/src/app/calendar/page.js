@@ -1,29 +1,8 @@
 "use client";
 
 import AppShell from "@/components/AppShell";
-import { useMemo, useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-/**
- * Expected API contract for easy DB wiring:
- *   GET /api/tasks?from=YYYY-MM-DD&to=YYYY-MM-DD
- *   -> returns Task[] with:
- *      {
- *        id: string,
- *        date: "YYYY-MM-DD",   // local date key (no time)
- *        title: string,
- *        account?: string,
- *        location?: string,
- *        estimateMins?: number,
- *        start?: "HH:mm",
- *        end?: "HH:mm",
- *        notes?: string
- *      }
- */
-
-/* ===========================
-   Date helpers (TZ safe)
-   =========================== */
+import { fetchApi } from "@/lib/api/api";
+import { useEffect, useMemo, useState } from "react";
 
 const pad = (n) => String(n).padStart(2, "0");
 const toLocalDateKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -36,14 +15,12 @@ const fromYmd = (ymd) => {
 const monthLabel = (y, mZero) =>
   new Date(y, mZero, 1).toLocaleString(undefined, { month: "long", year: "numeric" });
 
-/**
- * Build a fixed 6x7 grid starting on Sunday for a given month.
- */
 function buildMonthGrid(year, monthZero) {
   const first = new Date(year, monthZero, 1);
-  const startDow = first.getDay(); // 0 (Sun) .. 6 (Sat)
+  const startDow = first.getDay();
   const gridStart = new Date(year, monthZero, 1 - startDow);
   const cells = [];
+
   for (let i = 0; i < 42; i++) {
     const d = new Date(gridStart);
     d.setDate(gridStart.getDate() + i);
@@ -54,110 +31,117 @@ function buildMonthGrid(year, monthZero) {
       key: toLocalDateKey(d),
     });
   }
+
   return cells;
 }
 
-/**
- * Replace this with real API call when ready.
- * If there's no API yet, it returns [] and logs a helpful hint.
- */
+function normalizeCalendarTask(task, employeeMap) {
+  const date = task.dueDate || task.due_date || task.date;
+  const assignedId = task.assignedTo ?? task.assigned_to ?? null;
+  return {
+    id: String(task.id),
+    date: date ? String(date).slice(0, 10) : null,
+    title: task.title || "Untitled task",
+    account: task.account || "",
+    location: task.location || "",
+    notes: task.notes || "",
+    status: task.status || "",
+    assignedTo: assignedId,
+    assignee: assignedId ? employeeMap.get(Number(assignedId)) || `Employee ${assignedId}` : "Unassigned",
+  };
+}
+
 async function fetchMonthTasks(from, to) {
-  try {
-    const res = await fetch(`/api/tasks?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, {
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      // No API yet or error – keep UI functional.
-      console.warn("[calendar] /api/tasks returned", res.status, "– showing empty schedule.");
-      return [];
-    }
-    return await res.json();
-  } catch (err) {
-    console.warn("[calendar] Failed to load tasks:", err);
-    return [];
-  }
+  const [tasks, employees] = await Promise.all([
+    fetchApi("/tasks?scope=assignment", { cache: "no-store" }),
+    fetchApi("/employees", { cache: "no-store" }),
+  ]);
+
+  const employeeMap = new Map(
+    (Array.isArray(employees) ? employees : []).map((employee) => [Number(employee.id), employee.name])
+  );
+
+  return (Array.isArray(tasks) ? tasks : [])
+    .map((task) => normalizeCalendarTask(task, employeeMap))
+    .filter((task) => task.date && task.date >= from && task.date <= to && task.assignedTo);
 }
 
 export default function Page() {
-  const router = useRouter();
   const now = new Date();
   const todayKey = toLocalDateKey(now);
-
-  // Month cursor & selection
   const [cursor, setCursor] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
   const [selectedDayKey, setSelectedDayKey] = useState(todayKey);
-
-  // Data state
   const [tasksByDay, setTasksByDay] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedTask, setSelectedTask] = useState(null);
 
   const y = cursor.getFullYear();
   const m = cursor.getMonth();
   const grid = useMemo(() => buildMonthGrid(y, m), [y, m]);
+  const range = useMemo(() => ({ from: grid[0].key, to: grid[grid.length - 1].key }), [grid]);
 
-  // Visible range (use entire grid so we can show leading/trailing month days with dots)
-  const range = useMemo(
-    () => ({ from: grid[0].key, to: grid[grid.length - 1].key }),
-    [grid]
-  );
-
-  // Load tasks whenever the visible range changes
   useEffect(() => {
-    let abort = false;
+    let cancelled = false;
+
     (async () => {
       setLoading(true);
       setError("");
-      const rows = await fetchMonthTasks(range.from, range.to);
-      if (abort) return;
+      try {
+        const rows = await fetchMonthTasks(range.from, range.to);
+        if (cancelled) {
+          return;
+        }
 
-      // Index tasks by date (YYYY-MM-DD)
-      const map = {};
-      for (const t of rows) {
-        (map[t.date] ??= []).push(t);
-      }
-      // Sort tasks per day by start time if present
-      Object.keys(map).forEach((k) =>
-        map[k].sort((a, b) => (a.start ?? "").localeCompare(b.start ?? ""))
-      );
+        const map = {};
+        for (const task of rows) {
+          (map[task.date] ??= []).push(task);
+        }
+        Object.keys(map).forEach((key) => {
+          map[key].sort((a, b) => a.title.localeCompare(b.title));
+        });
 
-      setTasksByDay(map);
-      setLoading(false);
-    })().catch((e) => {
-      if (!abort) {
-        setError(e?.message || "Failed to load tasks");
-        setLoading(false);
+        setTasksByDay(map);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Failed to load tasks");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    });
+    })();
+
     return () => {
-      abort = true;
+      cancelled = true;
     };
   }, [range.from, range.to]);
 
-  // Keep selected day in-view on month change
   useEffect(() => {
-    const stillVisible = grid.find((c) => c.key === selectedDayKey && c.inMonth);
+    const stillVisible = grid.find((cell) => cell.key === selectedDayKey && cell.inMonth);
     if (!stillVisible) {
-      const firstInMonth = grid.find((c) => c.inMonth);
-      if (firstInMonth) setSelectedDayKey(firstInMonth.key);
+      const firstInMonth = grid.find((cell) => cell.inMonth);
+      if (firstInMonth) {
+        setSelectedDayKey(firstInMonth.key);
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [y, m]);
+  }, [grid, selectedDayKey]);
 
-  // Derived
   const selectedTasks = tasksByDay[selectedDayKey] ?? [];
   const selectedDate = fromYmd(selectedDayKey);
   const selectedWeekday = selectedDate.toLocaleString(undefined, { weekday: "long" });
 
-  // Nav
   const goPrev = () => setCursor(new Date(y, m - 1, 1));
   const goNext = () => setCursor(new Date(y, m + 1, 1));
-  const goToday = () => setCursor(new Date(now.getFullYear(), now.getMonth(), 1));
+  const goToday = () => {
+    setCursor(new Date(now.getFullYear(), now.getMonth(), 1));
+    setSelectedDayKey(todayKey);
+  };
 
   return (
     <AppShell title="View Calendar">
       <section className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-emerald-900">Schedule</h1>
           <button
@@ -168,16 +152,14 @@ export default function Page() {
           </button>
         </div>
 
-        {/* Calendar Card */}
         <div className="rounded-card bg-white p-4 shadow-soft">
-          {/* Month header */}
           <div className="mb-3 flex items-center justify-between">
             <button
               aria-label="Previous month"
               onClick={goPrev}
               className="rounded-md p-2 text-emerald-700 hover:bg-emerald-50"
             >
-              ←
+              &lt;
             </button>
             <div className="text-lg font-medium text-gray-900">{monthLabel(y, m)}</div>
             <button
@@ -185,18 +167,16 @@ export default function Page() {
               onClick={goNext}
               className="rounded-md p-2 text-emerald-700 hover:bg-emerald-50"
             >
-              →
+              &gt;
             </button>
           </div>
 
-          {/* Week header */}
           <div className="grid grid-cols-7 gap-1 px-1 pb-2 text-center text-sm font-medium text-gray-500">
             {["S", "M", "T", "W", "T", "F", "S"].map((d) => (
               <div key={d} className="py-1">{d}</div>
             ))}
           </div>
 
-          {/* Day grid */}
           <div className="grid grid-cols-7 gap-1">
             {grid.map((cell) => {
               const isToday = cell.key === todayKey;
@@ -214,7 +194,7 @@ export default function Page() {
                   ].join(" ")}
                 >
                   <div className="flex items-start justify-between">
-                    <span className={[ "text-sm", cell.inMonth ? "text-gray-900" : "text-gray-400" ].join(" ")}>
+                    <span className={["text-sm", cell.inMonth ? "text-gray-900" : "text-gray-400"].join(" ")}>
                       {cell.date.getDate()}
                     </span>
                     {isToday && (
@@ -224,7 +204,6 @@ export default function Page() {
                     )}
                   </div>
 
-                  {/* Task dots / counter */}
                   {count > 0 && (
                     <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1">
                       {count <= 3 ? (
@@ -243,66 +222,48 @@ export default function Page() {
             })}
           </div>
 
-          {/* Inline states */}
-          {loading && <div className="mt-3 text-sm text-gray-500">Loading tasks…</div>}
-          {!!error && (
-            <div className="mt-3 rounded bg-red-100 px-3 py-2 text-sm text-red-700">{error}</div>
-          )}
+          {loading && <div className="mt-3 text-sm text-gray-500">Loading tasks...</div>}
+          {!!error && <div className="mt-3 rounded bg-red-100 px-3 py-2 text-sm text-red-700">{error}</div>}
         </div>
 
-        {/* Day Panel */}
         <div className="rounded-card bg-emerald-900/90 p-4 shadow-soft">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">
-              {selectedWeekday} — {selectedDayKey}
+              {selectedWeekday} - {selectedDayKey}
             </h2>
-
-            <button
-              onClick={() => router.push(`/tasks/new?date=${selectedDayKey}`)}
-              className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-emerald-900 shadow hover:bg-gray-100"
-            >
-              <span>＋</span> Add Task
-            </button>
+            <div className="text-sm text-emerald-100">
+              Assigned tasks due on this day: {selectedTasks.length}
+            </div>
           </div>
 
           {selectedTasks.length === 0 ? (
-            <p className="text-sm text-emerald-100">No tasks scheduled for this day.</p>
+            <p className="text-sm text-emerald-100">No assigned tasks scheduled for this day.</p>
           ) : (
             <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {selectedTasks.map((t) => (
-                <li key={t.id} className="rounded-lg bg-white p-3 shadow">
-                  <h3 className="mb-1 font-medium text-gray-900">{t.title}</h3>
+              {selectedTasks.map((task) => (
+                <li key={task.id} className="rounded-lg bg-white p-3 shadow">
+                  <h3 className="mb-1 font-medium text-gray-900">{task.title}</h3>
+                  <p className="text-sm font-medium text-emerald-700">Assigned to: {task.assignee}</p>
 
-                  {(t.account || t.location) && (
-                    <p className="text-sm text-gray-600">
-                      {t.account ? t.account : ""}
-                      {t.account && t.location ? " • " : ""}
-                      {t.location ? t.location : ""}
-                    </p>
-                  )}
-
-                  {(t.start || t.end || t.estimateMins) && (
+                  {(task.account || task.location) && (
                     <p className="mt-1 text-sm text-gray-600">
-                      {(t.start || t.end) ? `${t.start ?? ""}${t.start && t.end ? "–" : ""}${t.end ?? ""}` : ""}
-                      {(t.start || t.end) && t.estimateMins ? " • " : ""}
-                      {t.estimateMins ? `~${Math.round(t.estimateMins / 60)} hr` : ""}
+                      {task.account ? task.account : ""}
+                      {task.account && task.location ? " - " : ""}
+                      {task.location ? task.location : ""}
                     </p>
                   )}
 
-                  {t.notes && <p className="mt-2 line-clamp-3 text-sm text-gray-700">{t.notes}</p>}
+                  {task.notes && <p className="mt-2 line-clamp-3 text-sm text-gray-700">{task.notes}</p>}
 
                   <div className="mt-3 flex items-center justify-between">
+                    <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800">
+                      {task.status}
+                    </span>
                     <button
-                      onClick={() => router.push(`/tasks/${t.id}`)}
+                      onClick={() => setSelectedTask(task)}
                       className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
                     >
-                      View
-                    </button>
-                    <button
-                      onClick={() => router.push(`/tasks/${t.id}/edit`)}
-                      className="rounded-md bg-gray-200 px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-300"
-                    >
-                      Edit
+                      View Task
                     </button>
                   </div>
                 </li>
@@ -310,7 +271,54 @@ export default function Page() {
             </ul>
           )}
         </div>
+
+        {selectedTask && (
+          <div
+            className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-6"
+            onClick={() => setSelectedTask(null)}
+          >
+            <div
+              className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-xl font-extrabold text-brand-700">Task Details</h3>
+                <button
+                  onClick={() => setSelectedTask(null)}
+                  className="rounded-lg bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Info label="Task" value={selectedTask.title} />
+                <Info label="Due Date" value={selectedTask.date} />
+                <Info label="Assigned To" value={selectedTask.assignee} />
+                <Info label="Status" value={selectedTask.status} />
+                <Info label="Account" value={selectedTask.account} />
+                <Info label="Location" value={selectedTask.location} />
+              </div>
+
+              <div className="mt-4">
+                <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800">
+                  {selectedTask.notes || "No notes provided."}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </AppShell>
+  );
+}
+
+function Info({ label, value }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+      <div className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-500">{label}</div>
+      <div className="text-sm font-medium text-gray-800">{value || "-"}</div>
+    </div>
   );
 }
