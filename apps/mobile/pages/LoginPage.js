@@ -1,289 +1,251 @@
-// pages/LoginScreen.js
-
-import React, { useState } from "react";
-import { useNavigation } from "@react-navigation/native";
+import React from 'react';
 import {
-  Image,
   ImageBackground,
-  KeyboardAvoidingView,
-  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
-  TextInput,
-  Pressable,
   View,
-  ActivityIndicator,
-  Alert,
+  Pressable,
   ScrollView,
-} from "react-native";
-
-import { login, auth } from "../util/firebase";
-
-const BG = require("../assets/bg.jpg");
-const LOGO = require("../assets/logo.png");
-
-export default function LoginScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [secure, setSecure] = useState(true);
-  const [loading, setLoading] = useState(false);
-
+  StatusBar,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import NavBar from '../components/NavBar';
+ 
+const BG = require('../assets/bg.jpg');
+const RADIUS = 12;
+const COLORS = {
+  green: '#6f8641',
+  greenDark: '#5e7833',
+  blockGreen: '#6f8641',
+  black: '#000000',
+  textOnGreen: '#ffffff',
+  cardFill: '#f8f8f8',
+  cardBorder: '#d9e1c8',
+  tint: 'rgba(125, 145, 98, 0.25)',
+  tabIcon: '#fff',
+  mutedText: '#e9efd9',
+  reqText: '#999999',
+  titleGreen: '#5a7320',
+};
+ 
+//Replace with real data
+const TASK_SETS = [
+  {
+    id: 1,
+    title: 'Task Set #1',
+    forms: [1738, 1328, 7543],
+  },
+  {
+    id: 2,
+    title: 'Task Set #2',
+    forms: [3333, 4444, 5555],
+  },
+  {
+    id: 3,
+    title: 'Task Set #3',
+    forms: [6666, 7777, 8888],
+  },
+];
+ 
+function TaskSetCard({ item, onViewMore }) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Ionicons name="information-circle-outline" size={28} color={COLORS.black} style={styles.infoIcon} />
+        <Text style={styles.cardTitle}>{item.title}</Text>
+      </View>
+      <View style={styles.cardForms}>
+        {item.forms.map((form, index) => (
+          <Text key={index} style={styles.formText}>REQ Form: {form}</Text>
+        ))}
+      </View>
+      <Pressable
+        style={({ pressed }) => [styles.viewMoreBtn, pressed && styles.viewMoreBtnPressed]}
+        onPress={() => onViewMore?.(item)}
+      >
+        <Text style={styles.viewMoreText}>View More</Text>
+      </Pressable>
+    </View>
+  );
+}
+ 
+export default function TaskSetList() {
   const navigation = useNavigation();
-
-  async function onSignIn() {
-  const trimmedEmail = email.trim().toLowerCase();
-
-  if (!trimmedEmail || !password) {
-    Alert.alert("Missing info", "Please enter both email and password.");
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    console.log("1. Starting Firebase login");
-
-    const user = await login(trimmedEmail, password);
-    console.log("2. Firebase login success:", user?.email);
-
-    const token = await user.getIdToken(true);
-    console.log("3. Got token:", !!token);
-    console.log("API URL:", process.env.EXPO_PUBLIC_API_BASE_URL);
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-
-    const response = await fetch(
-      `${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/me`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        signal: controller.signal,
-      }
-    );
-
-    clearTimeout(timeout);
-    console.log("4. /auth/me response status:", response.status);
-
-    const result = await response.json();
-    console.log("5. /auth/me response body:", result);
-
-    if (!response.ok) {
-      throw new Error(result?.message || "Unable to verify account with API");
-    }
-
-    navigation.navigate("HomePage");
-  } catch (err) {
-    console.error("Login flow error:", err);
-    Alert.alert("Error", err?.message || "Unable to sign in");
-  } finally {
-    setLoading(false);
-  }
-
-
-    setLoading(true);
-
-    try {
-      const user = await login(trimmedEmail, password);
-
-      const token = await user.getIdToken(true);
-      console.log("Token exists:", !!token);
-      console.log("Token preview:", token?.slice(0, 20));
-
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/me`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result?.message || "Unable to verify account with API");
-      }
-
-      console.log("Firebase user:", auth.currentUser?.email);
-      console.log("Backend account:", result?.data);
-
-      navigation.navigate("HomePage");
-    } catch (err) {
-      Alert.alert("Error", err?.message || "Unable to sign in");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function onForgotPassword() {
-    navigation.navigate("ForgotPassword");
-  }
-
-  function goToHomePage() {
-    navigation.navigate("HomePage");
-  }
-
+ 
+  const handleViewMore = (item) => {
+    // Navigate to task set detail screen
+    console.log('View More pressed for:', item.title);
+  };
+ 
   return (
     <SafeAreaView style={styles.safe}>
+      <StatusBar backgroundColor={COLORS.green} barStyle="light-content" />
+ 
       <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
         <View style={styles.tint} />
-
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "android" ? "padding" : "height"}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-            style={[styles.container, { marginTop: 60 }]}
-          >
-            <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: "center"}} keyboardShouldPersistTaps="handled">
-              <View style={styles.logoCard}>
-                <Image source={LOGO} style={styles.logoImage} resizeMode="cover" />
-              </View>
-
-              <View style={styles.formCard}>
-                <Text style={styles.label}>Email</Text>
-                <View style={styles.inputShell}>
-                  <TextInput
-                    placeholder="Enter Email:"
-                    placeholderTextColor="#b9b9b9"
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    textContentType="emailAddress"
-                    value={email}
-                    onChangeText={setEmail}
-                    style={styles.input}
-                    accessibilityLabel="Email"
-                  />
-                </View>
-
-                <Text style={[styles.label, { marginTop: 16 }]}>Password</Text>
-                <View style={styles.inputShell}>
-                  <TextInput
-                    placeholder="Enter Password:"
-                    placeholderTextColor="#b9b9b9"
-                    secureTextEntry={secure}
-                    textContentType="password"
-                    value={password}
-                    onChangeText={setPassword}
-                    style={styles.input}
-                    accessibilityLabel="Password"
-                  />
-                </View>
-
-                <Pressable
-                  style={[styles.signInBtn, loading && { opacity: 0.7 }]}
-                  disabled={loading}
-                  onPress={onSignIn}
-                  accessibilityRole="button"
-                  accessibilityLabel="Sign In"
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.signInText}>Sign In</Text>
-                  )}
-                </Pressable>
-
-                <Pressable onPress={onForgotPassword} style={styles.forgotWrap}>
-                  <Text style={styles.forgotText}>Forgot password?</Text>
-                </Pressable>
-              </View>
-
-              <View>
-                <Pressable onPress={ToHomePage}>
-                  <Text>To Home Screen</Text>
-                </Pressable>
-              </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
+ 
+        {/* Top App Bar */}
+        <View style={styles.topBar}>
+          <View style={styles.topBarSide}>
+            <Ionicons name="person-outline" size={22} color={COLORS.textOnGreen} />
+          </View>
+          <View style={styles.topBarCenter}>
+            <Text style={styles.topTitle}>Greenery Team App</Text>
+            <Text style={styles.topSubtitle}>Mobile View</Text>
+          </View>
+          <View style={[styles.topBarSide, { alignItems: 'flex-end' }]}>
+            <Ionicons name="notifications-outline" size={22} color={COLORS.textOnGreen} />
+          </View>
+        </View>
+ 
+        {/* Header Block */}
+        <View style={styles.menuBlockWrap}>
+          <View style={styles.menuBlock}>
+            <Text style={styles.menuBlockText}>List of Task Sets</Text>
+          </View>
+        </View>
+ 
+        {/* Task Set Cards */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {TASK_SETS.map((item) => (
+            <TaskSetCard key={item.id} item={item} onViewMore={handleViewMore} />
+          ))}
+          <View style={{ height: 20 }} />
+        </ScrollView>
+ 
+        {/* Bottom Nav Bar */}
+        <View style={styles.tabBar}>
+          <NavBar />
+        </View>
       </ImageBackground>
     </SafeAreaView>
   );
 }
-
-const GREEN = "#556f26";
-const CARD_BG = "#f2f2f2";
-const BORDER = "#c8c8c8";
-
+ 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#2f4f2f" },
-  bg: { flex: 1, justifyContent: "flex-start", height: "110%", marginTop: -60 },
+  safe: { flex: 1, backgroundColor: COLORS.green },
+  bg: { flex: 1 },
   tint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(88, 110, 50, 0.35)",
+    backgroundColor: COLORS.tint,
   },
-  container: {
-    flex: 1,
-    paddingHorizontal: 18,
-  },
-  logoCard: {
-    marginTop: 48,
-    width: 260,
-    height: 320,
-    backgroundColor: "#fff",
-    borderRadius: 10,
-    padding: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  logoImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 6,
-  },
-  formCard: {
-    width: "94%",
-    marginTop: 22,
-    backgroundColor: CARD_BG,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: "#bdbdbd",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+ 
+  /* Top bar */
+  topBar: {
+    height: 52,
+    backgroundColor: COLORS.green,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
     elevation: 6,
   },
-  label: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#5b6e30",
+  topBarSide: { width: 32 },
+  topBarCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  topTitle: {
+    color: COLORS.textOnGreen,
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
-  inputShell: {
+  topSubtitle: {
+    color: COLORS.mutedText,
+    fontSize: 11,
+    marginTop: -2,
+  },
+ 
+  /* Header block */
+  menuBlockWrap: {
     marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: 6,
+  },
+  menuBlock: {
+    height: 56,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: "#e6e6e6",
+    backgroundColor: COLORS.blockGreen,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
-    height: 44,
-    justifyContent: "center",
+    elevation: 6,
   },
-  input: {
-    fontSize: 16,
-    color: "#333",
+  backBtn: {
+    marginRight: 10,
+    padding: 4,
   },
-  signInBtn: {
-    marginTop: 16,
-    height: 44,
-    backgroundColor: GREEN,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+  menuBlockText: {
+    color: COLORS.textOnGreen,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    flex: 1,
+    textAlign: 'center',
   },
-  signInText: { color: "#fff", fontWeight: "800", fontSize: 18 },
-  forgotWrap: { marginTop: 12 },
-  forgotText: {
-    color: "#4b6424",
-    textDecorationLine: "underline",
-    fontSize: 16,
+ 
+  /* Scroll */
+  scrollContent: {
+    paddingHorizontal: 10,
+    paddingTop: 4,
+  },
+ 
+  /* Task Set Card */
+  card: {
+    backgroundColor: COLORS.cardFill,
+    borderRadius: RADIUS,
+    padding: 16,
+    marginBottom: 10,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  infoIcon: {
+    marginRight: 10,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.titleGreen,
+  },
+  cardForms: {
+    marginLeft: 38,
+    marginBottom: 14,
+  },
+  formText: {
+    fontSize: 13,
+    color: COLORS.reqText,
+    lineHeight: 20,
+  },
+  viewMoreBtn: {
+    alignSelf: 'flex-start',
+    marginLeft: 38,
+    borderWidth: 1,
+    borderColor: '#aaaaaa',
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 20,
+  },
+  viewMoreBtnPressed: {
+    backgroundColor: '#e8e8e8',
+  },
+  viewMoreText: {
+    fontSize: 13,
+    color: '#333333',
+    fontWeight: '500',
+  },
+ 
+  /* Bottom tab bar */
+  tabBar: {
+    backgroundColor: COLORS.green,
   },
 });
