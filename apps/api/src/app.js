@@ -14,6 +14,7 @@ const plantRoutes = require("./routes/plants");
 const accountRoutes = require("./routes/accounts");
 const employeeRoutes = require("./routes/employees");
 const reqRoutes = require("./routes/reqs");
+const scheduleRoutes = require("./routes/schedule"); 
 
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
@@ -38,6 +39,7 @@ app.use("/plants", plantRoutes);
 app.use("/accounts", accountRoutes);
 app.use("/employees", employeeRoutes);
 app.use("/reqs", reqRoutes);
+app.use("/schedule", scheduleRoutes); // ← ADD THIS
 
 /**
  * API documentation
