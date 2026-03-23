@@ -27,7 +27,7 @@ export default function NavBar() {
       </Pressable>
 
       <Pressable
-        onPress={() => navigation.navigate('TaskSets')}
+        onPress={() => navigation.navigate('TaskSetList')}
         style={styles.tabItem}
       >
         <FontAwesome5 name="wpforms" size={16} color="#fff" />
