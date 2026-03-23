@@ -47,9 +47,9 @@ export default function WorkRequestDetails({ route, navigation }) {
       setIsLoading(true);
 
       try {
-        const data = await getWorkRequestById(id);
-        console.log(data);
-        setDetailData(data);
+        const response = await getWorkRequestById(id);
+        const requestDetails = response?.data ?? response ?? null;
+        setDetailData(requestDetails);
       } catch (error) {
         console.error("Error fetching details:", error);
       } finally {
@@ -93,6 +93,8 @@ export default function WorkRequestDetails({ route, navigation }) {
           </View>
           {isLoading ? (
             <Text>Loading details...</Text>
+          ) : !detailData ? (
+            <Text>No work request details found.</Text>
           ) : (
             
               <View style={styles.formBlockWrap}>
@@ -106,7 +108,7 @@ export default function WorkRequestDetails({ route, navigation }) {
                       { paddingTop: 15 },
                     ]}
                   >
-                    REQ#{detailData.req} - Submitted by {detailData.techName}
+                    REQ#{detailData.referenceNumber || detailData.id} - Submitted by {detailData.techName}
                   </Text>
 
                   <View style={styles.fieldRow}>

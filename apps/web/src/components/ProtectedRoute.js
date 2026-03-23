@@ -12,7 +12,7 @@ export default function ProtectedRoute({ children }) {
     if (!loading && !user) {
       router.push("/login");
     }
-  }, [user, loading]);
+  }, [router, user, loading]);
 
   if (loading || !user) {
     return <div className="p-6">Checking authentication...</div>;

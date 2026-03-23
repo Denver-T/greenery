@@ -108,11 +108,6 @@ export default function LoginPage() {
     }
   }
 
-  setTimeout(() => {
-    setEmail("denvertimlick@gmail.com");
-    setPassword("GreeneryTest123");
-  }, 1000);
-
   return (
     <div style={styles.page}>
       <div style={styles.bgOverlay} />

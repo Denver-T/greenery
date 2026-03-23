@@ -23,12 +23,12 @@ Greenery API (/auth/me)
     │
     │ verifyIdToken()
     ▼
-Accounts Table (MySQL)
+Employees Table (MySQL)
     │
     ▼
 Authenticated User Session
 
-The backend verifies the Firebase token and maps the Firebase user email to an internal account.
+The backend verifies the Firebase token and maps the Firebase user email to an internal employee record.
 
 Environment Setup
 
@@ -81,20 +81,20 @@ The API verifies the Firebase token using the Firebase Admin SDK.
 
 admin.auth().verifyIdToken(token)
 
-If valid, the backend extracts the email and looks up the corresponding account in the database.
+If valid, the backend extracts the email and looks up the corresponding employee in the database.
 
-Account Requirement
-A matching email must exist in the accounts table.
+Employee Requirement
+A matching email must exist in the employees table.
 
 Example:
-accounts.email = firebaseUser.email
+employees.email = firebaseUser.email
 
-If no matching account exists the API returns:
-ACCOUNT_NOT_FOUND
+If no matching employee exists the API returns:
+EMPLOYEE_NOT_FOUND
 
 To add a user manually:
-INSERT INTO accounts (name, role, email)
-VALUES ('User Name', 'technician', 'user@email.com');
+INSERT INTO employees (name, role, email, status, permissionLevel)
+VALUES ('User Name', 'Technician', 'user@email.com', 'Active', 'Technician');
 
 Running the Mobile App
 From the mobile directory:
@@ -133,11 +133,11 @@ Restart both the API and Expo server.
 
 ⸻
 
-Account not found
+Employee not found
 
 The Firebase user email does not exist in the database.
 
-Add the email to the accounts table.
+Add the email to the employees table.
 
 ⸻
 
@@ -149,7 +149,7 @@ Notes for Future Developers
 
 Files Related to Authentication
 apps/mobile/util/firebase.js
-apps/mobile/pages/LoginScreen.js
+apps/mobile/pages/LoginPage.js
 apps/api/config/firebase.js
 apps/api/src/middleware/authMiddleware.js
 apps/api/src/routes/auth.js

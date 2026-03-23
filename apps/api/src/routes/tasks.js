@@ -253,7 +253,7 @@ router.get(
  *             schema:
  *               $ref: '#/components/schemas/ValidationError'
  *       404:
- *         description: Referenced account not found
+ *         description: Referenced employee not found
  *       429:
  *         description: Too many requests
  */
@@ -353,7 +353,7 @@ router.patch(
  *             schema:
  *               $ref: '#/components/schemas/ValidationError'
  *       404:
- *         description: Task or account not found
+ *         description: Task or employee not found
  *         content:
  *           application/json:
  *             schema:

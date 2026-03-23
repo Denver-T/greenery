@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   ImageBackground,
+  Pressable,
   SafeAreaView,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   View,
-  ScrollView,
-  Pressable,
-  StatusBar,
-  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+
 import NavBar from "../components/NavBar";
 import { getAllWorkRequest } from "../util/workRequest";
 
@@ -43,20 +44,16 @@ export default function WorkRequestView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const openRequest = (id) => {
+  function openRequest(id) {
     navigation.navigate("WorkRequestDetails", id);
-  };
+  }
 
   async function fetchWorkRequestList() {
     try {
       setLoading(true);
       setError(null);
       const res = await getAllWorkRequest();
-      console.log(res);
-      // Handle both array and wrapped response
-      const reqsArray = Array.isArray(res)
-        ? res
-        : res?.data || res?.reqs || [];
+      const reqsArray = Array.isArray(res) ? res : res?.data || res?.reqs || [];
       setReqs(reqsArray);
     } catch (err) {
       setError("Failed to load work requests");
@@ -70,9 +67,9 @@ export default function WorkRequestView() {
     fetchWorkRequestList();
   }, []);
 
-  const getStatusStyle = (status) => {
+  function getStatusStyle(status) {
     return STATUS_COLORS[status] || { bg: "#f3f4f6", text: "#374151" };
-  };
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -80,21 +77,21 @@ export default function WorkRequestView() {
       <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
         <View style={styles.tint} />
 
-        {/* Top App Bar */}
         <View style={styles.topBar}>
           <View style={styles.topBarSide}>
             <Ionicons name="person-outline" size={22} color={COLORS.textOnGreen} />
           </View>
+
           <View style={styles.topBarCenter}>
             <Text style={styles.topTitle}>Greenery Team App</Text>
             <Text style={styles.topSubtitle}>Mobile View</Text>
           </View>
+
           <View style={[styles.topBarSide, { alignItems: "flex-end" }]}>
             <Ionicons name="notifications-outline" size={22} color={COLORS.textOnGreen} />
           </View>
         </View>
 
-        {/* Header Block */}
         <View style={styles.menuBlockWrap}>
           <View style={styles.menuBlock}>
             <Text style={styles.menuBlockText}>Work Requests</Text>
@@ -105,17 +102,11 @@ export default function WorkRequestView() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Loading */}
-          {loading && (
-            <ActivityIndicator
-              size="large"
-              color={COLORS.green}
-              style={{ marginTop: 40 }}
-            />
-          )}
+          {loading ? (
+            <ActivityIndicator size="large" color={COLORS.green} style={{ marginTop: 40 }} />
+          ) : null}
 
-          {/* Error */}
-          {!loading && error && (
+          {!loading && error ? (
             <View style={styles.emptyBox}>
               <Ionicons name="alert-circle-outline" size={40} color="#cc0000" />
               <Text style={styles.emptyText}>{error}</Text>
@@ -123,53 +114,48 @@ export default function WorkRequestView() {
                 <Text style={styles.retryText}>Retry</Text>
               </Pressable>
             </View>
-          )}
+          ) : null}
 
-          {/* Empty */}
-          {!loading && !error && reqs.length === 0 && (
+          {!loading && !error && reqs.length === 0 ? (
             <View style={styles.emptyBox}>
               <Ionicons name="document-outline" size={40} color={COLORS.greenDark} />
               <Text style={styles.emptyText}>No work requests found</Text>
             </View>
-          )}
+          ) : null}
 
-          {/* Work Request Cards */}
-          {!loading && Array.isArray(reqs) && reqs.map((req) => {
+          {!loading && !error && reqs.map((req) => {
             const statusStyle = getStatusStyle(req.status);
+
             return (
               <View key={req.id} style={styles.card}>
-                {/* Row 1: Header */}
                 <View style={styles.cardHeader}>
                   <View style={styles.cardHeaderPill}>
                     <Text style={styles.cardHeaderText}>Work Request</Text>
                   </View>
+
                   <View style={{ flex: 1 }} />
+
                   <View style={styles.cardHeaderPill}>
-                    <Text style={styles.cardHeaderText}>
-                      #{req.referenceNumber}
-                    </Text>
+                    <Text style={styles.cardHeaderText}>#{req.referenceNumber}</Text>
                   </View>
                 </View>
 
-                {/* Row 2: Account */}
-                {req.account && (
+                {req.account ? (
                   <View style={styles.accountRow}>
                     <Ionicons name="business-outline" size={14} color={COLORS.greenDark} />
                     <Text style={styles.accountText}>{req.account}</Text>
                   </View>
-                )}
+                ) : null}
 
-                {/* Row 3: Submitted By + Status + Arrow */}
                 <View style={styles.cardBody}>
                   <View style={styles.inlineRow}>
                     <Text style={styles.submittedLabel}>Submitted By:</Text>
-                    <Text style={styles.submittedName}>{req.techName || 'N/A'}</Text>
+                    <Text style={styles.submittedName}>{req.techName || "N/A"}</Text>
                   </View>
 
-                  {/* Status Badge */}
                   <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
                     <Text style={[styles.statusText, { color: statusStyle.text }]}>
-                      {req.status?.replace('_', ' ').toUpperCase() || 'UNKNOWN'}
+                      {req.status?.replace("_", " ").toUpperCase() || "UNKNOWN"}
                     </Text>
                   </View>
 
@@ -181,15 +167,14 @@ export default function WorkRequestView() {
                   </Pressable>
                 </View>
 
-                {/* Row 4: Due Date */}
-                {req.dueDate && (
+                {req.dueDate ? (
                   <View style={styles.dueDateRow}>
                     <Ionicons name="calendar-outline" size={13} color={COLORS.greenDark} />
                     <Text style={styles.dueDateText}>
                       Due: {new Date(req.dueDate).toLocaleDateString()}
                     </Text>
                   </View>
-                )}
+                ) : null}
               </View>
             );
           })}
@@ -209,7 +194,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.green },
   bg: { flex: 1 },
   tint: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.tint },
-
   topBar: {
     height: 52,
     backgroundColor: COLORS.green,
@@ -231,7 +215,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: -2,
   },
-
   menuBlockWrap: {
     marginTop: 8,
     marginBottom: 8,
@@ -251,13 +234,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.5,
   },
-
   scrollContent: {
     paddingHorizontal: 12,
     paddingTop: 10,
   },
-
-  // Empty / Error
   emptyBox: {
     alignItems: "center",
     marginTop: 60,
@@ -280,8 +260,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 14,
   },
-
-  // Card
   card: {
     backgroundColor: COLORS.cardFill,
     borderRadius: 16,

@@ -1,20 +1,11 @@
 "use client";
 
 import AppShell from "@/components/AppShell";
+import { fetchApi } from "@/lib/api/api";
 import { useEffect, useMemo, useState } from "react";
-
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 function clsx(...xs) {
   return xs.filter(Boolean).join(" ");
-}
-
-async function jsonOrThrow(res) {
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(body?.error || `Request failed (${res.status})`);
-  }
-  return body;
 }
 
 export default function AssignmentsPage() {
@@ -34,7 +25,6 @@ export default function AssignmentsPage() {
   const [loading, setLoading] = useState(true);
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
-  const [dueDate, setDueDate] = useState("");
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const [filter, setFilter] = useState("unassigned");
   const [search, setSearch] = useState("");
@@ -53,12 +43,12 @@ export default function AssignmentsPage() {
 
     try {
       const [employeesData, tasksData] = await Promise.all([
-        fetch(`${API}/employees`, { cache: "no-store" }).then(jsonOrThrow),
-        fetch(`${API}/tasks?scope=assignment`, { cache: "no-store" }).then(jsonOrThrow),
+        fetchApi("/employees"),
+        fetchApi("/tasks?scope=assignment"),
       ]);
 
-      setEmployees(Array.isArray(employeesData) ? employeesData : []);
-      setTasks(Array.isArray(tasksData) ? tasksData : []);
+      setEmployees(Array.isArray(employeesData) ? employeesData : employeesData?.data || []);
+      setTasks(Array.isArray(tasksData) ? tasksData : tasksData?.data || []);
     } catch (e) {
       console.error("[assignments] load failed", e);
       setMessage(e.message || "Failed to load assignments data.");
@@ -80,25 +70,27 @@ export default function AssignmentsPage() {
     const term = search.trim().toLowerCase();
 
     return tasks.filter((t) => {
+      const assignedTo = t.assignedTo ?? t.assigned_to ?? null;
       const matchesFilter =
         filter === "all"
           ? true
           : filter === "unassigned"
-          ? !t.assignedTo
-          : !!t.assignedTo;
+          ? !assignedTo
+          : !!assignedTo;
 
       const matchesSearch =
         !term ||
         t.title?.toLowerCase().includes(term) ||
         t.account?.toLowerCase().includes(term) ||
-        t.location?.toLowerCase().includes(term);
+        t.location?.toLowerCase().includes(term) ||
+        t.referenceNumber?.toLowerCase().includes(term);
 
       return matchesFilter && matchesSearch;
     });
   }, [tasks, filter, search]);
 
   const selectedCount = selectedTaskIds.size;
-  const canAssign = selectedCount > 0 && selectedEmployeeId && dueDate && !submitting;
+  const canAssign = selectedCount > 0 && selectedEmployeeId && !submitting;
 
   /**
    * Toggle one task checkbox
@@ -119,7 +111,7 @@ export default function AssignmentsPage() {
     setSelectedTaskIds((prev) => {
       const next = new Set(prev);
       filteredTasks.forEach((t) => {
-        if (!t.assignedTo) next.add(t.id);
+        if (!(t.assignedTo ?? t.assigned_to)) next.add(t.id);
       });
       return next;
     });
@@ -132,82 +124,37 @@ export default function AssignmentsPage() {
    * Assign selected tasks to employee
    * ---------------------------------------------------------
    * Backend route required:
-   * POST /tasks/assign
-   *
-   * Expected body:
-   * {
-   *   employeeId,
-   *   dueDate,
-   *   taskIds: []
-   * }
+   * Uses the current schema-backed API:
+   * PATCH /tasks/:id/assign { assigned_to }
    */
   const assignTasks = async () => {
     setSubmitting(true);
     setMessage("");
 
     try {
-      const body = {
-        employeeId: Number(selectedEmployeeId),
-        dueDate,
-        taskIds: Array.from(selectedTaskIds),
-      };
-
-      const res = await fetch(`${API}/tasks/assign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      await jsonOrThrow(res);
+      const taskIds = Array.from(selectedTaskIds);
+      await Promise.all(
+        taskIds.map((taskId) =>
+          fetchApi(`/tasks/${taskId}/assign`, {
+            method: "PATCH",
+            body: { assigned_to: Number(selectedEmployeeId) },
+          })
+        )
+      );
 
       await loadData();
       clearAll();
 
       const emp = employees.find((e) => Number(e.id) === Number(selectedEmployeeId));
       setMessage(
-        `Assigned ${body.taskIds.length} task${body.taskIds.length > 1 ? "s" : ""} to ${
+        `Assigned ${taskIds.length} task${taskIds.length > 1 ? "s" : ""} to ${
           emp?.name || "employee"
-        } for ${dueDate}.`
+        }.`
       );
     } catch (e) {
       setMessage(e.message || "Assignment failed.");
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  /**
-   * ---------------------------------------------------------
-   * Unassign a task
-   * ---------------------------------------------------------
-   * Backend route required:
-   * PATCH /tasks/:id
-   * body: { assignedTo: null, date: null }
-   */
-  const unassignTask = async (taskId) => {
-    try {
-      const res = await fetch(`${API}/tasks/${taskId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignedTo: null, date: null }),
-      });
-
-      await jsonOrThrow(res);
-
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === taskId ? { ...t, assignedTo: null, date: null } : t
-        )
-      );
-
-      setSelectedTaskIds((prev) => {
-        const next = new Set(prev);
-        next.delete(taskId);
-        return next;
-      });
-    } catch (e) {
-      console.error(e);
-      setMessage(e.message || "Failed to unassign task.");
     }
   };
 
@@ -221,7 +168,7 @@ export default function AssignmentsPage() {
     employees.forEach((e) => map.set(Number(e.id), { employee: e, tasks: [] }));
 
     tasks.forEach((t) => {
-      const assignedId = Number(t.assignedTo);
+      const assignedId = Number(t.assignedTo ?? t.assigned_to);
       if (assignedId && map.has(assignedId)) {
         map.get(assignedId).tasks.push(t);
       }
@@ -238,7 +185,7 @@ export default function AssignmentsPage() {
 
         {/* Assignment controls */}
         <div className="bg-white p-4 shadow-soft">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Employee</label>
               <select
@@ -253,19 +200,6 @@ export default function AssignmentsPage() {
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Due date</label>
-              <input
-                type="date"
-                className="w-full rounded-md border border-gray-300 p-2"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
-              <p className="text-xs text-gray-500">
-                Stored in the task record so the calendar can use it later.
-              </p>
             </div>
 
             <div className="flex flex-col justify-end gap-2">
@@ -351,31 +285,22 @@ export default function AssignmentsPage() {
                         <div>
                           <div className="font-medium text-gray-900">{t.title}</div>
                           <div className="text-sm text-gray-600">
-                            {[t.account, t.location].filter(Boolean).join(" · ")}
+                            {[t.referenceNumber, t.account, t.location].filter(Boolean).join(" · ")}
                           </div>
 
-                          {t.assignedTo ? (
+                          {(t.assignedTo ?? t.assigned_to) ? (
                             <div className="mt-1 text-xs text-emerald-700">
                               Assigned to{" "}
-                              {employees.find((e) => Number(e.id) === Number(t.assignedTo))?.name ||
-                                t.assignedTo}
-                              {t.date ? ` · due ${t.date}` : ""}
+                              {employees.find(
+                                (e) => Number(e.id) === Number(t.assignedTo ?? t.assigned_to)
+                              )?.name || (t.assignedTo ?? t.assigned_to)}
+                              {(t.dueDate ?? t.due_date) ? ` · due ${t.dueDate ?? t.due_date}` : ""}
                             </div>
                           ) : (
                             <div className="mt-1 text-xs text-gray-500">Unassigned</div>
                           )}
                         </div>
                       </div>
-
-                      {!!t.assignedTo && (
-                        <button
-                          onClick={() => unassignTask(t.id)}
-                          className="rounded-md bg-white px-2 py-1 text-xs text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
-                          title="Unassign"
-                        >
-                          Unassign
-                        </button>
-                      )}
                     </div>
                   </li>
                 );
@@ -403,14 +328,10 @@ export default function AssignmentsPage() {
                       <li key={t.id} className="flex items-center justify-between">
                         <div>
                           <div className="text-gray-900">{t.title}</div>
-                          <div className="text-gray-500">{t.date ? `due ${t.date}` : ""}</div>
+                          <div className="text-gray-500">
+                            {t.dueDate ?? t.due_date ? `due ${t.dueDate ?? t.due_date}` : ""}
+                          </div>
                         </div>
-                        <button
-                          onClick={() => unassignTask(t.id)}
-                          className="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-800 hover:bg-gray-200"
-                        >
-                          Unassign
-                        </button>
                       </li>
                     ))}
                   </ul>

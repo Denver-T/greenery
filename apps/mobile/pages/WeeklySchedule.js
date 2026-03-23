@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   ImageBackground,
   SafeAreaView,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   View,
-  ScrollView,
-  StatusBar,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
 import NavBar from '../components/NavBar';
 import { apiFetch } from '../util/api';
 
@@ -36,12 +37,12 @@ export default function WeeklySchedule() {
     fetchSchedule();
   }, []);
 
-  const fetchSchedule = async () => {
+  async function fetchSchedule() {
     try {
       setLoading(true);
-      const data = await apiFetch('/schedule');
-      // ✅ Safety check - make sure data is an array
-      const eventsArray = Array.isArray(data) ? data : [];
+      setError(null);
+      const response = await apiFetch('/schedule');
+      const eventsArray = Array.isArray(response) ? response : response?.data || [];
       setEvents(eventsArray);
     } catch (err) {
       setError('Failed to load schedule');
@@ -49,19 +50,21 @@ export default function WeeklySchedule() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', {
+  function formatDate(dateStr) {
+    if (!dateStr) {
+      return '';
+    }
+
+    return new Date(dateStr).toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -70,7 +73,6 @@ export default function WeeklySchedule() {
       <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
         <View style={styles.tint} />
 
-        {/* Top App Bar */}
         <View style={styles.topBar}>
           <View style={styles.topBarSide}>
             <Ionicons name="person-outline" size={22} color={COLORS.textOnGreen} />
@@ -90,43 +92,36 @@ export default function WeeklySchedule() {
           </View>
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Loading */}
-          {loading && (
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {loading ? (
             <ActivityIndicator size="large" color={COLORS.green} style={{ marginTop: 40 }} />
-          )}
+          ) : null}
 
-          {/* Error */}
-          {error && (
+          {error ? (
             <View style={styles.emptyBox}>
               <Ionicons name="alert-circle-outline" size={40} color="#cc0000" />
               <Text style={styles.emptyText}>{error}</Text>
             </View>
-          )}
+          ) : null}
 
-          {/* Empty */}
-          {!loading && !error && events.length === 0 && (
+          {!loading && !error && events.length === 0 ? (
             <View style={styles.emptyBox}>
               <Ionicons name="calendar-outline" size={40} color={COLORS.greenDark} />
               <Text style={styles.emptyText}>No schedule events found</Text>
             </View>
-          )}
+          ) : null}
 
-          {/* Events List */}
-          {!loading && Array.isArray(events) && events.map((event) => (
+          {!loading && !error && events.map((event) => (
             <View key={event.id} style={styles.card}>
               <View style={styles.cardHeader}>
                 <Ionicons name="calendar-outline" size={22} color={COLORS.greenDark} />
                 <Text style={styles.cardTitle}>{event.title}</Text>
               </View>
-              <Text style={styles.cardDetail}>🕐 Start: {formatDate(event.start_time)}</Text>
-              <Text style={styles.cardDetail}>🕐 End: {formatDate(event.end_time)}</Text>
-              {event.employee_name && (
-                <Text style={styles.cardDetail}>👤 Employee: {event.employee_name}</Text>
-              )}
+              <Text style={styles.cardDetail}>Start: {formatDate(event.start_time)}</Text>
+              <Text style={styles.cardDetail}>End: {formatDate(event.end_time)}</Text>
+              {event.employee_name ? (
+                <Text style={styles.cardDetail}>Employee: {event.employee_name}</Text>
+              ) : null}
             </View>
           ))}
 
@@ -144,10 +139,7 @@ export default function WeeklySchedule() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.green },
   bg: { flex: 1 },
-  tint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.tint,
-  },
+  tint: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.tint },
   topBar: {
     height: 52,
     backgroundColor: COLORS.green,
@@ -159,22 +151,9 @@ const styles = StyleSheet.create({
   },
   topBarSide: { width: 32 },
   topBarCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  topTitle: {
-    color: COLORS.textOnGreen,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  topSubtitle: {
-    color: COLORS.mutedText,
-    fontSize: 11,
-    marginTop: -2,
-  },
-  menuBlockWrap: {
-    marginTop: 8,
-    marginBottom: 8,
-    paddingHorizontal: 6,
-  },
+  topTitle: { color: COLORS.textOnGreen, fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
+  topSubtitle: { color: COLORS.mutedText, fontSize: 11, marginTop: -2 },
+  menuBlockWrap: { marginTop: 8, marginBottom: 8, paddingHorizontal: 6 },
   menuBlock: {
     height: 56,
     borderRadius: 10,
@@ -183,12 +162,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 6,
   },
-  menuBlockText: {
-    color: COLORS.textOnGreen,
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
+  menuBlockText: { color: COLORS.textOnGreen, fontSize: 22, fontWeight: '800', letterSpacing: 0.5 },
   scrollContent: {
     paddingHorizontal: 12,
     paddingTop: 10,

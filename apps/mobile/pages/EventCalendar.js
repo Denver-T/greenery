@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   ImageBackground,
+  Pressable,
   SafeAreaView,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   View,
-  ScrollView,
-  Pressable,
-  StatusBar,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
 import NavBar from '../components/NavBar';
 import { apiFetch } from '../util/api';
 
 const BG = require('../assets/bg.jpg');
 const RADIUS = 12;
-
 const COLORS = {
   green: '#6f8641',
   greenDark: '#5e7833',
@@ -53,75 +53,89 @@ export default function EventCalendar() {
     fetchEvents();
   }, []);
 
-  const fetchEvents = async () => {
+  async function fetchEvents() {
     try {
       setLoading(true);
-      const data = await apiFetch('/schedule');
-      const arr = Array.isArray(data) ? data : [];
-      setEvents(arr);
+      setError(null);
+      const response = await apiFetch('/schedule');
+      const eventsArray = Array.isArray(response) ? response : response?.data || [];
+      setEvents(eventsArray);
     } catch (err) {
       setError('Failed to load events');
       console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  // Get days in month
-  const getDaysInMonth = (month, year) => new Date(year, month + 1, 0).getDate();
-  const getFirstDayOfMonth = (month, year) => new Date(year, month, 1).getDay();
+  function getDaysInMonth(month, year) {
+    return new Date(year, month + 1, 0).getDate();
+  }
 
-  // Get events for a specific date
-  const getEventsForDate = (day) => {
-    return events.filter((e) => {
-      const d = new Date(e.start_time);
+  function getFirstDayOfMonth(month, year) {
+    return new Date(year, month, 1).getDay();
+  }
+
+  function getEventsForDate(day) {
+    return events.filter((event) => {
+      const date = new Date(event.start_time);
+
       return (
-        d.getDate() === day &&
-        d.getMonth() === currentMonth &&
-        d.getFullYear() === currentYear
+        date.getDate() === day &&
+        date.getMonth() === currentMonth &&
+        date.getFullYear() === currentYear
       );
     });
-  };
+  }
 
-  // Check if date has events
-  const hasEvents = (day) => getEventsForDate(day).length > 0;
+  function hasEvents(day) {
+    return getEventsForDate(day).length > 0;
+  }
 
-  // Format time
-  const formatTime = (dateStr) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  };
+  function formatTime(dateStr) {
+    if (!dateStr) {
+      return '';
+    }
 
-  // Navigate months
-  const prevMonth = () => {
+    return new Date(dateStr).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  function prevMonth() {
     if (currentMonth === 0) {
       setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
+      setCurrentYear((value) => value - 1);
     } else {
-      setCurrentMonth(currentMonth - 1);
+      setCurrentMonth((value) => value - 1);
     }
-    setSelectedDate(null);
-  };
 
-  const nextMonth = () => {
+    setSelectedDate(null);
+  }
+
+  function nextMonth() {
     if (currentMonth === 11) {
       setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
+      setCurrentYear((value) => value + 1);
     } else {
-      setCurrentMonth(currentMonth + 1);
+      setCurrentMonth((value) => value + 1);
     }
+
     setSelectedDate(null);
-  };
+  }
 
   const daysInMonth = getDaysInMonth(currentMonth, currentYear);
   const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
   const selectedEvents = selectedDate ? getEventsForDate(selectedDate) : [];
 
-  // Build calendar grid
   const calendarDays = [];
-  for (let i = 0; i < firstDay; i++) calendarDays.push(null);
-  for (let i = 1; i <= daysInMonth; i++) calendarDays.push(i);
+  for (let i = 0; i < firstDay; i += 1) {
+    calendarDays.push(null);
+  }
+  for (let i = 1; i <= daysInMonth; i += 1) {
+    calendarDays.push(i);
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -130,7 +144,6 @@ export default function EventCalendar() {
       <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
         <View style={styles.tint} />
 
-        {/* Top App Bar */}
         <View style={styles.topBar}>
           <View style={styles.topBarSide}>
             <Ionicons name="person-outline" size={22} color={COLORS.textOnGreen} />
@@ -144,20 +157,14 @@ export default function EventCalendar() {
           </View>
         </View>
 
-        {/* Header Block */}
         <View style={styles.menuBlockWrap}>
           <View style={styles.menuBlock}>
             <Text style={styles.menuBlockText}>Event Calendar</Text>
           </View>
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Calendar Card */}
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.calendarCard}>
-            {/* Month Navigation */}
             <View style={styles.monthNav}>
               <Pressable onPress={prevMonth} style={styles.navBtn}>
                 <Ionicons name="chevron-back" size={22} color={COLORS.green} />
@@ -170,14 +177,12 @@ export default function EventCalendar() {
               </Pressable>
             </View>
 
-            {/* Day Headers */}
             <View style={styles.dayHeaders}>
-              {DAYS.map((d) => (
-                <Text key={d} style={styles.dayHeader}>{d}</Text>
+              {DAYS.map((day) => (
+                <Text key={day} style={styles.dayHeader}>{day}</Text>
               ))}
             </View>
 
-            {/* Calendar Grid */}
             {loading ? (
               <ActivityIndicator size="large" color={COLORS.green} style={{ marginVertical: 20 }} />
             ) : (
@@ -192,7 +197,7 @@ export default function EventCalendar() {
 
                   return (
                     <Pressable
-                      key={index}
+                      key={`${day || 'blank'}-${index}`}
                       style={[
                         styles.dayCell,
                         isToday && styles.todayCell,
@@ -211,14 +216,14 @@ export default function EventCalendar() {
                       >
                         {day || ''}
                       </Text>
-                      {hasDot && (
+                      {hasDot ? (
                         <View
                           style={[
                             styles.eventDot,
-                            isToday || isSelected ? styles.eventDotWhite : null,
+                            (isToday || isSelected) && styles.eventDotWhite,
                           ]}
                         />
-                      )}
+                      ) : null}
                     </Pressable>
                   );
                 })}
@@ -226,8 +231,14 @@ export default function EventCalendar() {
             )}
           </View>
 
-          {/* Selected Date Events */}
-          {selectedDate && (
+          {error ? (
+            <View style={styles.noEventsBox}>
+              <Ionicons name="alert-circle-outline" size={40} color="#cc0000" />
+              <Text style={styles.noEventsText}>{error}</Text>
+            </View>
+          ) : null}
+
+          {selectedDate ? (
             <View style={styles.eventsSection}>
               <Text style={styles.eventsSectionTitle}>
                 {MONTHS[currentMonth]} {selectedDate}, {currentYear}
@@ -250,21 +261,20 @@ export default function EventCalendar() {
                           {formatTime(event.start_time)} — {formatTime(event.end_time)}
                         </Text>
                       </View>
-                      {event.employee_name && (
+                      {event.employee_name ? (
                         <View style={styles.eventTimeRow}>
                           <Ionicons name="person-outline" size={13} color={COLORS.gray500} />
                           <Text style={styles.eventTime}>{event.employee_name}</Text>
                         </View>
-                      )}
+                      ) : null}
                     </View>
                   </View>
                 ))
               )}
             </View>
-          )}
+          ) : null}
 
-          {/* All Upcoming Events */}
-          {!selectedDate && !loading && events.length > 0 && (
+          {!selectedDate && !loading && !error && events.length > 0 ? (
             <View style={styles.eventsSection}>
               <Text style={styles.eventsSectionTitle}>Upcoming Events</Text>
               {events.slice(0, 5).map((event) => (
@@ -276,7 +286,9 @@ export default function EventCalendar() {
                       <Ionicons name="calendar-outline" size={13} color={COLORS.gray500} />
                       <Text style={styles.eventTime}>
                         {new Date(event.start_time).toLocaleDateString('en-US', {
-                          month: 'short', day: 'numeric', year: 'numeric'
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
                         })}
                       </Text>
                     </View>
@@ -286,25 +298,24 @@ export default function EventCalendar() {
                         {formatTime(event.start_time)} — {formatTime(event.end_time)}
                       </Text>
                     </View>
-                    {event.employee_name && (
+                    {event.employee_name ? (
                       <View style={styles.eventTimeRow}>
                         <Ionicons name="person-outline" size={13} color={COLORS.gray500} />
                         <Text style={styles.eventTime}>{event.employee_name}</Text>
                       </View>
-                    )}
+                    ) : null}
                   </View>
                 </View>
               ))}
             </View>
-          )}
+          ) : null}
 
-          {/* Empty State */}
-          {!loading && !error && events.length === 0 && !selectedDate && (
+          {!loading && !error && events.length === 0 && !selectedDate ? (
             <View style={styles.noEventsBox}>
               <Ionicons name="calendar-outline" size={40} color={COLORS.greenDark} />
               <Text style={styles.noEventsText}>No events scheduled</Text>
             </View>
-          )}
+          ) : null}
 
           <View style={{ height: 90 }} />
         </ScrollView>
@@ -321,7 +332,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.green },
   bg: { flex: 1 },
   tint: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.tint },
-
   topBar: {
     height: 52,
     backgroundColor: COLORS.green,
@@ -334,17 +344,17 @@ const styles = StyleSheet.create({
   topBarCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   topTitle: { color: COLORS.textOnGreen, fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
   topSubtitle: { color: COLORS.mutedText, fontSize: 11, marginTop: -2 },
-
   menuBlockWrap: { marginTop: 8, marginBottom: 8, paddingHorizontal: 6 },
   menuBlock: {
-    height: 56, borderRadius: 10, backgroundColor: COLORS.blockGreen,
-    alignItems: 'center', justifyContent: 'center', elevation: 6,
+    height: 56,
+    borderRadius: 10,
+    backgroundColor: COLORS.blockGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
   },
   menuBlockText: { color: COLORS.textOnGreen, fontSize: 22, fontWeight: '800', letterSpacing: 0.5 },
-
   scrollContent: { paddingHorizontal: 12, paddingTop: 4 },
-
-  // Calendar Card
   calendarCard: {
     backgroundColor: COLORS.cardFill,
     borderRadius: RADIUS,
@@ -354,8 +364,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.cardBorder,
     marginBottom: 12,
   },
-
-  // Month Nav
   monthNav: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -364,19 +372,20 @@ const styles = StyleSheet.create({
   },
   navBtn: { padding: 6 },
   monthTitle: { fontSize: 17, fontWeight: '800', color: COLORS.titleGreen },
-
-  // Day Headers
   dayHeaders: { flexDirection: 'row', marginBottom: 6 },
   dayHeader: {
-    flex: 1, textAlign: 'center', fontSize: 11,
-    fontWeight: '700', color: COLORS.gray500,
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.gray500,
   },
-
-  // Grid
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   dayCell: {
-    width: '14.28%', aspectRatio: 1,
-    alignItems: 'center', justifyContent: 'center',
+    width: '14.28%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 20,
   },
   todayCell: { backgroundColor: COLORS.todayBg },
@@ -386,19 +395,20 @@ const styles = StyleSheet.create({
   selectedText: { color: '#fff', fontWeight: '800' },
   emptyDay: { color: 'transparent' },
   eventDot: {
-    width: 5, height: 5, borderRadius: 3,
-    backgroundColor: COLORS.green, marginTop: 2,
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: COLORS.green,
+    marginTop: 2,
   },
   eventDotWhite: { backgroundColor: '#fff' },
-
-  // Events Section
   eventsSection: { marginBottom: 12 },
   eventsSectionTitle: {
-    fontSize: 15, fontWeight: '800',
-    color: COLORS.titleGreen, marginBottom: 8,
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.titleGreen,
+    marginBottom: 8,
   },
-
-  // Event Card
   eventCard: {
     backgroundColor: COLORS.cardFill,
     borderRadius: RADIUS,
@@ -414,10 +424,7 @@ const styles = StyleSheet.create({
   eventTitle: { fontSize: 14, fontWeight: '700', color: '#222', marginBottom: 4 },
   eventTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   eventTime: { fontSize: 12, color: COLORS.gray500 },
-
-  // No Events
   noEventsBox: { alignItems: 'center', paddingVertical: 20, gap: 8 },
   noEventsText: { fontSize: 14, color: COLORS.greenDark, fontWeight: '600' },
-
   tabBar: { backgroundColor: COLORS.green },
 });

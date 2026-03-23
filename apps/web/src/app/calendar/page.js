@@ -1,25 +1,9 @@
 "use client";
 
 import AppShell from "@/components/AppShell";
+import { fetchApi } from "@/lib/api/api";
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-/**
- * Expected API contract for easy DB wiring:
- *   GET /api/tasks?from=YYYY-MM-DD&to=YYYY-MM-DD
- *   -> returns Task[] with:
- *      {
- *        id: string,
- *        date: "YYYY-MM-DD",   // local date key (no time)
- *        title: string,
- *        account?: string,
- *        location?: string,
- *        estimateMins?: number,
- *        start?: "HH:mm",
- *        end?: "HH:mm",
- *        notes?: string
- *      }
- */
 
 /* ===========================
    Date helpers (TZ safe)
@@ -58,22 +42,35 @@ function buildMonthGrid(year, monthZero) {
 }
 
 /**
- * Replace this with real API call when ready.
- * If there's no API yet, it returns [] and logs a helpful hint.
+ * Load schedule rows from the schema-backed /schedule route and
+ * map them into the calendar UI shape.
  */
 async function fetchMonthTasks(from, to) {
   try {
-    const res = await fetch(`/api/tasks?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, {
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      // No API yet or error – keep UI functional.
-      console.warn("[calendar] /api/tasks returned", res.status, "– showing empty schedule.");
-      return [];
-    }
-    return await res.json();
+    const response = await fetchApi("/schedule");
+    const rows = Array.isArray(response) ? response : response?.data || [];
+
+    return rows
+      .filter((row) => {
+        const dateKey = toLocalDateKey(new Date(row.start_time));
+        return dateKey >= from && dateKey <= to;
+      })
+      .map((row) => {
+        const start = new Date(row.start_time);
+        const end = new Date(row.end_time);
+
+        return {
+          id: row.id,
+          workReqId: row.work_req_id ?? null,
+          date: toLocalDateKey(start),
+          title: row.title,
+          employeeName: row.employee_name ?? null,
+          start: start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+          end: end.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+        };
+      });
   } catch (err) {
-    console.warn("[calendar] Failed to load tasks:", err);
+    console.warn("[calendar] Failed to load schedule:", err);
     return [];
   }
 }
@@ -244,7 +241,7 @@ export default function Page() {
           </div>
 
           {/* Inline states */}
-          {loading && <div className="mt-3 text-sm text-gray-500">Loading tasks…</div>}
+          {loading && <div className="mt-3 text-sm text-gray-500">Loading schedule…</div>}
           {!!error && (
             <div className="mt-3 rounded bg-red-100 px-3 py-2 text-sm text-red-700">{error}</div>
           )}
@@ -266,44 +263,44 @@ export default function Page() {
           </div>
 
           {selectedTasks.length === 0 ? (
-            <p className="text-sm text-emerald-100">No tasks scheduled for this day.</p>
+            <p className="text-sm text-emerald-100">No schedule entries for this day.</p>
           ) : (
             <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
               {selectedTasks.map((t) => (
                 <li key={t.id} className="rounded-lg bg-white p-3 shadow">
                   <h3 className="mb-1 font-medium text-gray-900">{t.title}</h3>
 
-                  {(t.account || t.location) && (
+                  {t.employeeName && (
                     <p className="text-sm text-gray-600">
-                      {t.account ? t.account : ""}
-                      {t.account && t.location ? " • " : ""}
-                      {t.location ? t.location : ""}
+                      {t.employeeName}
                     </p>
                   )}
 
-                  {(t.start || t.end || t.estimateMins) && (
+                  {(t.start || t.end) && (
                     <p className="mt-1 text-sm text-gray-600">
-                      {(t.start || t.end) ? `${t.start ?? ""}${t.start && t.end ? "–" : ""}${t.end ?? ""}` : ""}
-                      {(t.start || t.end) && t.estimateMins ? " • " : ""}
-                      {t.estimateMins ? `~${Math.round(t.estimateMins / 60)} hr` : ""}
+                      {`${t.start ?? ""}${t.start && t.end ? "–" : ""}${t.end ?? ""}`}
                     </p>
                   )}
-
-                  {t.notes && <p className="mt-2 line-clamp-3 text-sm text-gray-700">{t.notes}</p>}
 
                   <div className="mt-3 flex items-center justify-between">
-                    <button
-                      onClick={() => router.push(`/tasks/${t.id}`)}
-                      className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
-                    >
-                      View
-                    </button>
-                    <button
-                      onClick={() => router.push(`/tasks/${t.id}/edit`)}
-                      className="rounded-md bg-gray-200 px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-300"
-                    >
-                      Edit
-                    </button>
+                    {t.workReqId ? (
+                      <>
+                        <button
+                          onClick={() => router.push(`/tasks/${t.workReqId}`)}
+                          className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                        >
+                          View
+                        </button>
+                        <button
+                          onClick={() => router.push(`/tasks/${t.workReqId}/edit`)}
+                          className="rounded-md bg-gray-200 px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-300"
+                        >
+                          Edit
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-sm text-gray-500">No linked work request</span>
+                    )}
                   </div>
                 </li>
               ))}
