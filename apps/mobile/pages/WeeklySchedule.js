@@ -40,7 +40,9 @@ export default function WeeklySchedule() {
     try {
       setLoading(true);
       const data = await apiFetch('/schedule');
-      setEvents(data || []);
+      // ✅ Safety check - make sure data is an array
+      const eventsArray = Array.isArray(data) ? data : [];
+      setEvents(eventsArray);
     } catch (err) {
       setError('Failed to load schedule');
       console.error(err);
@@ -114,7 +116,7 @@ export default function WeeklySchedule() {
           )}
 
           {/* Events List */}
-          {!loading && events.map((event) => (
+          {!loading && Array.isArray(events) && events.map((event) => (
             <View key={event.id} style={styles.card}>
               <View style={styles.cardHeader}>
                 <Ionicons name="calendar-outline" size={22} color={COLORS.greenDark} />
