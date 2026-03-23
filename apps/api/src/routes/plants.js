@@ -8,6 +8,11 @@ const { verifyToken } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/authorize");
 const { writeLimiter } = require("../middleware/rateLimiters");
 
+/**
+ * Plants Routes
+ * -------------
+ * Thin resource router over the `plants` table.
+ */
 router.get(
   "/",
   verifyToken,

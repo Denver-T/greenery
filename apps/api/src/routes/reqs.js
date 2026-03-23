@@ -1,4 +1,6 @@
 // apps/api/src/routes/reqs.js
+// Work request router backed directly by the `work_reqs` table.
+// This route family is the main schema-owned path for operational request data.
 
 const express = require("express");
 const path = require("path");
@@ -12,7 +14,7 @@ const { writeLimiter } = require("../middleware/rateLimiters");
 
 const router = express.Router();
 
-// Ensure upload directory exists
+// Ensure upload directory exists before multer attempts to write files.
 const uploadDir = path.join(__dirname, "../../uploads");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -25,7 +27,8 @@ const allowedMimeTypes = new Set([
   "image/webp",
 ]);
 
-// Configure multer disk storage
+// Configure multer disk storage.
+// Filenames are randomized to avoid collisions and to avoid trusting client filenames.
 const storage = multer.diskStorage({
   destination(req, file, cb) {
     cb(null, uploadDir);
@@ -70,6 +73,16 @@ function parseOptionalPositiveInt(value) {
   return parsed;
 }
 
+function parsePositiveInt(value) {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
 function normalizeString(value, maxLength = null) {
   if (value === undefined || value === null) {
     return null;
@@ -98,6 +111,7 @@ function isValidDateString(value) {
 }
 
 function handleUpload(req, res, next) {
+  // Centralize upload error normalization so route handlers can stay focused on schema validation.
   upload.single("picture")(req, res, (err) => {
     if (!err) {
       return next();
@@ -120,7 +134,11 @@ function handleUpload(req, res, next) {
 
 /**
  * POST /reqs
- * Creates a new work request
+ * Creates a new work request.
+ *
+ * Schema notes:
+ * - `referenceNumber`, `requestDate`, `account`, and `actionRequired` are required by `work_reqs`
+ * - uploaded images are persisted separately and only the relative path is stored in MySQL
  */
 router.post(
   "/",
@@ -137,10 +155,12 @@ router.post(
       const techName = normalizeString(body.techName, 120);
       const account = normalizeString(body.account, 150);
 
-      if (!referenceNumber || !requestDate || !techName || !account) {
+      const actionRequired = normalizeString(body.actionRequired, 255);
+
+      if (!referenceNumber || !requestDate || !account || !actionRequired) {
         return res.status(400).json({
           error:
-            "referenceNumber, requestDate, techName, and account are required",
+            "referenceNumber, requestDate, account, and actionRequired are required",
         });
       }
 
@@ -204,7 +224,7 @@ router.post(
           account,
           normalizeString(body.accountContact, 150),
           normalizeString(body.accountAddress, 255),
-          normalizeString(body.actionRequired, 255),
+          actionRequired,
           numberOfPlants,
           normalizeString(body.plantWanted, 150),
           normalizeString(body.plantReplaced, 150),
@@ -239,6 +259,8 @@ router.post(
 
 /**
  * GET /reqs
+ * Returns work requests intended for the request-management views.
+ * The current filter keeps auto-generated internal tasks out of the main REQ listing.
  */
 router.get(
   "/",
@@ -265,7 +287,7 @@ router.get(
         ORDER BY id DESC`
       );
 
-      return res.json(rows);
+      return res.json({ data: rows });
     } catch (err) {
       return next(err);
     }
@@ -274,6 +296,7 @@ router.get(
 
 /**
  * GET /reqs/:id
+ * Returns the full row so detail views can render all optional request fields.
  */
 router.get(
   "/:id",
@@ -281,9 +304,9 @@ router.get(
   authorize("technician", "manager", "admin"),
   async (req, res, next) => {
     try {
-      const id = Number(req.params.id);
+      const id = parsePositiveInt(req.params.id);
 
-      if (!Number.isFinite(id)) {
+      if (!id) {
         return res.status(400).json({ error: "Invalid id" });
       }
 
@@ -295,7 +318,7 @@ router.get(
         return res.status(404).json({ error: "REQ not found" });
       }
 
-      return res.json(rows[0]);
+      return res.json({ data: rows[0] });
     } catch (err) {
       return next(err);
     }

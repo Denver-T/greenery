@@ -36,6 +36,8 @@ async function verifyToken(req, res, next) {
 
     const decoded = await admin.auth().verifyIdToken(token);
 
+    // Normalize token data once here so downstream middleware/controllers
+    // do not need to understand Firebase's raw decoded-claims shape.
     req.user = {
       uid: decoded.uid,
       email:
@@ -51,6 +53,8 @@ async function verifyToken(req, res, next) {
 
     return next();
   } catch (err) {
+    // Avoid leaking provider internals to the client while still logging
+    // enough context locally to debug auth configuration issues.
     console.error("verifyToken failed");
     console.error("code:", err?.code);
     console.error("message:", err?.message);

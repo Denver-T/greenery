@@ -19,6 +19,7 @@ const app = require("./app");
 
 const PORT = process.env.PORT || 3001;
 
+// Keep the bootstrap minimal so app.js stays easy to test/import in isolation.
 app.listen(PORT, () => {
   console.log(`Greenery API running at http://localhost:${PORT}`);
 });

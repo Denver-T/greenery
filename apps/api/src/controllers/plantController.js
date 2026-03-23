@@ -45,7 +45,7 @@ exports.getPlantById = async (req, res, next) => {
 
 exports.createPlant = async (req, res, next) => {
   try {
-    const { name } = req.body;
+    const { name, location } = req.body;
 
     if (!isNonEmptyString(name)) {
       return next(
@@ -55,7 +55,11 @@ exports.createPlant = async (req, res, next) => {
       );
     }
 
-    const created = await plantService.createPlant({ name });
+    // Keep controller validation minimal: required fields and obvious normalization only.
+    const created = await plantService.createPlant({
+      name: name.trim(),
+      location: isNonEmptyString(location) ? location.trim() : null,
+    });
     res.status(201).json({ data: created });
   } catch (err) {
     next(err);

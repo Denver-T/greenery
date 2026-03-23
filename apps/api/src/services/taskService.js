@@ -1,6 +1,9 @@
 // apps/api/src/services/taskService.js
+// Compatibility service for the legacy `/tasks` API.
+// Tasks are persisted in the `work_reqs` table because the current schema has
+// a request/task lifecycle there rather than in a separate `tasks` table.
 
-const db = require("../../config/db");
+const db = require("../db");
 const { httpError } = require("../utils/httpError");
 const { isNonEmptyString, toPositiveInt } = require("../utils/validators");
 
@@ -22,9 +25,17 @@ function mapWorkReqToTask(row) {
     title: row.actionRequired,
     status: row.status,
     assigned_to: row.assignedTo,
+    assignedTo: row.assignedTo,
     plant_id: null,
     notes: row.notes,
     due_date: row.dueDate,
+    dueDate: row.dueDate,
+    // Include a few raw work-request fields because current clients still
+    // need them when rendering assignment and calendar-adjacent screens.
+    account: row.account ?? null,
+    location: row.location ?? null,
+    referenceNumber: row.referenceNumber ?? null,
+    requestDate: row.requestDate ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -170,11 +181,18 @@ async function ensureEmployeeExists(employeeId) {
  * GET all tasks
  * Backed by work_reqs rows that are already in the task lifecycle.
  */
-async function getTasks() {
+async function getTasks(scope = null) {
+  // `assignment` scope intentionally includes unassigned work requests so
+  // managers can assign them through the existing `/tasks` UI.
+  const includeUnassigned = scope === "assignment";
   const sql = `
     SELECT
       id,
+      referenceNumber,
+      requestDate,
       actionRequired,
+      account,
+      location,
       status,
       assignedTo,
       notes,
@@ -182,7 +200,11 @@ async function getTasks() {
       created_at,
       updated_at
     FROM ${WORK_REQS_TABLE}
-    WHERE status IN ('assigned', 'in_progress', 'completed', 'cancelled')
+    WHERE ${
+      includeUnassigned
+        ? "status IN ('unassigned', 'assigned', 'in_progress', 'completed', 'cancelled')"
+        : "status IN ('assigned', 'in_progress', 'completed', 'cancelled')"
+    }
     ORDER BY updated_at DESC, id DESC
   `;
 
@@ -206,7 +228,11 @@ async function getTaskById(id) {
   const sql = `
     SELECT
       id,
+      referenceNumber,
+      requestDate,
       actionRequired,
+      account,
+      location,
       status,
       assignedTo,
       notes,
@@ -258,6 +284,8 @@ async function createTask(taskData) {
 
   await ensureEmployeeExists(assignedTo);
 
+  // Legacy task creation still has to satisfy `work_reqs` required columns,
+  // so we synthesize internal request metadata here.
   const now = new Date();
   const isoDate = now.toISOString().slice(0, 10);
   const referenceNumber = `TASK-${Date.now()}`;
@@ -375,6 +403,8 @@ async function assignTask(id, assignedTo) {
 
   await ensureEmployeeExists(employeeId);
 
+  // Assignment promotes an `unassigned` request to `assigned` without clobbering
+  // requests that have already advanced further in the lifecycle.
   const sql = `
     UPDATE ${WORK_REQS_TABLE}
     SET

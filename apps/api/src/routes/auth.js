@@ -5,7 +5,7 @@ const { verifyToken } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/authorize");
 const { writeLimiter } = require("../middleware/rateLimiters");
 
-const accountController = require("../controllers/accountController");
+const employeesController = require("../controllers/employeesController");
 const taskController = require("../controllers/taskController");
 
 /**
@@ -15,30 +15,34 @@ const taskController = require("../controllers/taskController");
  * - a valid Firebase ID token
  * - role-based authorization
  * - optional rate limiting for write operations
+ *
+ * This is the backend boundary both the web and mobile clients rely on
+ * to turn a Firebase-authenticated user into an application employee.
  */
 
 /**
  * GET /auth/me
  * Any authenticated user
- * Returns the authenticated account based on the email in the verified token.
+ * Returns the authenticated employee based on the email in the verified token.
  *
  * NOTE:
  * This route should only require verifyToken for now.
  * Firebase custom role claims are not guaranteed to exist yet.
+ * Employee lookup is performed by email in the controller/service layer.
  */
-router.get("/me", verifyToken, accountController.getMe);
+router.get("/me", verifyToken, employeesController.getMe);
 
 /**
- * POST /auth/accounts
+ * POST /auth/employees
  * Admin only
- * Creates a new account.
+ * Creates a new employee.
  */
 router.post(
-  "/accounts",
+  "/employees",
   writeLimiter,
   verifyToken,
   authorize("admin"),
-  accountController.createAccount
+  employeesController.create
 );
 
 /**

@@ -1,6 +1,6 @@
 require("dotenv").config();
 const admin = require("./config/firebase");
-const db = require("./config/db");
+const db = require("./src/db");
 
 const VALID_ROLES = ["admin", "manager", "technician"];
 

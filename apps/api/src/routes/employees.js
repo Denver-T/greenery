@@ -12,6 +12,7 @@ const { writeLimiter } = require("../middleware/rateLimiters");
  * Employees Routes
  * ----------------
  * Protected employee resource endpoints.
+ * `employees` is the canonical people table in the current schema.
  *
  * Access model:
  * - technicians, managers, admins can read
@@ -24,6 +25,13 @@ router.get(
   verifyToken,
   authorize("technician", "manager", "admin"),
   employeesController.getAll
+);
+
+router.get(
+  "/:id",
+  verifyToken,
+  authorize("technician", "manager", "admin"),
+  employeesController.getById
 );
 
 router.post(
