@@ -52,7 +52,7 @@ export default function EmployeesPage() {
     try {
       const res = await fetch(`${API_BASE}/employees`, { cache: "no-store" });
       const data = await jsonOrThrow(res);
-      setEmployees(Array.isArray(data) ? data : []);
+      setEmployees(Array.isArray(data) ? data : data?.data || []);
     } catch (e) {
       setError(e.message || "Failed to load employees.");
     } finally {
