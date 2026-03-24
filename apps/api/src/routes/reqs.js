@@ -132,6 +132,75 @@ function handleUpload(req, res, next) {
   });
 }
 
+function buildReqPayload(body = {}, file = null, existing = null) {
+  const referenceNumber = normalizeString(
+    body.referenceNumber ?? existing?.referenceNumber,
+    100
+  );
+  const requestDate = normalizeString(body.requestDate ?? existing?.requestDate, 100);
+  const techName = normalizeString(body.techName ?? existing?.techName, 120);
+  const account = normalizeString(body.account ?? existing?.account, 150);
+  const actionRequired = normalizeString(body.actionRequired ?? existing?.actionRequired, 255);
+
+  if (!referenceNumber || !requestDate || !account || !actionRequired) {
+    return {
+      error: "referenceNumber, requestDate, account, and actionRequired are required",
+    };
+  }
+
+  if (!isValidDateString(requestDate)) {
+    return { error: "requestDate must be a valid date" };
+  }
+
+  const dueDate = normalizeString(body.dueDate ?? existing?.dueDate, 100);
+  if (dueDate && !isValidDateString(dueDate)) {
+    return { error: "dueDate must be a valid date" };
+  }
+
+  const rawNumberOfPlants =
+    body.numberOfPlants !== undefined ? body.numberOfPlants : existing?.numberOfPlants;
+  const numberOfPlants = parseOptionalPositiveInt(rawNumberOfPlants);
+  if (
+    rawNumberOfPlants !== undefined &&
+    rawNumberOfPlants !== null &&
+    rawNumberOfPlants !== "" &&
+    numberOfPlants === null
+  ) {
+    return { error: "numberOfPlants must be a valid non-negative integer" };
+  }
+
+  return {
+    referenceNumber,
+    requestDate,
+    techName,
+    account,
+    actionRequired,
+    accountContact: normalizeString(body.accountContact ?? existing?.accountContact, 150),
+    accountAddress: normalizeString(body.accountAddress ?? existing?.accountAddress, 255),
+    numberOfPlants,
+    plantWanted: normalizeString(body.plantWanted ?? existing?.plantWanted, 150),
+    plantReplaced: normalizeString(body.plantReplaced ?? existing?.plantReplaced, 150),
+    plantSize: normalizeString(body.plantSize ?? existing?.plantSize, 100),
+    plantHeight: normalizeString(body.plantHeight ?? existing?.plantHeight, 100),
+    planterTypeSize: normalizeString(body.planterTypeSize ?? existing?.planterTypeSize, 100),
+    planterColour: normalizeString(body.planterColour ?? existing?.planterColour, 100),
+    stagingMaterial: normalizeString(body.stagingMaterial ?? existing?.stagingMaterial, 150),
+    lighting: normalizeString(body.lighting ?? existing?.lighting, 100),
+    method: normalizeString(body.method ?? existing?.method, 100),
+    location: normalizeString(body.location ?? existing?.location, 150),
+    notes: normalizeString(body.notes ?? existing?.notes, 2000),
+    picturePath: file ? `/uploads/${file.filename}` : existing?.picturePath ?? null,
+    assignedTo: existing?.assignedTo ?? null,
+    dueDate,
+    status: existing?.status || "unassigned",
+  };
+}
+
+async function getReqById(id) {
+  const [rows] = await db.query(`SELECT * FROM work_reqs WHERE id = ?`, [id]);
+  return rows[0] || null;
+}
+
 /**
  * POST /reqs
  * Creates a new work request.
@@ -148,48 +217,10 @@ router.post(
   handleUpload,
   async (req, res, next) => {
     try {
-      const body = req.body || {};
-
-      const referenceNumber = normalizeString(body.referenceNumber, 100);
-      const requestDate = normalizeString(body.requestDate, 100);
-      const techName = normalizeString(body.techName, 120);
-      const account = normalizeString(body.account, 150);
-
-      const actionRequired = normalizeString(body.actionRequired, 255);
-
-      if (!referenceNumber || !requestDate || !account || !actionRequired) {
-        return res.status(400).json({
-          error:
-            "referenceNumber, requestDate, account, and actionRequired are required",
-        });
+      const payload = buildReqPayload(req.body, req.file);
+      if (payload.error) {
+        return res.status(400).json({ error: payload.error });
       }
-
-      if (!isValidDateString(requestDate)) {
-        return res.status(400).json({
-          error: "requestDate must be a valid date",
-        });
-      }
-
-      const dueDate = normalizeString(body.dueDate, 100);
-      if (dueDate && !isValidDateString(dueDate)) {
-        return res.status(400).json({
-          error: "dueDate must be a valid date",
-        });
-      }
-
-      const numberOfPlants = parseOptionalPositiveInt(body.numberOfPlants);
-      if (
-        body.numberOfPlants !== undefined &&
-        body.numberOfPlants !== null &&
-        body.numberOfPlants !== "" &&
-        numberOfPlants === null
-      ) {
-        return res.status(400).json({
-          error: "numberOfPlants must be a valid non-negative integer",
-        });
-      }
-
-      const picturePath = req.file ? `/uploads/${req.file.filename}` : null;
 
       const [result] = await db.query(
         `INSERT INTO work_reqs (
@@ -218,38 +249,38 @@ router.post(
           status
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          referenceNumber,
-          requestDate,
-          techName,
-          account,
-          normalizeString(body.accountContact, 150),
-          normalizeString(body.accountAddress, 255),
-          actionRequired,
-          numberOfPlants,
-          normalizeString(body.plantWanted, 150),
-          normalizeString(body.plantReplaced, 150),
-          normalizeString(body.plantSize, 100),
-          normalizeString(body.plantHeight, 100),
-          normalizeString(body.planterTypeSize, 100),
-          normalizeString(body.planterColour, 100),
-          normalizeString(body.stagingMaterial, 150),
-          normalizeString(body.lighting, 100),
-          normalizeString(body.method, 100),
-          normalizeString(body.location, 150),
-          normalizeString(body.notes, 2000),
-          picturePath,
-          null,
-          dueDate,
-          "unassigned",
+          payload.referenceNumber,
+          payload.requestDate,
+          payload.techName,
+          payload.account,
+          payload.accountContact,
+          payload.accountAddress,
+          payload.actionRequired,
+          payload.numberOfPlants,
+          payload.plantWanted,
+          payload.plantReplaced,
+          payload.plantSize,
+          payload.plantHeight,
+          payload.planterTypeSize,
+          payload.planterColour,
+          payload.stagingMaterial,
+          payload.lighting,
+          payload.method,
+          payload.location,
+          payload.notes,
+          payload.picturePath,
+          payload.assignedTo,
+          payload.dueDate,
+          payload.status,
         ]
       );
 
       return res.status(201).json({
         ok: true,
         id: result.insertId,
-        referenceNumber,
-        picturePath,
-        status: "unassigned",
+        referenceNumber: payload.referenceNumber,
+        picturePath: payload.picturePath,
+        status: payload.status,
       });
     } catch (err) {
       return next(err);
@@ -310,15 +341,119 @@ router.get(
         return res.status(400).json({ error: "Invalid id" });
       }
 
-      const [rows] = await db.query(`SELECT * FROM work_reqs WHERE id = ?`, [
-        id,
-      ]);
-
-      if (!rows.length) {
+      const row = await getReqById(id);
+      if (!row) {
         return res.status(404).json({ error: "REQ not found" });
       }
 
-      return res.json({ data: rows[0] });
+      return res.json({ data: row });
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+router.put(
+  "/:id",
+  writeLimiter,
+  verifyToken,
+  authorize("manager", "admin"),
+  handleUpload,
+  async (req, res, next) => {
+    try {
+      const id = parsePositiveInt(req.params.id);
+
+      if (!id) {
+        return res.status(400).json({ error: "Invalid id" });
+      }
+
+      const existing = await getReqById(id);
+      if (!existing) {
+        return res.status(404).json({ error: "REQ not found" });
+      }
+
+      const payload = buildReqPayload(req.body, req.file, existing);
+      if (payload.error) {
+        return res.status(400).json({ error: payload.error });
+      }
+
+      await db.query(
+        `UPDATE work_reqs
+         SET referenceNumber = ?,
+             requestDate = ?,
+             techName = ?,
+             account = ?,
+             accountContact = ?,
+             accountAddress = ?,
+             actionRequired = ?,
+             numberOfPlants = ?,
+             plantWanted = ?,
+             plantReplaced = ?,
+             plantSize = ?,
+             plantHeight = ?,
+             planterTypeSize = ?,
+             planterColour = ?,
+             stagingMaterial = ?,
+             lighting = ?,
+             method = ?,
+             location = ?,
+             notes = ?,
+             picturePath = ?,
+             dueDate = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          payload.referenceNumber,
+          payload.requestDate,
+          payload.techName,
+          payload.account,
+          payload.accountContact,
+          payload.accountAddress,
+          payload.actionRequired,
+          payload.numberOfPlants,
+          payload.plantWanted,
+          payload.plantReplaced,
+          payload.plantSize,
+          payload.plantHeight,
+          payload.planterTypeSize,
+          payload.planterColour,
+          payload.stagingMaterial,
+          payload.lighting,
+          payload.method,
+          payload.location,
+          payload.notes,
+          payload.picturePath,
+          payload.dueDate,
+          id,
+        ]
+      );
+
+      return res.json({ ok: true, id });
+    } catch (err) {
+      return next(err);
+    }
+  }
+);
+
+router.delete(
+  "/:id",
+  writeLimiter,
+  verifyToken,
+  authorize("admin"),
+  async (req, res, next) => {
+    try {
+      const id = parsePositiveInt(req.params.id);
+
+      if (!id) {
+        return res.status(400).json({ error: "Invalid id" });
+      }
+
+      const [result] = await db.query(`DELETE FROM work_reqs WHERE id = ?`, [id]);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: "REQ not found" });
+      }
+
+      return res.json({ ok: true });
     } catch (err) {
       return next(err);
     }

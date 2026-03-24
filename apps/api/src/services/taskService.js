@@ -36,6 +36,7 @@ function mapWorkReqToTask(row) {
     location: row.location ?? null,
     referenceNumber: row.referenceNumber ?? null,
     requestDate: row.requestDate ?? null,
+    date: row.dueDate ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -241,7 +242,7 @@ async function getTaskById(id) {
       updated_at
     FROM ${WORK_REQS_TABLE}
     WHERE id = ?
-      AND status IN ('assigned', 'in_progress', 'completed', 'cancelled')
+      AND status IN ('unassigned', 'assigned', 'in_progress', 'completed', 'cancelled')
     LIMIT 1
   `;
 
@@ -381,10 +382,10 @@ async function updateTaskStatus(id, status) {
 }
 
 /**
- * ASSIGN task to an employee
- * Updates work_reqs.assignedTo.
+ * ASSIGN or unassign task to an employee
+ * Updates work_reqs.assignedTo and optional dueDate.
  */
-async function assignTask(id, assignedTo) {
+async function assignTask(id, assignment) {
   const taskId = toPositiveInt(id);
 
   if (!taskId) {
@@ -393,23 +394,18 @@ async function assignTask(id, assignedTo) {
     ]);
   }
 
-  const employeeId = normalizeOptionalId(assignedTo, "assigned_to");
-
-  if (!employeeId) {
-    throw httpError(400, "Invalid assigned_to", "VALIDATION_ERROR", [
-      { field: "assigned_to", issue: "must be a positive integer" },
-    ]);
-  }
+  const employeeId = normalizeOptionalId(assignment?.assigned_to, "assigned_to");
+  const dueDate = normalizeDueDate(assignment?.due_date);
 
   await ensureEmployeeExists(employeeId);
 
-  // Assignment promotes an `unassigned` request to `assigned` without clobbering
-  // requests that have already advanced further in the lifecycle.
   const sql = `
     UPDATE ${WORK_REQS_TABLE}
     SET
       assignedTo = ?,
+      dueDate = ?,
       status = CASE
+        WHEN ? IS NULL THEN 'unassigned'
         WHEN status = 'unassigned' THEN 'assigned'
         ELSE status
       END,
@@ -417,7 +413,7 @@ async function assignTask(id, assignedTo) {
     WHERE id = ?
   `;
 
-  const [result] = await db.query(sql, [employeeId, taskId]);
+  const [result] = await db.query(sql, [employeeId, dueDate, employeeId, taskId]);
 
   if (result.affectedRows === 0) {
     return null;

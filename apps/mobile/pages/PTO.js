@@ -157,6 +157,7 @@ export default function PTO() {
           </View>
         </View>
 
+        {/* Header Block */}
         <View style={styles.menuBlockWrap}>
           <View style={styles.menuBlock}>
             <Text style={styles.menuBlockText}>Book Time Off</Text>
@@ -328,10 +329,21 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.3,
   },
-  topSubtitle: {
-    color: COLORS.mutedText,
-    fontSize: 11,
-    marginTop: -2,
+  menuBlockText: { color: COLORS.textOnGreen, fontSize: 22, fontWeight: '800', letterSpacing: 0.5 },
+
+  scrollContent: { paddingHorizontal: 12, paddingTop: 8 },
+
+  // New Request Button
+  newRequestBtn: {
+    backgroundColor: COLORS.green,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: RADIUS,
+    marginBottom: 12,
+    elevation: 3,
   },
   menuBlockWrap: { marginTop: 8, marginBottom: 8, paddingHorizontal: 6 },
   menuBlock: {
