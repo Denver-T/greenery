@@ -8,18 +8,23 @@ const { verifyToken } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/authorize");
 const { writeLimiter } = require("../middleware/rateLimiters");
 
+/**
+ * Plants Routes
+ * -------------
+ * Thin resource router over the `plants` table.
+ */
 router.get(
   "/",
   verifyToken,
   authorize("technician", "manager", "admin"),
-  plantController.getPlants
+  plantController.getPlants,
 );
 
 router.get(
   "/:id",
   verifyToken,
   authorize("technician", "manager", "admin"),
-  plantController.getPlantById
+  plantController.getPlantById,
 );
 
 router.post(
@@ -27,7 +32,7 @@ router.post(
   writeLimiter,
   verifyToken,
   authorize("manager", "admin"),
-  plantController.createPlant
+  plantController.createPlant,
 );
 
 module.exports = router;

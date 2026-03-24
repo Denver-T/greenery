@@ -1,4 +1,6 @@
 // apps/api/src/routes/reqs.js
+// Work request router backed directly by the `work_reqs` table.
+// This route family is the main schema-owned path for operational request data.
 
 const express = require("express");
 const path = require("path");
@@ -12,6 +14,7 @@ const { writeLimiter } = require("../middleware/rateLimiters");
 
 const router = express.Router();
 
+// Ensure upload directory exists before multer attempts to write files.
 const uploadDir = path.join(__dirname, "../../uploads");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -24,6 +27,8 @@ const allowedMimeTypes = new Set([
   "image/webp",
 ]);
 
+// Configure multer disk storage.
+// Filenames are randomized to avoid collisions and to avoid trusting client filenames.
 const storage = multer.diskStorage({
   destination(req, file, cb) {
     cb(null, uploadDir);
@@ -38,7 +43,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: 5 * 1024 * 1024, // 5 MB
   },
   fileFilter(req, file, cb) {
     if (!allowedMimeTypes.has(file.mimetype)) {
@@ -60,7 +65,18 @@ function parseOptionalPositiveInt(value) {
   }
 
   const parsed = Number(value);
+
   if (!Number.isInteger(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function parsePositiveInt(value) {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
     return null;
   }
 
@@ -73,6 +89,7 @@ function normalizeString(value, maxLength = null) {
   }
 
   const trimmed = String(value).trim();
+
   if (!trimmed) {
     return null;
   }
@@ -94,6 +111,7 @@ function isValidDateString(value) {
 }
 
 function handleUpload(req, res, next) {
+  // Centralize upload error normalization so route handlers can stay focused on schema validation.
   upload.single("picture")(req, res, (err) => {
     if (!err) {
       return next();
@@ -122,10 +140,11 @@ function buildReqPayload(body = {}, file = null, existing = null) {
   const requestDate = normalizeString(body.requestDate ?? existing?.requestDate, 100);
   const techName = normalizeString(body.techName ?? existing?.techName, 120);
   const account = normalizeString(body.account ?? existing?.account, 150);
+  const actionRequired = normalizeString(body.actionRequired ?? existing?.actionRequired, 255);
 
-  if (!referenceNumber || !requestDate || !techName || !account) {
+  if (!referenceNumber || !requestDate || !account || !actionRequired) {
     return {
-      error: "referenceNumber, requestDate, techName, and account are required",
+      error: "referenceNumber, requestDate, account, and actionRequired are required",
     };
   }
 
@@ -155,9 +174,9 @@ function buildReqPayload(body = {}, file = null, existing = null) {
     requestDate,
     techName,
     account,
+    actionRequired,
     accountContact: normalizeString(body.accountContact ?? existing?.accountContact, 150),
     accountAddress: normalizeString(body.accountAddress ?? existing?.accountAddress, 255),
-    actionRequired: normalizeString(body.actionRequired ?? existing?.actionRequired, 255),
     numberOfPlants,
     plantWanted: normalizeString(body.plantWanted ?? existing?.plantWanted, 150),
     plantReplaced: normalizeString(body.plantReplaced ?? existing?.plantReplaced, 150),
@@ -182,6 +201,14 @@ async function getReqById(id) {
   return rows[0] || null;
 }
 
+/**
+ * POST /reqs
+ * Creates a new work request.
+ *
+ * Schema notes:
+ * - `referenceNumber`, `requestDate`, `account`, and `actionRequired` are required by `work_reqs`
+ * - uploaded images are persisted separately and only the relative path is stored in MySQL
+ */
 router.post(
   "/",
   writeLimiter,
@@ -261,6 +288,11 @@ router.post(
   }
 );
 
+/**
+ * GET /reqs
+ * Returns work requests intended for the request-management views.
+ * The current filter keeps auto-generated internal tasks out of the main REQ listing.
+ */
 router.get(
   "/",
   verifyToken,
@@ -282,24 +314,30 @@ router.get(
           status,
           created_at
         FROM work_reqs
+        WHERE referenceNumber LIKE 'REQ-%'
         ORDER BY id DESC`
       );
 
-      return res.json(rows);
+      return res.json({ data: rows });
     } catch (err) {
       return next(err);
     }
   }
 );
 
+/**
+ * GET /reqs/:id
+ * Returns the full row so detail views can render all optional request fields.
+ */
 router.get(
   "/:id",
   verifyToken,
   authorize("technician", "manager", "admin"),
   async (req, res, next) => {
     try {
-      const id = Number(req.params.id);
-      if (!Number.isFinite(id)) {
+      const id = parsePositiveInt(req.params.id);
+
+      if (!id) {
         return res.status(400).json({ error: "Invalid id" });
       }
 
@@ -308,7 +346,7 @@ router.get(
         return res.status(404).json({ error: "REQ not found" });
       }
 
-      return res.json(row);
+      return res.json({ data: row });
     } catch (err) {
       return next(err);
     }
@@ -323,8 +361,9 @@ router.put(
   handleUpload,
   async (req, res, next) => {
     try {
-      const id = Number(req.params.id);
-      if (!Number.isFinite(id)) {
+      const id = parsePositiveInt(req.params.id);
+
+      if (!id) {
         return res.status(400).json({ error: "Invalid id" });
       }
 
@@ -403,8 +442,9 @@ router.delete(
   authorize("admin"),
   async (req, res, next) => {
     try {
-      const id = Number(req.params.id);
-      if (!Number.isFinite(id)) {
+      const id = parsePositiveInt(req.params.id);
+
+      if (!id) {
         return res.status(400).json({ error: "Invalid id" });
       }
 

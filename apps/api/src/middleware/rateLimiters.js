@@ -11,6 +11,7 @@ const rateLimit = require("express-rate-limit");
 const { httpError } = require("../utils/httpError");
 
 // Env helpers (safe defaults)
+// Misconfigured env values should degrade to sane defaults rather than disable protection.
 const toInt = (value, fallback) => {
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
@@ -48,6 +49,7 @@ const rateLimitHandler = (req, res, next) => {
 };
 
 // Login limiter (more strict)
+// Kept separate so auth endpoints can be tightened independently from CRUD traffic.
 const loginLimiter = rateLimit({
   windowMs: RATE_LIMIT_LOGIN_WINDOW_MS,
   max: RATE_LIMIT_LOGIN_MAX,
@@ -57,6 +59,7 @@ const loginLimiter = rateLimit({
 });
 
 // Write limiter (less strict)
+// Applied to mutating routes to reduce accidental flooding and simple abuse cases.
 const writeLimiter = rateLimit({
   windowMs: RATE_LIMIT_WRITE_WINDOW_MS,
   max: RATE_LIMIT_WRITE_MAX,

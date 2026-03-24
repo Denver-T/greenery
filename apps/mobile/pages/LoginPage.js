@@ -1,92 +1,77 @@
-// pages/LoginScreen.js
-// This is the login page
-// Aka what the user first sees when they open the app.
-
-import React, { useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState } from "react";
+import { useNavigation } from "@react-navigation/native";
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
-  Pressable,
   View,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+} from "react-native";
 
-import { login, auth } from '../util/firebase';
+import { login } from "../util/firebase";
 
-const BG = require('../assets/bg.jpg'); // leafy background
-const LOGO = require('../assets/logo.png'); // poster/logo image
+const BG = require("../assets/bg.jpg");
+const LOGO = require("../assets/logo.png");
 
-export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [secure, setSecure] = useState(true);
-  const [loading, setLoading] = useState(false);
-
+export default function LoginPage() {
   const navigation = useNavigation();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  async function onSignIn() {
-    const trimmedEmail = email.trim().toLowerCase();
-
-    if (!trimmedEmail || !password) {
-      Alert.alert('Missing info', 'Please enter both email and password.');
+  async function onLogin() {
+    if (!email.trim() || !password) {
+      setError("Enter your email and password.");
       return;
     }
 
     setLoading(true);
+    setError("");
 
     try {
-      // 1) Sign in with Firebase Auth
-      const user = await login(trimmedEmail, password);
-
-      // 2) Get a Firebase ID token for backend verification
-      const token = await user.getIdToken(true);
-      console.log("Token exists:", !!token);
-      console.log("Token preview:", token?.slice(0, 20));
-
-      // 3) Ask the backend who this user is in the local accounts table
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/me`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result?.message || 'Unable to verify account with API');
-      }
-
-      console.log('Firebase user:', auth.currentUser?.email);
-      console.log('Backend account:', result?.data);
-
-      // 4) Navigate after successful auth + backend verification
-      navigation.navigate('HomePage');
+      await login(email.trim(), password);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "HomePage" }],
+      });
     } catch (err) {
-      Alert.alert('Error', err?.message || 'Unable to sign in');
+      const code = err?.code || "";
+
+      if (code === "auth/invalid-credential" || code === "auth/wrong-password") {
+        setError("Incorrect email or password.");
+      } else if (code === "auth/invalid-email") {
+        setError("Enter a valid email address.");
+      } else if (code === "auth/too-many-requests") {
+        setError("Too many attempts. Please wait and try again.");
+      } else {
+        setError("Login failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   }
 
   function onForgotPassword() {
-    navigation.navigate('ForgotPassword');
+    navigation.navigate("ForgotPassword");
   }
 
-  function onHomePage() {
-    navigation.navigate('HomePage');
+  function onDemoNotice() {
+    Alert.alert(
+      "Sign in required",
+      "Use a valid Firebase account for this project to continue.",
+    );
   }
+
+  const webPointer = Platform.OS === "web" ? { cursor: "pointer" } : undefined;
+  const webTextCursor = Platform.OS === "web" ? { cursor: "text" } : undefined;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -94,7 +79,7 @@ export default function LoginScreen() {
         <View style={styles.tint} />
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'android' ? 'padding' : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.container}
         >
           <View style={styles.logoCard}>
@@ -102,57 +87,83 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.formCard}>
+            <Text style={styles.heading}>Greenery Login</Text>
+
             <Text style={styles.label}>Email</Text>
             <View style={styles.inputShell}>
               <TextInput
-                placeholder="Enter Email:"
+                placeholder="Enter email"
                 placeholderTextColor="#b9b9b9"
                 autoCapitalize="none"
                 keyboardType="email-address"
                 textContentType="emailAddress"
+                autoCorrect={false}
                 value={email}
                 onChangeText={setEmail}
-                style={styles.input}
+                style={[styles.input, webTextCursor]}
                 accessibilityLabel="Email"
               />
             </View>
 
-            <Text style={[styles.label, { marginTop: 16 }]}>Password</Text>
+            <Text style={[styles.label, styles.labelSpacing]}>Password</Text>
             <View style={styles.inputShell}>
               <TextInput
-                placeholder="Enter Password:"
+                placeholder="Enter password"
                 placeholderTextColor="#b9b9b9"
-                secureTextEntry={secure}
-                textContentType="password"
+                secureTextEntry
                 value={password}
                 onChangeText={setPassword}
-                style={styles.input}
+                style={[styles.input, webTextCursor]}
                 accessibilityLabel="Password"
               />
             </View>
 
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
             <Pressable
-              style={[styles.signInBtn, loading && { opacity: 0.7 }]}
+              onPress={onLogin}
               disabled={loading}
-              onPress={onSignIn}
+              android_ripple={{ color: "#44591e" }}
+              style={({ pressed }) => [
+                styles.primaryBtn,
+                loading && { opacity: 0.7 },
+                pressed && { transform: [{ scale: 0.995 }] },
+                webPointer,
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Sign In"
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.signInText}>Sign In</Text>
+                <Text style={styles.primaryText}>Sign In</Text>
               )}
             </Pressable>
 
-            <Pressable onPress={onForgotPassword} style={styles.forgotWrap}>
-              <Text style={styles.forgotText}>Forgot password?</Text>
+            <Pressable
+              onPress={onForgotPassword}
+              style={({ pressed }) => [
+                styles.secondaryBtn,
+                pressed && { transform: [{ scale: 0.995 }] },
+                webPointer,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Forgot Password"
+            >
+              <Text style={styles.secondaryText}>Forgot Password</Text>
             </Pressable>
-          </View>
 
-          <View>
-            <Pressable onPress={onHomePage}>
-              <Text>To Home Screen</Text>
+            <Pressable
+              onPress={onDemoNotice}
+              style={({ pressed }) => [
+                styles.linkBtn,
+                pressed && { opacity: 0.8 },
+                webPointer,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Login help"
+            >
+              <Text style={styles.linkText}>Need an account?</Text>
             </Pressable>
           </View>
         </KeyboardAvoidingView>
@@ -161,87 +172,105 @@ export default function LoginScreen() {
   );
 }
 
-const GREEN = '#556f26';
-const CARD_BG = '#f2f2f2';
-const BORDER = '#c8c8c8';
+const GREEN = "#556f26";
+const CARD_BG = "#f2f2f2";
+const BORDER = "#c8c8c8";
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#2f4f2f' },
-  bg: { flex: 1, justifyContent: 'flex-start' },
+  safe: { flex: 1, backgroundColor: "#2f4f2f" },
+  bg: { flex: 1, justifyContent: "flex-start" },
   tint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(88, 110, 50, 0.35)',
+    backgroundColor: "rgba(88,110,50,0.35)",
   },
-  container: {
-    flex: 1,
-    paddingHorizontal: 18,
-    alignItems: 'center',
-  },
+  container: { flex: 1, alignItems: "center", paddingHorizontal: 18 },
   logoCard: {
     marginTop: 48,
     width: 260,
     height: 320,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 10,
     padding: 14,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 8,
   },
   logoImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
     borderRadius: 6,
   },
   formCard: {
-    width: '94%',
-    marginTop: 22,
+    width: "94%",
+    marginTop: 20,
     backgroundColor: CARD_BG,
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderWidth: 1,
-    borderColor: '#bdbdbd',
-    shadowColor: '#000',
+    borderColor: "#bdbdbd",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 6,
   },
-  label: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#5b6e30',
+  heading: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#5b6e30",
+    marginBottom: 12,
+    textAlign: "center",
   },
+  label: { fontSize: 18, fontWeight: "700", color: "#5b6e30" },
+  labelSpacing: { marginTop: 12 },
   inputShell: {
     marginTop: 8,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: BORDER,
-    backgroundColor: '#e6e6e6',
+    backgroundColor: "#e6e6e6",
     paddingHorizontal: 12,
     height: 44,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
-  input: {
-    fontSize: 16,
-    color: '#333',
+  input: { fontSize: 16, color: "#333" },
+  errorText: {
+    marginTop: 12,
+    color: "#b42318",
+    fontSize: 14,
+    fontWeight: "600",
   },
-  signInBtn: {
-    marginTop: 16,
+  primaryBtn: {
+    marginTop: 14,
     height: 44,
-    backgroundColor: GREEN,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: GREEN,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  signInText: { color: '#fff', fontWeight: '800', fontSize: 18 },
-  forgotWrap: { marginTop: 12 },
-  forgotText: {
-    color: '#4b6424',
-    textDecorationLine: 'underline',
-    fontSize: 16,
+  primaryText: { color: "#fff", fontSize: 17, fontWeight: "800" },
+  secondaryBtn: {
+    marginTop: 12,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: "#ddd",
+    borderWidth: 1,
+    borderColor: "#bdbdbd",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryText: { color: "#4b6424", fontSize: 17, fontWeight: "800" },
+  linkBtn: {
+    marginTop: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  linkText: {
+    color: "#4b6424",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

@@ -1,6 +1,10 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   initializeAuth,
+  getAuth,
+  // Expo/Metro resolves the React Native auth entry correctly, but ESLint's
+  // static export map for this package version does not see it.
+  // eslint-disable-next-line import/named
   getReactNativePersistence,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -19,9 +23,15 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+let auth;
+
+try {
+  auth = getAuth(app);
+} catch {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+}
 
 async function login(email, password) {
   const credential = await signInWithEmailAndPassword(auth, email, password);
@@ -37,4 +47,14 @@ async function logout() {
   await signOut(auth);
 }
 
-export { auth, login, register, logout };
+async function getBearerToken() {
+  const user = auth.currentUser;
+
+  if (!user) {
+    return null;
+  }
+
+  return user.getIdToken();
+}
+
+export { auth, login, register, logout, getBearerToken };

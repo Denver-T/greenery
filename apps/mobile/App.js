@@ -9,7 +9,7 @@ import WorkRequestSubmit from './pages/WorkRequestSubmit';
 import WorkRequestView from './pages/WorkRequestView';
 import Dashboard from './pages/Dashboard';
 import EventCalendar from './pages/EventCalendar';
-import TaskSets from './pages/TaskSets';
+import TaskSetList from './pages/TaskSetList';
 import PTO from './pages/PTO';
 import WeeklySchedule from './pages/WeeklySchedule';
 import WorkRequestDetails from './pages/WorkRequestDetails';
@@ -33,7 +33,7 @@ export default function App() {
         <Stack.Screen name="WorkRequestView" component={WorkRequestView} />
         <Stack.Screen name="Dashboard" component={Dashboard} />
         <Stack.Screen name="EventCalendar" component={EventCalendar} />
-        <Stack.Screen name="TaskSets" component={TaskSets} />
+        <Stack.Screen name="TaskSetList" component={TaskSetList} />
         <Stack.Screen name="PTO" component={PTO} />
         <Stack.Screen name="WeeklySchedule" component={WeeklySchedule} />
         <Stack.Screen name="WorkRequestDetails" component={WorkRequestDetails} />

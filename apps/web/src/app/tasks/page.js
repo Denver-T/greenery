@@ -74,7 +74,7 @@ export default function TasksPage() {
 
     try {
       const data = await fetchApi("/reqs", { cache: "no-store" });
-      setReqs(Array.isArray(data) ? data : []);
+      setReqs(Array.isArray(data) ? data : data?.data || []);
     } catch (err) {
       setError(err.message || "Failed to load work requests.");
     } finally {
@@ -89,8 +89,9 @@ export default function TasksPage() {
 
     try {
       const data = await fetchApi(`/reqs/${id}`, { cache: "no-store" });
-      setSelectedReq(data);
-      setForm(toFormValues(data));
+      const req = data?.data || data;
+      setSelectedReq(req);
+      setForm(toFormValues(req));
     } catch (err) {
       setError(err.message || "Failed to load request details.");
     } finally {
@@ -119,8 +120,9 @@ export default function TasksPage() {
       });
 
       const updated = await fetchApi(`/reqs/${selectedReq.id}`, { cache: "no-store" });
-      setSelectedReq(updated);
-      setForm(toFormValues(updated));
+      const req = updated?.data || updated;
+      setSelectedReq(req);
+      setForm(toFormValues(req));
       setEditMode(false);
       await loadReqs();
     } catch (err) {

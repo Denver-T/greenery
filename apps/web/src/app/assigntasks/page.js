@@ -41,8 +41,10 @@ export default function AssignmentsPage() {
         fetchApi("/tasks?scope=assignment", { cache: "no-store" }),
       ]);
 
-      setEmployees(Array.isArray(employeesData) ? employeesData : []);
-      setTasks(Array.isArray(tasksData) ? tasksData.map(normalizeTask) : []);
+      const employeeRows = Array.isArray(employeesData) ? employeesData : employeesData?.data || [];
+      const taskRows = Array.isArray(tasksData) ? tasksData : tasksData?.data || [];
+      setEmployees(employeeRows);
+      setTasks(taskRows.map(normalizeTask));
     } catch (e) {
       console.error("[assignments] load failed", e);
       setMessage(e.message || "Failed to load assignments data.");
@@ -66,7 +68,10 @@ export default function AssignmentsPage() {
             ? !t.assignedTo
             : !!t.assignedTo;
 
-      const haystack = [t.title, t.account, t.location].filter(Boolean).join(" ").toLowerCase();
+      const haystack = [t.title, t.referenceNumber, t.account, t.location]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
       const matchesSearch = !term || haystack.includes(term);
 
       return matchesFilter && matchesSearch;

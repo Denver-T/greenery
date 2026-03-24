@@ -1,6 +1,7 @@
 // apps/api/src/controllers/taskController.js
-// Minimal note change only; the existing controller logic can stay as-is.
-// The service above preserves the task-shaped API.
+// Controller for the legacy `/tasks` API surface.
+// Important: the current schema does not have a dedicated `tasks` table;
+// these handlers delegate to a compatibility layer over `work_reqs`.
 
 const taskService = require("../services/taskService");
 const { httpError } = require("../utils/httpError");
@@ -45,6 +46,8 @@ function validateAndNormalizeCreateTaskPayload(body) {
   const status = typeof rawStatus === "string" ? rawStatus.trim().toLowerCase() : rawStatus;
   const notes = normalizeOptionalString(rawNotes);
 
+  // Collect validation issues so clients receive one actionable response
+  // rather than fixing fields one at a time.
   const details = [];
 
   if (!isNonEmptyString(title)) {
@@ -145,11 +148,13 @@ function validateAndNormalizeAssignPayload(body) {
     rawAssignedTo === undefined || rawAssignedTo === null || rawAssignedTo === ""
       ? null
       : toPositiveInt(rawAssignedTo);
+
   if (rawAssignedTo !== undefined && rawAssignedTo !== null && rawAssignedTo !== "" && !assignedTo) {
     throw httpError(400, "Invalid assigned_to", "VALIDATION_ERROR", [
       { field: "assigned_to", issue: "must be a positive integer" },
     ]);
   }
+
   if (rawDueDate !== undefined && rawDueDate !== null && rawDueDate !== "") {
     if (typeof rawDueDate !== "string" || Number.isNaN(new Date(rawDueDate).getTime())) {
       throw httpError(400, "Invalid due_date", "VALIDATION_ERROR", [
@@ -157,6 +162,7 @@ function validateAndNormalizeAssignPayload(body) {
       ]);
     }
   }
+
   return {
     assigned_to: assignedTo,
     due_date: rawDueDate ?? null,
@@ -168,7 +174,9 @@ function validateAndNormalizeAssignPayload(body) {
  */
 async function getTasks(req, res, next) {
   try {
-    const tasks = await taskService.getTasks({ scope: req.query.scope });
+    // `scope=assignment` is used by the web assignment UI to include unassigned work requests.
+    const scope = typeof req.query?.scope === "string" ? req.query.scope.trim() : null;
+    const tasks = await taskService.getTasks(scope);
 
     return res.status(200).json({
       data: tasks,
@@ -290,4 +298,3 @@ module.exports = {
   updateTaskStatus,
   assignTask,
 };
-
