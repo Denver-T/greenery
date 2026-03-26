@@ -1,0 +1,87 @@
+{
+  "accounts": [
+    { "id": 1, "name": "Denver T",      "role": "administrator", "email": "denvertimlick@gmail.com" },
+    { "id": 2, "name": "Sarah Manager", "role": "manager",       "email": "sarah@greenery.com"      },
+    { "id": 3, "name": "John Tech",     "role": "technician",    "email": "john@greenery.com"       }
+  ],
+
+  "employees": [
+    { "id": 1, "name": "John Smith",    "role": "Technician",    "email": "john@greenery.com",   "phone": "555-0001", "status": "Active",   "permissionLevel": "Technician"    },
+    { "id": 2, "name": "Sarah Lee",     "role": "Manager",       "email": "sarah@greenery.com",  "phone": "555-0002", "status": "Active",   "permissionLevel": "Manager"       },
+    { "id": 3, "name": "Mike Johnson",  "role": "Technician",    "email": "mike@greenery.com",   "phone": "555-0003", "status": "Active",   "permissionLevel": "Technician"    },
+    { "id": 4, "name": "Emily Davis",   "role": "Administrator", "email": "emily@greenery.com",  "phone": "555-0004", "status": "Active",   "permissionLevel": "Administrator" },
+    { "id": 5, "name": "Carlos Rivera", "role": "Technician",    "email": "carlos@greenery.com", "phone": "555-0005", "status": "Inactive", "permissionLevel": "Technician"    }
+  ],
+
+  "plants": [
+    { "id": 1, "name": "Orchid",          "location": "Greenhouse A" },
+    { "id": 2, "name": "Fiddle Leaf Fig", "location": "Greenhouse B" },
+    { "id": 3, "name": "Fern",            "location": "Greenhouse A" },
+    { "id": 4, "name": "Croton",          "location": "Outdoor"      },
+    { "id": 5, "name": "Moss",            "location": "Greenhouse C" },
+    { "id": 6, "name": "Peace Lily",      "location": "Greenhouse B" },
+    { "id": 7, "name": "Snake Plant",     "location": "Greenhouse A" },
+    { "id": 8, "name": "Pothos",          "location": "Greenhouse C" }
+  ],
+
+  "work_reqs": [
+    {
+      "id": 1, "referenceNumber": "REQ-001", "requestDate": "2026-03-22",
+      "techName": "John Smith", "account": "ABC Company", "accountContact": "Jane Doe",
+      "accountAddress": "123 Main St, Calgary, AB", "actionRequired": "Plant replacement needed",
+      "numberOfPlants": 3, "plantWanted": "Orchid", "plantReplaced": "Fern",
+      "plantSize": "Medium", "lighting": "Low", "method": "Standard replacement",
+      "location": "Reception Area", "notes": "Minimal disruption during business hours",
+      "assignedTo": null, "dueDate": "2026-03-28", "status": "unassigned"
+    },
+    {
+      "id": 2, "referenceNumber": "REQ-002", "requestDate": "2026-03-22",
+      "techName": "Mike Johnson", "account": "XYZ Corp", "accountContact": "Bob Wilson",
+      "accountAddress": "456 Oak Ave, Calgary, AB", "actionRequired": "Soil top-up required",
+      "numberOfPlants": 0, "plantWanted": null, "lighting": "Medium", "method": "Soil refresh",
+      "location": "Office Floor 3", "notes": null,
+      "assignedTo": 1, "dueDate": "2026-03-25", "status": "assigned"
+    },
+    {
+      "id": 3, "referenceNumber": "REQ-003", "requestDate": "2026-03-21",
+      "techName": "Sarah Lee", "account": "Green Office", "accountContact": "Tom Brown",
+      "accountAddress": "789 Pine Rd, Calgary, AB", "actionRequired": "New plant installation",
+      "numberOfPlants": 5, "plantWanted": "Fiddle Leaf Fig", "plantSize": "Large",
+      "lighting": "High", "method": "New installation", "location": "Boardroom",
+      "notes": "Coordinate with building management",
+      "assignedTo": 3, "dueDate": "2026-03-30", "status": "in_progress"
+    },
+    {
+      "id": 4, "referenceNumber": "REQ-004", "requestDate": "2026-03-20",
+      "techName": "Denver T", "account": "City Hall", "accountContact": "Mary White",
+      "accountAddress": "1 City Square, Calgary, AB", "actionRequired": "Monthly maintenance",
+      "numberOfPlants": 0, "method": "Routine maintenance", "location": "Main Lobby",
+      "notes": "All plants watered and fertilized",
+      "assignedTo": 2, "dueDate": "2026-03-22", "status": "completed"
+    },
+    {
+      "id": 5, "referenceNumber": "REQ-005", "requestDate": "2026-03-23",
+      "techName": "John Smith", "account": "Tech Hub", "accountContact": "Alex Chen",
+      "accountAddress": "999 Tech Blvd, Calgary, AB", "actionRequired": "Emergency plant rescue",
+      "numberOfPlants": 2, "plantWanted": "Fern", "plantSize": "Small",
+      "lighting": "Low", "method": "Emergency replacement", "location": "Breakroom",
+      "notes": "Plants severely dehydrated",
+      "assignedTo": null, "dueDate": "2026-03-24", "status": "cancelled"
+    }
+  ],
+
+  "schedule_events": [
+    { "id": 1, "title": "Morning Planting",      "start_time": "2026-03-24T08:00:00Z", "end_time": "2026-03-24T12:00:00Z", "employee_id": 1, "employee_name": "John Smith",  "work_req_id": null },
+    { "id": 2, "title": "Client Visit - ABC Co", "start_time": "2026-03-25T10:00:00Z", "end_time": "2026-03-25T11:00:00Z", "employee_id": 2, "employee_name": "Sarah Lee",   "work_req_id": 1    },
+    { "id": 3, "title": "Team Meeting",          "start_time": "2026-03-26T09:00:00Z", "end_time": "2026-03-26T10:00:00Z", "employee_id": null, "employee_name": null,        "work_req_id": null },
+    { "id": 4, "title": "Greenhouse Audit",      "start_time": "2026-03-27T13:00:00Z", "end_time": "2026-03-27T15:00:00Z", "employee_id": 2, "employee_name": "Sarah Lee",   "work_req_id": null },
+    { "id": 5, "title": "Plant Delivery",        "start_time": "2026-03-28T08:00:00Z", "end_time": "2026-03-28T09:30:00Z", "employee_id": 3, "employee_name": "Mike Johnson","work_req_id": null }
+  ],
+
+  "pto_requests": [
+    { "id": 1, "employee_id": 1, "employee_name": "John Smith",   "start_date": "2026-03-28", "end_date": "2026-03-29", "reason": "Family event",        "status": "pending"  },
+    { "id": 2, "employee_id": 2, "employee_name": "Sarah Lee",    "start_date": "2026-04-01", "end_date": "2026-04-03", "reason": "Vacation",            "status": "approved" },
+    { "id": 3, "employee_id": 3, "employee_name": "Mike Johnson", "start_date": "2026-04-10", "end_date": "2026-04-11", "reason": "Medical appointment", "status": "pending"  },
+    { "id": 4, "employee_id": 1, "employee_name": "John Smith",   "start_date": "2026-04-15", "end_date": "2026-04-15", "reason": "Personal day",        "status": "denied"   }
+  ]
+}

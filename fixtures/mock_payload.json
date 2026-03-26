@@ -1,0 +1,139 @@
+{
+  "description": "Greenery API — Mock Payloads for Postman / Unit Tests",
+  "base_url": "http://localhost:3001",
+
+  "health": {
+    "GET /health": {
+      "request": { "method": "GET", "headers": {} },
+      "response_200": { "status": "ok", "service": "api", "timestamp": "2026-03-25T00:00:00.000Z" }
+    },
+    "GET /db-health": {
+      "request": { "method": "GET", "headers": {} },
+      "response_200": { "status": "ok", "database": "connected" },
+      "response_500": { "status": "error", "database": "disconnected", "message": "connect ECONNREFUSED 127.0.0.1:3307" }
+    }
+  },
+
+  "auth": {
+    "GET /auth/me": {
+      "request": {
+        "method": "GET",
+        "headers": { "Authorization": "Bearer <firebase_id_token>" }
+      },
+      "response_200": { "id": 1, "name": "Denver T", "email": "denvertimlick@gmail.com", "role": "administrator" },
+      "response_401": { "status": "error", "code": "UNAUTHORIZED", "message": "Missing or invalid token", "details": [] },
+      "response_404": { "status": "error", "code": "ACCOUNT_NOT_FOUND", "message": "No account found for this Firebase user", "details": [] }
+    }
+  },
+
+  "work_requests": {
+    "GET /reqs": {
+      "request": {
+        "method": "GET",
+        "headers": { "Authorization": "Bearer <firebase_id_token>" }
+      },
+      "response_200": [
+        {
+          "id": 1, "referenceNumber": "REQ-001", "requestDate": "2026-03-22",
+          "techName": "John Smith", "account": "ABC Company",
+          "actionRequired": "Plant replacement needed",
+          "status": "unassigned", "dueDate": "2026-03-28"
+        }
+      ]
+    },
+
+    "POST /reqs (JSON)": {
+      "request": {
+        "method": "POST",
+        "headers": { "Authorization": "Bearer <firebase_id_token>", "Content-Type": "application/json" },
+        "body": {
+          "referenceNumber": "REQ-006",
+          "requestDate": "2026-03-25",
+          "techName": "John Smith",
+          "account": "New Client Co",
+          "accountContact": "Lisa Park",
+          "accountAddress": "321 Elm Street, Calgary, AB",
+          "actionRequired": "New plant installation",
+          "numberOfPlants": 4,
+          "plantWanted": "Peace Lily",
+          "plantSize": "Medium",
+          "lighting": "Low",
+          "method": "Standard installation",
+          "location": "Waiting Room",
+          "notes": "Call 30 minutes before arrival",
+          "dueDate": "2026-04-02"
+        }
+      },
+      "response_201": { "id": 6, "message": "Work request created successfully" },
+      "response_400_validation": {
+        "status": "error", "code": "VALIDATION_ERROR",
+        "message": "Missing required fields",
+        "details": ["account is required", "actionRequired is required"]
+      }
+    },
+
+    "POST /reqs (FormData with photo)": {
+      "_note": "In Postman: Body → form-data. All fields as Text, 'photo' as File. Max 5MB. JPEG/PNG/WEBP only.",
+      "request": {
+        "method": "POST",
+        "headers": { "Authorization": "Bearer <firebase_id_token>", "Content-Type": "multipart/form-data" },
+        "body": {
+          "referenceNumber": "REQ-007",
+          "requestDate": "2026-03-25",
+          "techName": "Mike Johnson",
+          "account": "Photo Test Client",
+          "actionRequired": "Photo upload test",
+          "photo": "<attach JPEG/PNG/WEBP file, max 5MB>"
+        }
+      },
+      "response_201": { "id": 7, "message": "Work request created successfully", "picturePath": "uploads/req-1711234567890-12345.jpg" },
+      "response_400_file_too_large": { "status": "error", "code": "FILE_TOO_LARGE", "message": "File exceeds 5MB limit" },
+      "response_400_invalid_type": { "status": "error", "code": "INVALID_FILE_TYPE", "message": "Invalid file type. Only JPEG, PNG, and WEBP images are allowed." }
+    },
+
+    "GET /reqs/:id": {
+      "example_url": "http://localhost:3001/reqs/1",
+      "request": {
+        "method": "GET",
+        "headers": { "Authorization": "Bearer <firebase_id_token>" }
+      },
+      "response_200": {
+        "id": 1, "referenceNumber": "REQ-001", "requestDate": "2026-03-22",
+        "techName": "John Smith", "account": "ABC Company",
+        "actionRequired": "Plant replacement needed",
+        "status": "unassigned", "dueDate": "2026-03-28"
+      },
+      "response_404": { "status": "error", "code": "NOT_FOUND", "message": "Work request not found" }
+    }
+  },
+
+  "schedule": {
+    "GET /schedule": {
+      "request": { "method": "GET", "headers": { "Authorization": "Bearer <firebase_id_token>" } },
+      "response_200": [
+        { "id": 1, "title": "Morning Planting", "start_time": "2026-03-24T14:00:00.000Z", "end_time": "2026-03-24T18:00:00.000Z", "employee_name": "John Smith", "work_req_id": null }
+      ],
+      "response_200_empty": []
+    },
+    "POST /schedule": {
+      "request": {
+        "method": "POST",
+        "headers": { "Authorization": "Bearer <firebase_id_token>", "Content-Type": "application/json" },
+        "body": { "title": "New Client Walkthrough", "start_time": "2026-04-01 10:00:00", "end_time": "2026-04-01 11:30:00", "employee_id": 1, "work_req_id": null }
+      },
+      "response_201": { "id": 6, "message": "Event created" }
+    },
+    "DELETE /schedule/:id": {
+      "example_url": "http://localhost:3001/schedule/1",
+      "request": { "method": "DELETE", "headers": { "Authorization": "Bearer <firebase_id_token>" } },
+      "response_200": { "message": "Event deleted" }
+    }
+  },
+
+  "common_errors": {
+    "401": { "status": "error", "code": "UNAUTHORIZED", "message": "Missing or invalid token", "details": [] },
+    "403": { "status": "error", "code": "FORBIDDEN",     "message": "You do not have permission", "details": [] },
+    "404": { "status": "error", "code": "ROUTE_NOT_FOUND", "message": "Route not found: GET /unknown", "details": [] },
+    "500": { "status": "error", "code": "INTERNAL_SERVER_ERROR", "message": "The backend is having a bad day", "details": [] }
+  }
+}
