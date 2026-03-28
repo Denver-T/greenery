@@ -1,5 +1,10 @@
 "use client";
 
+// Super-admin workspace
+// ---------------------
+// This page is intentionally web-only because it handles governance concerns:
+// audit review, admin promotion, and privileged account visibility.
+
 import { useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { fetchApi } from "@/lib/api/api";
@@ -47,6 +52,8 @@ export default function SuperAdminPage() {
     setError("");
 
     try {
+      // Always resolve the current employee first. The sidebar may already hide this page
+      // for non-super-admins, but the page still treats backend identity as the source of truth.
       const me = await fetchApi("/auth/me", { cache: "no-store" });
 
       setCurrentUser(me);
@@ -85,6 +92,10 @@ export default function SuperAdminPage() {
     setError("");
 
     try {
+      // Promotions go through the dedicated governance route so the backend can:
+      // - enforce super-admin-only access
+      // - normalize permission values
+      // - write a durable audit-log event
       await fetchApi(`/superadmin/employees/${promotion.employeeId}/permission-level`, {
         method: "PATCH",
         body: {

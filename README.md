@@ -1,282 +1,169 @@
-# 🌱 Greenery Platform
+# Greenery
 
-Greenery is a full-stack mobile and web platform designed to manage plant maintenance and greenhouse operations.  
-The system supports technicians in the field as well as managers and administrators through a centralized web dashboard.
+Greenery is a full-stack operations platform for plant maintenance teams. It includes:
 
-This project is developed as a **capstone project** using **Agile (Scrum) methodology** and industry-standard tools.
+- a Next.js web application for operations, scheduling, staffing, and governance
+- an Expo mobile application for field-facing workflows
+- an Express + MySQL API that owns authentication, authorization, and business data
 
----
+The current platform is organized around a single backend source of truth:
 
-## ✨ Core Features (Planned)
+- `employees` for people and access control
+- `work_reqs` for work requests and assignment state
+- `schedule_events` for calendar/scheduling
+- `activity_logs` for super-admin governance history
 
-### Technicians (Mobile Application)
-- View assigned plant maintenance tasks
-- Clock in and out to track work time
-- Update task status and submit notes
-- Access plant-specific instructions
+## Repository Layout
 
-### Managers & Administrators (Web Application)
-- Manage users and roles
-- Assign and schedule maintenance tasks
-- Approve completed work and time entries
-- View dashboard analytics (e.g., most-maintained plants)
-
-### Backend API
-- Centralized RESTful API
-- Authentication and role-based authorization
-- Database-backed persistence
-- Aggregation of analytics data
-
----
-
-## 📁 Project Structure
+```text
 apps/
-mobile/   # Expo (React Native) mobile application
-web/      # Next.js web application (managers/admins)
-api/      # Node.js + Express backend API
-docs/       # Project documentation, diagrams, and planning artifacts
+  api/     Express API + MySQL access layer
+  mobile/  Expo React Native app
+  web/     Next.js operations dashboard
+```
 
-Each application runs independently and communicates with the backend API.
+## Core Architecture
 
----
+### Authentication
 
-## 🛠️ Tech Stack
+- Firebase Authentication is used for sign-in
+- the API verifies Firebase ID tokens with the Firebase Admin SDK
+- the API resolves the authenticated email against the `employees` table
+- `permissionLevel` in MySQL is the application authority model
 
-### Frontend
-- JavaScript
-- Expo (React Native) – mobile application
-- Next.js (React) – web application
-- Tailwind CSS – web UI styling
+### Authorization
 
-### Backend
-- Node.js
-- Express.js
-- RESTful API architecture
+The API uses a hierarchical access model:
 
-### Database (Planned)
-- MySQL
-- Local development via Docker
-- Cloud deployment via Microsoft Azure
+- `Technician`
+- `Manager`
+- `Administrator`
+- `SuperAdmin`
 
-### Tooling & Process
-- Git & GitHub – version control
-- Jira – Scrum project management
-- Figma – UI/UX design
-- Docker – local database environment
+`role` is treated as the operational job role.  
+`permissionLevel` is treated as the platform access level.
 
----
+### Governance
 
-## 🚀 Getting Started (Team Setup)
+Super admins can:
+
+- review the activity log
+- promote employees to administrator or super-admin access
+- manage privileged access without relying on frontend-only checks
+
+## Local Development
 
 ### Prerequisites
-- Node.js (LTS)
+
+- Node.js 18+
 - npm
-- Git
-- Expo Go app (mobile developers only)
+- Docker Desktop
+- a Firebase project configured for web/mobile sign-in
 
-### Test my own branch
-
-Verify installation:
+### 1. Start MySQL
 
 ```bash
-node -v
-npm -v
-git --version
+cd apps/api/db
+docker compose up -d
+```
 
-▶️ Running the Applications
+The local database runs on `127.0.0.1:3307`.
 
-📱 Mobile App (Expo)
+### 2. Start the API
+
+Create `apps/api/.env` with your local values:
+
+```env
+PORT=3001
+DB_HOST=127.0.0.1
+DB_PORT=3307
+DB_NAME=greenery
+DB_USER=greenery_user
+DB_PASSWORD=greenery_pass
+FIREBASE_PROJECT_ID=...
+FIREBASE_CLIENT_EMAIL=...
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+```
+
+Then run:
+
+```bash
+cd apps/api
+npm install
+npm run dev
+```
+
+API health checks:
+
+- `http://localhost:3001/health`
+- `http://localhost:3001/db-health`
+
+### 3. Start the Web App
+
+Create `apps/web/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+NEXT_PUBLIC_FIREBASE_APP_ID=...
+```
+
+Run:
+
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+### 4. Start the Mobile App
+
+Create `apps/mobile/.env`:
+
+```env
+EXPO_PUBLIC_API_BASE_URL=http://YOUR_LOCAL_IP:3001
+EXPO_PUBLIC_FIREBASE_API_KEY=...
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=...
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+EXPO_PUBLIC_FIREBASE_APP_ID=...
+```
+
+Run:
+
+```bash
 cd apps/mobile
 npm install
-npx expo start
-Scan the QR code using Expo Go.
-
-🌐 Web App (Next.js)
-cd apps/web
-npm install
-npm run dev
-Open in a browser:http://localhost:3000
-
-🔧 Backend API (Express)
-cd apps/api
-npm install
-npm run dev
-
-API runs at: http://localhost:3001
-Health check endpoint: http://localhost:3001/health
-
-🔁 Git Workflow
-
-❌ Do NOT commit directly to main
-
-Always create a feature branch:
-git checkout -b feature/<short-description>
-
-When finished:
-    1.    Push your branch
-    2.    Open a Pull Request
-    3.    Request at least one review before merging
-    
-📌 Project Management
-    •    Project is managed using Jira Scrum boards
-    •    Work is organized into sprints
-    •    Team members update Jira ticket status as work progresses:
-    •    TO DO → IN PROGRESS → DONE
-    
-📊 Project Status
-
-The project is under active development.
-Current focus areas:
-    •    Application scaffolding
-    •    Authentication and role-based access
-    •    Database integration
-    •    Sprint-based feature delivery
-    
-Install the following:
-Docker Desktop
-Node.js (v18+ recommended)
-HeidiSQL (for viewing database contents)
-
-Verify installation:
-docker --version
-node -v
-npm -v
-
-🗄️ Database Setup (Docker – Local Development)
-The project uses MySQL inside Docker for consistent development.
-
-1️⃣ Start the Database
-Navigate to:
-cd apps/api/db
-
-Start MySQL container:
-docker compose up -d
-
-Verify container is running:
-docker ps
-
-You should see:
-0.0.0.0:3307->3306/tcp
-Note: We use port 3307 locally to avoid conflicts with system MySQL.
-
-2️⃣ Database Connection Info (Local)
-
-Use these settings:
-
-Setting	Value
-Host	127.0.0.1
-Port	3307
-Database	greenery
-Username	greenery_user
-Password	greenery_pass
-Root Password	rootpassword
-
-🧰 HeidiSQL Setup
-HeidiSQL is used to view and edit database records during development.
-Create a New Session
-Open HeidiSQL
-Click New
-Select MySQL (TCP/IP)
-Enter:
-Hostname/IP: 127.0.0.1
-Port: 3307
-User: greenery_user
-Password: greenery_pass
-
-Click Open
-You should see the greenery database and tables like:
-employees
-plants
-tasks
-users
-
-🚀 API Setup (Backend)
-Navigate to:
-cd apps/api
-
-Install dependencies:
-npm install
-
-Ensure .env exists in apps/api:
-PORT=3001
-DB_HOST=127.0.0.1
-DB_PORT=3307
-DB_NAME=greenery
-DB_USER=greenery_user
-DB_PASSWORD=greenery_pass
-
-Start API:
-
-npm run dev
-API runs at:
-
-http://localhost:3001
-🔎 Test API
-
-Health check:
-http://localhost:3001/db-health
-
-Employees endpoint:
-http://localhost:3001/employees
-
-If database is connected correctly, /employees should return:
-[]     or a list of employees.
-
-🌐 Web Setup (Frontend)
-Navigate to:
-cd apps/web
-
-Install dependencies:
-npm install
-
-Create .env.local:
-NEXT_PUBLIC_API_URL=http://localhost:3001
-
-Start web server:
-npm run dev
-
-Web runs at:
-http://localhost:3000
-
-🔄 Reset Database (If Needed)
-To completely reset the database:
-
-cd apps/api/db
-docker compose down -v
-docker compose up -d
-
-⚠️ This deletes all local data.
-
+npx expo start -c
 ```
+
+When using a physical device, do not use `localhost`; use your computer's LAN IP.
+
+## Quality Checks
+
+```bash
+cd apps/api && npm run lint
+cd ../web && npm run lint
+cd ../mobile && npm run lint
 ```
-apps>api>.env 
-# Server
-PORT=3001
-NODE_ENV=development
 
-# Database (local Docker)
-DB_HOST=127.0.0.1
-DB_PORT=3307
-DB_NAME=greenery
-DB_USER=greenery_user
-DB_PASSWORD=greenery_pass
+## High-Risk Areas
 
+Before merging or deploying, validate these flows end to end:
 
-# # Authentication (placeholder)
-# AUTH_PROVIDER=firebase
-# FIREBASE_PROJECT_ID=
-# FIREBASE_CLIENT_EMAIL=
-# FIREBASE_PRIVATE_KEY=
+- Firebase login -> `/auth/me`
+- employee management permissions
+- work request create, edit, delete, and undo delete
+- assignment and scheduling
+- super-admin promotion and activity-log access
 
-# # Monday.com Integration (placeholder)
-# MONDAY_API_TOKEN=
-# MONDAY_BOARD_ID=
+## Notes
 
-apps>web>.env.local
-DB_HOST=127.0.0.1
-DB_PORT=3307
-DB_NAME=greenery
-DB_USER=greenery_user
-DB_PASSWORD=greenery_pass
-NEXT_PUBLIC_API_URL=http://localhost:3001
-```
+- keep Firebase Admin credentials server-side only
+- keep `.env` files out of git
+- prefer updating shared API helpers and shared theme tokens instead of duplicating logic per screen

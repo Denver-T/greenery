@@ -1,75 +1,38 @@
-Step 1 — Install Docker
-Download and install Docker Desktop.
-Open Docker Desktop and make sure it is running.
+Greenery API database notes
+===========================
 
-Verify installation:
-docker --version
-docker compose version
+Local Docker MySQL is used for development consistency.
 
-Step 2 — Start the Database
+Run from:
+  apps/api/db
 
-From the project root (the folder that contains apps/):
-You can copy paste this into the terminal
-cd apps/api/db
-docker compose up -d
+Commands:
+  docker compose up -d
+  docker compose down
+  docker compose down -v   (destroys local data)
 
-Step 3 — Confirm Containers Are Running
-docker ps
+Local connection defaults:
+  host: 127.0.0.1
+  port: 3307
+  database: greenery
+  user: greenery_user
 
-You should see:
+Adminer:
+  http://localhost:8080
 
-greenery_mysql
+Schema initialization:
+  init/01_schema.sql
 
-greenery_adminer
+Key tables:
+  employees
+  plants
+  work_reqs
+  schedule_events
+  notifications
+  activity_logs
 
-Step 4 — Open Adminer (Database UI)
-Open your browser:
-http://localhost:8080
-
-Login using:
-System: MySQL
-Server: mysql
-Username: greenery_user
-Password: greenery_pass
-Database: greenery
-
-⚠️ IMPORTANT: Server must be mysql, NOT localhost.
-Step 5 — Connect the API to the Database
-
-Move to the API folder:
-
-cd ../
-
-
-Create your environment file:
-
-Open .env and ensure it contains:
-
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=greenery
-DB_USER=greenery_user
-DB_PASSWORD=greenery_pass
-
-Step 6 — Run the API
-npm install
-npm run dev
-
-Step 7 — Reset Database (If Something Breaks)
-
-From apps/api/db:
-copy paste this:
-
-docker compose down -v
-docker compose up -d
-
-This deletes all database data and recreates everything.
-
-Step 8 — Stop the Database
-cd apps/api/db
-docker compose down
-
-Notes:
-Do NOT commit .env files
-Database schema is located in apps/api/db/init
-This setup is for local development only
+Important:
+  - `permissionLevel` is the platform access model
+  - `role` remains the operational job role
+  - `activity_logs` supports super-admin governance and privileged audit history
+  - do not commit `.env` files
