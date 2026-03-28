@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Greenery Web
 
-## Getting Started
+The web app is a Next.js operations dashboard for staffing, request intake, scheduling, and platform governance.
 
-First, run the development server:
+## Primary Areas
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- dashboard overview
+- request intake and queue management
+- assignment and scheduling
+- team management
+- super-admin governance
+
+## Environment
+
+Create `apps/web/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+NEXT_PUBLIC_FIREBASE_APP_ID=...
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Run
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Architecture Notes
 
-## Learn More
+- the app uses the shared `fetchApi()` helper for authenticated backend access
+- the backend is responsible for permission enforcement
+- the sidebar and governance UI reflect the current employee `permissionLevel`
+- request deletion and recovery are handled in-app instead of relying on browser-native prompts
 
-To learn more about Next.js, take a look at the following resources:
+Key files:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `src/lib/api/api.js`
+- `src/components/AppShell.js`
+- `src/components/Sidebar.js`
+- `src/app/tasks/page.js`
+- `src/app/superadmin/page.js`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Quality Notes
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- keep layout, color, spacing, and surface treatment aligned with shared shell patterns
+- prefer structured workflow pages over one-off admin tables
+- verify contrast and responsive behavior on every major screen before merging visual changes

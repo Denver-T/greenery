@@ -1,5 +1,14 @@
 // apps/api/src/utils/permissions.js
-// Canonical permission helpers shared by auth, authorization, and employee writes.
+//
+// Central permission vocabulary for the backend.
+//
+// Why this file exists:
+// - Firebase claims, API payloads, and DB enum values all use slightly different wording
+// - authorization is hierarchical, so we need one place that defines rank/order
+// - employee writes should normalize role and permission inputs the same way every time
+//
+// This module keeps those rules together so auth middleware, controllers, and route guards
+// do not each invent their own interpretation of "admin" or "super admin".
 
 const DB_ROLE_MAP = {
   technician: "Technician",
@@ -69,6 +78,8 @@ function getAccessRank(value) {
 }
 
 function isHighPrivilegePermission(value) {
+  // Administrator and SuperAdmin are treated as privileged platform access,
+  // not just job titles, so controllers can use this helper to protect writes.
   return getAccessRank(value) >= ACCESS_RANK.admin;
 }
 

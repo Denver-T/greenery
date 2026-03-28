@@ -1,3 +1,9 @@
+// Shared mobile design tokens
+// ---------------------------
+// Mobile screens should import from this file instead of redefining one-off greens, grays,
+// or spacing values. Keeping the palette centralized makes cross-screen polish easier and
+// reduces the risk of the UI drifting back into inconsistent styles.
+
 export const COLORS = {
   forest: "#294733",
   forestDeep: "#1F3427",

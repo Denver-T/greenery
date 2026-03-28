@@ -1,3 +1,8 @@
+// Super-admin controller
+// ----------------------
+// This controller owns platform-governance endpoints rather than day-to-day operations.
+// Keep privileged concerns here so employee CRUD and operational routes stay simpler.
+
 const db = require("../db");
 const employeesService = require("../services/employeesService");
 const { httpError } = require("../utils/httpError");
@@ -7,6 +12,8 @@ const { toPositiveInt } = require("../utils/validators");
 
 async function listActivityLogs(req, res, next) {
   try {
+    // The limit is capped so one governance page refresh cannot accidentally pull the entire
+    // audit history into memory. If deeper audit exports are needed later, add a paginated route.
     const requestedLimit = Number.parseInt(req.query.limit, 10);
     const limit = Number.isFinite(requestedLimit)
       ? Math.min(Math.max(requestedLimit, 1), 200)
@@ -51,6 +58,8 @@ async function listActivityLogs(req, res, next) {
 
 async function listAdminCandidates(req, res, next) {
   try {
+    // The web governance UI needs one employee list for promotions. Filtering to active employees
+    // keeps the action list focused on accounts that are currently usable.
     const rows = await employeesService.listEmployees();
     return res.json({
       data: rows.filter((row) => row.status === "Active"),
@@ -83,6 +92,8 @@ async function updatePermissionLevel(req, res, next) {
       existing.permissionLevel || existing.role
     );
 
+    // Reuse the canonical employee update service so permission changes flow through the same
+    // schema normalization and row-shaping logic as the rest of the employee module.
     const updated = await employeesService.updateEmployee(id, {
       ...existing,
       permissionLevel: nextPermission,

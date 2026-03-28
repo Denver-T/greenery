@@ -1,5 +1,11 @@
 // apps/api/src/utils/activityLogger.js
+//
 // Best-effort audit trail for privileged and destructive actions.
+//
+// The logger is intentionally non-blocking:
+// - the business action should succeed or fail on its own merits
+// - audit logging should enrich governance visibility without becoming a single point of failure
+// - metadata is stored as JSON so we can keep context for admin actions without schema churn
 
 const db = require("../db");
 
