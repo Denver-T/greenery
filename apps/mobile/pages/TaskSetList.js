@@ -9,26 +9,11 @@ import {
   ScrollView,
   StatusBar,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import NavBar from '../components/NavBar';
+import { COLORS, RADII } from '../theme';
 
 const BG = require('../assets/bg.jpg');
-const RADIUS = 12;
-const COLORS = {
-  green: '#6f8641',
-  greenDark: '#5e7833',
-  blockGreen: '#6f8641',
-  black: '#000000',
-  textOnGreen: '#ffffff',
-  cardFill: '#f8f8f8',
-  cardBorder: '#d9e1c8',
-  tint: 'rgba(125, 145, 98, 0.25)',
-  tabIcon: '#fff',
-  mutedText: '#e9efd9',
-  reqText: '#999999',
-  titleGreen: '#5a7320',
-};
 
 //Replace with real data
 const TASK_SETS = [
@@ -53,7 +38,7 @@ function TaskSetCard({ item, onViewMore }) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Ionicons name="information-circle-outline" size={28} color={COLORS.black} style={styles.infoIcon} />
+        <Ionicons name="information-circle-outline" size={28} color={COLORS.textPrimary} style={styles.infoIcon} />
         <Text style={styles.cardTitle}>{item.title}</Text>
       </View>
       <View style={styles.cardForms}>
@@ -72,8 +57,6 @@ function TaskSetCard({ item, onViewMore }) {
 }
 
 export default function TaskSetList() {
-  const navigation = useNavigation();
-
   const handleViewMore = (item) => {
     // Navigate to task set detail screen
     console.log('View More pressed for:', item.title);
@@ -81,7 +64,7 @@ export default function TaskSetList() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor={COLORS.green} barStyle="light-content" />
+      <StatusBar backgroundColor={COLORS.forest} barStyle="light-content" />
 
       <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
         <View style={styles.tint} />
@@ -128,81 +111,78 @@ export default function TaskSetList() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.green },
+  safe: { flex: 1, backgroundColor: COLORS.forest },
   bg: { flex: 1 },
   tint: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: COLORS.tint,
   },
 
-  /* Top bar */
   topBar: {
-    height: 52,
-    backgroundColor: COLORS.green,
+    height: 58,
+    backgroundColor: COLORS.forest,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(247, 248, 243, 0.12)',
     elevation: 6,
   },
   topBarSide: { width: 32 },
   topBarCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   topTitle: {
-    color: COLORS.textOnGreen,
-    fontSize: 16,
+    color: COLORS.textOnBrand,
+    fontSize: 17,
     fontWeight: '800',
     letterSpacing: 0.3,
   },
   topSubtitle: {
-    color: COLORS.mutedText,
+    color: COLORS.sageMist,
     fontSize: 11,
     marginTop: -2,
   },
 
-  /* Header block */
   menuBlockWrap: {
     marginTop: 8,
-    marginBottom: 8,
-    paddingHorizontal: 6,
+    marginBottom: 10,
+    paddingHorizontal: 10,
   },
   menuBlock: {
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: COLORS.blockGreen,
+    minHeight: 60,
+    borderRadius: RADII.lg,
+    backgroundColor: 'rgba(255, 252, 246, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(247, 248, 243, 0.14)',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    elevation: 6,
-  },
-  backBtn: {
-    marginRight: 10,
-    padding: 4,
+    paddingHorizontal: 16,
   },
   menuBlockText: {
-    color: COLORS.textOnGreen,
-    fontSize: 22,
+    color: COLORS.textOnBrand,
+    fontSize: 24,
     fontWeight: '800',
     letterSpacing: 0.5,
     flex: 1,
     textAlign: 'center',
   },
 
-  /* Scroll */
   scrollContent: {
-    paddingHorizontal: 10,
-    paddingTop: 4,
+    paddingHorizontal: 12,
+    paddingTop: 8,
   },
 
-  /* Task Set Card */
   card: {
-    backgroundColor: COLORS.cardFill,
-    borderRadius: RADIUS,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADII.lg,
     padding: 16,
-    marginBottom: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -215,7 +195,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.titleGreen,
+    color: COLORS.textPrimary,
   },
   cardForms: {
     marginLeft: 38,
@@ -223,29 +203,29 @@ const styles = StyleSheet.create({
   },
   formText: {
     fontSize: 13,
-    color: COLORS.reqText,
+    color: COLORS.textMuted,
     lineHeight: 20,
   },
   viewMoreBtn: {
     alignSelf: 'flex-start',
     marginLeft: 38,
     borderWidth: 1,
-    borderColor: '#aaaaaa',
-    borderRadius: 8,
+    borderColor: COLORS.border,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.parchment,
     paddingVertical: 7,
     paddingHorizontal: 20,
   },
   viewMoreBtnPressed: {
-    backgroundColor: '#e8e8e8',
+    backgroundColor: COLORS.surfaceMuted,
   },
   viewMoreText: {
     fontSize: 13,
-    color: '#333333',
-    fontWeight: '500',
+    color: COLORS.textPrimary,
+    fontWeight: '700',
   },
 
-  /* Bottom tab bar */
   tabBar: {
-    backgroundColor: COLORS.green,
+    backgroundColor: COLORS.forestDeep,
   },
 });

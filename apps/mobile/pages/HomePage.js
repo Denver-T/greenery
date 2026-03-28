@@ -15,45 +15,37 @@ import {
   Ionicons,
   MaterialIcons,
   MaterialCommunityIcons,
-  FontAwesome5,
   Feather,
 } from '@expo/vector-icons';
 import NavBar from '../components/NavBar'; 
+import { COLORS, RADII } from '../theme';
 
 const BG = require('../assets/bg.jpg');
 
-const COLORS = {
-  green: '#6f8641',      
-  greenDark: '#5e7833',
-  blockGreen: '#6f8641',
-  black: '#000000',
-  textOnGreen: '#ffffff',
-  cardFill: '#f8f8f8',
-  cardBorder: '#d9e1c8',
-  arrowBg: '#6f8641',
-  tint: 'rgba(125, 145, 98, 0.25)',
-  tabIcon: '#fff',
-  mutedText: '#e9efd9',
-};
-
 const MENU_ITEMS = [
   {
-    key: 'work_request_submit',
-    label: 'Submit a Work Request',
-    leftIcon: (props) => <MaterialIcons name="edit" {...props} />,
-    route: 'WorkRequestSubmit',
+    key: 'dashboard_analytics',
+    label: 'Today Overview',
+    leftIcon: (props) => <MaterialIcons name="pie-chart" {...props} />,
+    route: 'Dashboard',
   },
   {
     key: 'work_requests_view',
-    label: 'View Work Requests',
+    label: 'Request Queue',
     leftIcon: (props) => <MaterialIcons name="insert-drive-file" {...props} />,
     route: 'WorkRequestView',
   },
   {
-    key: 'dashboard_analytics',
-    label: 'Dashboard Analytics',
-    leftIcon: (props) => <MaterialIcons name="pie-chart" {...props} />,
-    route: 'Dashboard',
+    key: 'work_request_submit',
+    label: 'Create New Request',
+    leftIcon: (props) => <MaterialIcons name="edit" {...props} />,
+    route: 'WorkRequestSubmit',
+  },
+  {
+    key: 'schedule',
+    label: 'Weekly Schedule',
+    leftIcon: (props) => <MaterialCommunityIcons name="calendar-week" {...props} />,
+    route: 'WeeklySchedule',
   },
   {
     key: 'calendar',
@@ -62,22 +54,16 @@ const MENU_ITEMS = [
     route: 'EventCalendar',
   },
   {
-    key: 'tasks',
-    label: 'Task Sets',
-    leftIcon: (props) => <MaterialCommunityIcons name="clipboard-text-outline" {...props} />,
-    route: 'TaskSetList',
-  },
-  {
     key: 'pto',
-    label: 'Book Time Off',
+    label: 'Time Off',
     leftIcon: (props) => <MaterialCommunityIcons name="clock-outline" {...props} />,
     route: 'PTO',
   },
   {
-    key: 'schedule',
-    label: 'Weekly Schedule',
-    leftIcon: (props) => <MaterialCommunityIcons name="calendar-week" {...props} />,
-    route: 'WeeklySchedule',
+    key: 'tasks',
+    label: 'Task Sets',
+    leftIcon: (props) => <MaterialCommunityIcons name="clipboard-text-outline" {...props} />,
+    route: 'TaskSetList',
   },
 ];
 
@@ -114,7 +100,7 @@ export default function HomePage() {
           {/* Main Menu Block */}
           <View style={styles.menuBlockWrap}>
             <View style={styles.menuBlock}>
-              <Text style={styles.menuBlockText}>Main Menu</Text>
+              <Text style={styles.menuBlockText}>Field Operations</Text>
             </View>
           </View>
 
@@ -163,7 +149,7 @@ export default function HomePage() {
 const RADIUS = 12;
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.green },
+  safe: { flex: 1, backgroundColor: COLORS.forest },
   bg: { flex: 1 },
   tint: {
     ...StyleSheet.absoluteFillObject,
@@ -172,23 +158,25 @@ const styles = StyleSheet.create({
 
   /* Top bar */
   topBar: {
-    height: 52,
-    backgroundColor: COLORS.green,
+    height: 58,
+    backgroundColor: COLORS.forest,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    elevation: 6, // Android shadow
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(247, 248, 243, 0.12)',
+    elevation: 6,
   },
   topBarSide: { width: 32 },
   topBarCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   topTitle: {
     color: COLORS.textOnGreen,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '800',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
   },
   topSubtitle: {
-    color: COLORS.mutedText,
+    color: COLORS.sageMist,
     fontSize: 11,
     marginTop: -2,
   },
@@ -201,46 +189,50 @@ const styles = StyleSheet.create({
   /* Main Menu chip */
   menuBlockWrap: {
     marginTop: 8,
-    marginBottom: 8,
-    paddingHorizontal: 6,
+    marginBottom: 10,
+    paddingHorizontal: 10,
   },
   menuBlock: {
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: COLORS.blockGreen,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
+    borderRadius: RADII.lg,
+    backgroundColor: 'rgba(255, 252, 246, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(247, 248, 243, 0.14)',
+    paddingHorizontal: 18,
+    paddingVertical: 16,
   },
   menuBlockText: {
-    color: COLORS.textOnGreen,
-    fontSize: 22,
+    color: COLORS.textOnBrand,
+    fontSize: 24,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
 
   /* Blocks */
   blockWrap: {
-    marginTop: 10,
+    marginTop: 12,
   },
   blockBar: {
-    height: 18,
-    marginHorizontal: 4,
-    backgroundColor: COLORS.green,
+    height: 8,
+    marginHorizontal: 10,
+    backgroundColor: COLORS.accent,
     borderTopLeftRadius: RADIUS,
     borderTopRightRadius: RADIUS,
-    elevation: 2,
+    opacity: 0.9,
   },
   blockCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.cardFill,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    borderBottomLeftRadius: RADIUS,
-    borderBottomRightRadius: RADIUS,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    borderColor: COLORS.border,
+    borderBottomLeftRadius: RADII.lg,
+    borderBottomRightRadius: RADII.lg,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
     elevation: 4,
   },
   blockLeft: {
@@ -252,9 +244,9 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.parchment,
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 1,
@@ -266,15 +258,17 @@ const styles = StyleSheet.create({
   blockLabel: {
     fontSize: 18,
     fontWeight: '700',
-    textAlign: 'center',
+    textAlign: 'left',
+    color: COLORS.textPrimary,
   },
   blockArrow: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.arrowBg,
+    backgroundColor: COLORS.moss,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 2,
   },
+  tabBar: { backgroundColor: COLORS.forestDeep },
 });

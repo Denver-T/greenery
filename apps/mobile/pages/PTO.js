@@ -16,22 +16,10 @@ import { Ionicons } from "@expo/vector-icons";
 
 import NavBar from "../components/NavBar";
 import { apiFetch } from "../util/api";
+import { COLORS } from "../theme";
 
 const BG = require("../assets/bg.jpg");
 const RADIUS = 12;
-
-const COLORS = {
-  green: "#6f8641",
-  greenDark: "#5e7833",
-  blockGreen: "#6f8641",
-  textOnGreen: "#ffffff",
-  cardFill: "#ffffff",
-  cardBorder: "#d9e1c8",
-  tint: "rgba(125, 145, 98, 0.25)",
-  mutedText: "#e9efd9",
-  titleGreen: "#5a7320",
-  gray500: "#6b7280",
-};
 
 const STATUS_COLORS = {
   pending: { bg: "#fef9c3", text: "#854d0e" },
@@ -328,22 +316,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 0.3,
-  },
-  menuBlockText: { color: COLORS.textOnGreen, fontSize: 22, fontWeight: '800', letterSpacing: 0.5 },
-
-  scrollContent: { paddingHorizontal: 12, paddingTop: 8 },
-
-  // New Request Button
-  newRequestBtn: {
-    backgroundColor: COLORS.green,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 14,
-    borderRadius: RADIUS,
-    marginBottom: 12,
-    elevation: 3,
   },
   menuBlockWrap: { marginTop: 8, marginBottom: 8, paddingHorizontal: 6 },
   menuBlock: {

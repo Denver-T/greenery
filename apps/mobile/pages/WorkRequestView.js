@@ -15,20 +15,9 @@ import { useNavigation } from "@react-navigation/native";
 
 import NavBar from "../components/NavBar";
 import { getAllWorkRequest } from "../util/workRequest";
+import { COLORS } from "../theme";
 
 const BG = require("../assets/bg.jpg");
-
-const COLORS = {
-  green: "#6f8641",
-  greenDark: "#5e7833",
-  blockGreen: "#6f8641",
-  black: "#000000",
-  textOnGreen: "#ffffff",
-  cardFill: "#ffffff",
-  cardBorder: "#d9e1c8",
-  tint: "rgba(125,145,98,0.25)",
-  mutedText: "#e9efd9",
-};
 
 const STATUS_COLORS = {
   unassigned: { bg: "#fef9c3", text: "#854d0e" },

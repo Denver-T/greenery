@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ImageBackground,
   SafeAreaView,
@@ -11,54 +11,48 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import NavBar from '../components/NavBar'; 
+import { apiFetch } from "../util/api";
+import { COLORS } from '../theme';
 
 const BG = require('../assets/bg.jpg');
-const COLORS = {
-  green: '#6f8641',      
-  greenDark: '#5e7833',
-  blockGreen: '#6f8641',
-  textOnGreen: '#ffffff',
-  cardFill: '#ffffff',
-  cardBorder: '#e5e7eb',
-  tint: 'rgba(125, 145, 98, 0.25)',
-  mutedText: '#e9efd9',
-  emerald: '#16a34a',
-  emeraldLight: '#dcfce7',
-  rose: '#e11d48',
-  roseLight: '#ffe4e6',
-  gray100: '#f3f4f6',
-  gray500: '#6b7280',
-  gray900: '#111827',
-};
 
-const mock = {
-  kpis: [
-    { label: 'Weekly Jobs', value: '143', delta: '+12%', positive: true },
-    { label: 'Plants In', value: '178', delta: '+8%', positive: true },
-    { label: 'Revenue', value: '$18,460', delta: '-3%', positive: false },
-    { label: 'Avg. Ticket', value: '$129', delta: '+5%', positive: true },
-  ],
-  weeklyCommonJobsShare: 67,
-  commonJobsBreakdown: [
-    { label: 'Plant Replacements', value: 96 },
-    { label: 'Soil Top-ups', value: 30 },
-    { label: 'Bloom', value: 15 },
-  ],
-  plantsIn: [
-    { label: 'Orchids', value: 54 },
-    { label: 'Fiddle Leaf', value: 42 },
-    { label: 'Fern', value: 36 },
-    { label: 'Croton', value: 20 },
-    { label: 'Bloom', value: 12 },
-  ],
-  plantRevenue: [
-    { label: 'Orchids', value: 6600 },
-    { label: 'Moss', value: 5840 },
-    { label: 'Fern', value: 3436 },
-    { label: 'Fiddle Leaf', value: 2970 },
-    { label: 'Croton', value: 1180 },
-  ],
-};
+function countBy(items, selector) {
+  const map = new Map();
+
+  items.forEach((item) => {
+    const key = selector(item) || "Unknown";
+    map.set(key, (map.get(key) || 0) + 1);
+  });
+
+  return Array.from(map.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
+}
+
+function buildDashboardData({ employees, reqs, tasks, schedule }) {
+  const activeReqs = reqs.filter(
+    (req) => !["completed", "cancelled"].includes(String(req.status || "").toLowerCase())
+  );
+  const assignedTasks = tasks.filter((task) => task.assignedTo ?? task.assigned_to);
+  const completedTasks = tasks.filter(
+    (task) => String(task.status || "").toLowerCase() === "completed"
+  );
+
+  return {
+    kpis: [
+      { label: "Employees", value: String(employees.length) },
+      { label: "Open REQs", value: String(activeReqs.length) },
+      { label: "Assigned Tasks", value: String(assignedTasks.length) },
+      { label: "Schedule Events", value: String(schedule.length) },
+    ],
+    weeklyCommonJobsShare:
+      tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0,
+    commonJobsBreakdown: countBy(reqs, (req) => req.actionRequired),
+    plantsIn: countBy(reqs, (req) => req.account),
+    plantRevenue: countBy(schedule, (event) => event.employee_name || "Unassigned"),
+  };
+}
 
 function KpiCard({ label, value, delta, positive }) {
   return (
@@ -131,8 +125,57 @@ function RingStat({ title, percent, caption }) {
 }
 
 export default function Dashboard() {
-  const [data] = useState(mock);
-  const [loading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [sourceData, setSourceData] = useState({
+    employees: [],
+    reqs: [],
+    tasks: [],
+    schedule: [],
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDashboard = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [employees, reqs, tasks, schedule] = await Promise.all([
+          apiFetch("/employees"),
+          apiFetch("/reqs"),
+          apiFetch("/tasks?scope=assignment"),
+          apiFetch("/schedule"),
+        ]);
+
+        if (!cancelled) {
+          setSourceData({
+            employees: Array.isArray(employees) ? employees : [],
+            reqs: Array.isArray(reqs) ? reqs : [],
+            tasks: Array.isArray(tasks) ? tasks : [],
+            schedule: Array.isArray(schedule) ? schedule : [],
+          });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Failed to load dashboard");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const data = useMemo(() => buildDashboardData(sourceData), [sourceData]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -169,6 +212,12 @@ export default function Dashboard() {
             <ActivityIndicator size="large" color={COLORS.green} style={styles.loading} />
           ) : (
             <>
+              {error ? (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+
               <View style={styles.kpiGrid}>
                 {data.kpis.map((item) => (
                   <KpiCard key={item.label} {...item} />
@@ -255,6 +304,18 @@ const styles = StyleSheet.create({
   },
   loading: {
     marginTop: 40,
+  },
+  errorBox: {
+    backgroundColor: "#fee2e2",
+    borderColor: "#fecaca",
+    borderWidth: 1,
+    borderRadius: RADIUS,
+    padding: 12,
+    marginBottom: 12,
+  },
+  errorText: {
+    color: "#991b1b",
+    fontWeight: "600",
   },
   kpiGrid: {
     flexDirection: 'row',

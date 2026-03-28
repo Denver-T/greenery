@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { COLORS, RADII } from '../theme';
 
 const BG = require('../assets/bg.jpg');
 const LOGO = require('../assets/logo.png');
@@ -34,7 +35,7 @@ export default function ForgotPasswordPage() {
       /*
       ForgetPassword Functionality
       */
-    } catch (err) {
+    } catch (_err) {
         //Error handling
     } finally {
       setLoading(false);
@@ -123,32 +124,30 @@ export default function ForgotPasswordPage() {
   );
 }
 
-const GREEN = '#556f26';     // primary button green
-const CARD_BG = '#f2f2f2';   // form card
-const BORDER = '#c8c8c8';    // input border
-
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#2f4f2f' },
+  safe: { flex: 1, backgroundColor: COLORS.forest },
   bg: { flex: 1, justifyContent: 'flex-start' },
   tint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(88,110,50,0.35)',
+    backgroundColor: COLORS.tint,
   },
   container: { flex: 1, alignItems: 'center', paddingHorizontal: 18 },
 
   /* Logo card */
   logoWrap: { marginTop: 40, width: 260, height: 320 },
   logoCard: {
-    marginTop: 48,
-    width: 260,
-    height: 320,
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    marginTop: 42,
+    width: 250,
+    height: 300,
+    backgroundColor: 'rgba(255, 252, 246, 0.94)',
+    borderRadius: RADII.lg,
     padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 248, 243, 0.4)',
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
     elevation: 8,
   },
   logoImage: {
@@ -161,37 +160,37 @@ const styles = StyleSheet.create({
   formCard: {
     width: '94%',
     marginTop: 20,
-    backgroundColor: CARD_BG,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADII.lg,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
     borderWidth: 1,
-    borderColor: '#bdbdbd',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    borderColor: COLORS.border,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
     elevation: 6,
   },
-  label: { fontSize: 18, fontWeight: '700', color: '#5b6e30' },
+  label: { fontSize: 14, fontWeight: '700', color: COLORS.textMuted, letterSpacing: 0.2 },
 
   inputShell: {
     marginTop: 8,
-    borderRadius: 10,
+    borderRadius: RADII.md,
     borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: '#e6e6e6',
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.parchment,
     paddingHorizontal: 12,
-    height: 44,
+    height: 48,
     justifyContent: 'center',
   },
-  input: { fontSize: 16, color: '#333' },
+  input: { fontSize: 16, color: COLORS.textPrimary },
 
   primaryBtn: {
     marginTop: 14,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: GREEN,
+    height: 48,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.moss,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -199,13 +198,13 @@ const styles = StyleSheet.create({
 
   secondaryBtn: {
     marginTop: 12,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: '#ddd',
+    height: 46,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.surfaceMuted,
     borderWidth: 1,
-    borderColor: '#bdbdbd',
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  secondaryText: { color: '#4b6424', fontSize: 17, fontWeight: '800' },
+  secondaryText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '700' },
 });
