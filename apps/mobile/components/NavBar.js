@@ -16,7 +16,7 @@ export default function NavBar() {
     {
       label: 'Today',
       route: 'Dashboard',
-      icon: (color) => <MaterialCommunityIcons name="view-dashboard-outline" size={18} color={color} />,
+      icon: (color) => <MaterialCommunityIcons name="clipboard-check-outline" size={18} color={color} />,
     },
     {
       label: 'Requests',
@@ -39,11 +39,12 @@ export default function NavBar() {
     <View style={styles.tabBar}>
       {tabs.map((tab) => {
         const active = route.name === tab.route;
-        const color = active ? COLORS.textPrimary : COLORS.textOnBrand;
+        const color = active ? COLORS.textOnBrand : COLORS.textMuted;
 
         return (
           <Pressable
             key={tab.route}
+            // Root navigation should switch context cleanly instead of stacking duplicate tab routes.
             onPress={() => navigation.navigate(tab.route)}
             style={[styles.tabItem, active && styles.tabItemActive]}
           >
@@ -58,36 +59,44 @@ export default function NavBar() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    position: 'absolute',
-    left: 0, right: 0, bottom: 0,
-    height: 64,
-    backgroundColor: COLORS.forestDeep,
+    width: '100%',
+    minHeight: 68,
+    backgroundColor: 'rgba(255, 252, 246, 0.96)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(247, 248, 243, 0.15)',
-    paddingHorizontal: 10,
-    elevation: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 26,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 6,
   },
   tabItem: {
     minWidth: 68,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderRadius: RADII.md,
   },
   tabItemActive: {
-    backgroundColor: COLORS.parchment,
+    backgroundColor: COLORS.forestDeep,
+    borderWidth: 1,
+    borderColor: COLORS.forestDeep,
   },
   tabText: {
-    color: COLORS.textOnBrand,
-    fontSize: 11,
+    color: COLORS.textMuted,
+    fontSize: 10,
     marginTop: 3,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   tabTextActive: {
-    color: COLORS.textPrimary,
+    color: COLORS.textOnBrand,
+    fontWeight: '800',
   },
 });

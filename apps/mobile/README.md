@@ -5,9 +5,10 @@ The mobile app is an Expo React Native client aimed at field-facing workflows. I
 ## Current Focus
 
 - login and authenticated session bootstrap
-- dashboard and request queue visibility
+- technician-first dashboard and request queue visibility
 - work request detail and submission flows
 - schedule visibility
+- a shared mobile shell with one navigation pattern across primary screens
 
 ## Environment
 
@@ -38,13 +39,17 @@ Relevant files:
 - `util/firebase.js`
 - `util/api.js`
 - `pages/LoginPage.js`
+- `components/MobileScaffold.js`
+- `components/NavBar.js`
 
 ## Run
 
 ```bash
 npm install
-npx expo start -c
+npm start
 ```
+
+This workspace defaults Expo/Metro to port `8082` through the package scripts so local Docker usage on `8081` does not keep interrupting mobile startup. `npx expo start --port 8082` also works when you want to run Expo directly.
 
 ## Quality Notes
 
@@ -55,7 +60,9 @@ npx expo start -c
 ## Files Worth Understanding
 
 - `theme.js`: shared visual tokens
+- `components/MobileScaffold.js`: shared shell, top bar, hero, and footer rhythm
 - `components/NavBar.js`: primary mobile navigation
 - `pages/Dashboard.js`: field-facing summary view
 - `pages/WorkRequestView.js`: request queue
 - `pages/WorkRequestDetails.js`: request detail workflow
+- `pages/SettingsPage.js`: account/support/settings surface

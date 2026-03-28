@@ -2,323 +2,294 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
-  ImageBackground,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
+  Pressable,
   StyleSheet,
   Text,
   View,
-  Pressable,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 
-import NavBar from "../components/NavBar";
+import MobileScaffold from "../components/MobileScaffold";
 import { getWorkRequestById } from "../util/workRequest";
-import { COLORS, RADII } from "../theme";
+import { COLORS, RADII, SPACING } from "../theme";
 
-const BG = require("../assets/bg.jpg");
+function formatDate(value) {
+  if (!value) {
+    return "Not scheduled";
+  }
 
-function DetailItem({ label, value }) {
-  return (
-    <View style={styles.detailCard}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value || "-"}</Text>
-    </View>
-  );
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Not scheduled";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 export default function WorkRequestDetails({ route, navigation }) {
-  const id = route.params;
+  // Some older entry points passed the raw id directly; newer ones pass a params object.
+  const id = route?.params?.id ?? route?.params;
   const [detailData, setDetailData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchDetails() {
-      setIsLoading(true);
+      setLoading(true);
+
       try {
         const response = await getWorkRequestById(id);
         const requestDetails = response?.data ?? response ?? null;
-        setDetailData(requestDetails);
+
+        if (!cancelled) {
+          setDetailData(requestDetails);
+        }
       } catch (error) {
         console.error("Error fetching details:", error);
+        if (!cancelled) {
+          setDetailData(null);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     fetchDetails();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
-  const summaryItems = useMemo(() => {
+  const detailRows = useMemo(() => {
     if (!detailData) {
       return [];
     }
 
     return [
-      { label: "Reference", value: detailData.referenceNumber },
-      { label: "Submitted By", value: detailData.techName },
-      { label: "Account", value: detailData.account },
-      { label: "Location", value: detailData.location },
-      { label: "Action", value: detailData.actionRequired },
-      { label: "Plants", value: detailData.numberOfPlants },
-      { label: "Lighting", value: detailData.lighting },
-      { label: "Method", value: detailData.method },
-      { label: "Plant Wanted", value: detailData.plantWanted },
-      { label: "Plant Replaced", value: detailData.plantReplaced },
-      { label: "Plant Size", value: detailData.plantSize },
-      { label: "Plant Height", value: detailData.plantHeight },
-      { label: "Planter Type / Size", value: detailData.planterTypeSize },
-      { label: "Planter Colour", value: detailData.planterColour },
-      { label: "Staging Material", value: detailData.stagingMaterial },
-      { label: "Account Contact", value: detailData.accountContact },
-      { label: "Account Address", value: detailData.accountAddress },
+      ["Reference", detailData.referenceNumber],
+      ["Account", detailData.account],
+      ["Submitted by", detailData.techName],
+      ["Requested date", formatDate(detailData.requestDate)],
+      ["Due date", formatDate(detailData.dueDate)],
+      ["Location", detailData.location],
+      ["Action", detailData.actionRequired],
+      ["Plants", detailData.numberOfPlants],
+      ["Lighting", detailData.lighting],
+      ["Method", detailData.method],
+      ["Plant wanted", detailData.plantWanted],
+      ["Plant replaced", detailData.plantReplaced],
+      ["Planter type", detailData.planterTypeSize],
+      ["Planter colour", detailData.planterColour],
+      ["Staging material", detailData.stagingMaterial],
+      ["Contact", detailData.accountContact],
+      ["Address", detailData.accountAddress],
     ];
   }, [detailData]);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor={COLORS.forest} barStyle="light-content" />
+    <MobileScaffold
+      eyebrow="Request detail"
+      title={detailData?.actionRequired || "Work request"}
+      subtitle={detailData ? `${detailData.account || "Unknown account"} • ${detailData.referenceNumber}` : "Review the complete field request and supporting context."}
+    >
+      {loading ? <ActivityIndicator size="large" color={COLORS.moss} style={styles.loader} /> : null}
 
-      <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
-        <View style={styles.tint} />
-
-        <View style={styles.topBar}>
-          <View style={styles.topBarSide}>
-            <Ionicons name="person-outline" size={22} color={COLORS.textOnBrand} />
-          </View>
-          <View style={styles.topBarCenter}>
-            <Text style={styles.topTitle}>Greenery Team App</Text>
-            <Text style={styles.topSubtitle}>Mobile View</Text>
-          </View>
-          <View style={[styles.topBarSide, { alignItems: "flex-end" }]}>
-            <Ionicons name="notifications-outline" size={22} color={COLORS.textOnBrand} />
-          </View>
+      {!loading && !detailData ? (
+        <View style={styles.stateCard}>
+          <Text style={styles.stateTitle}>No details available</Text>
+          <Text style={styles.stateText}>This request could not be loaded from the backend.</Text>
         </View>
+      ) : null}
 
-        <View style={styles.menuBlockWrap}>
-          <View style={styles.menuBlock}>
-            <Text style={styles.menuBlockText}>Work Request Details</Text>
-          </View>
-        </View>
-
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {isLoading ? (
-            <ActivityIndicator size="large" color={COLORS.moss} style={styles.loading} />
-          ) : !detailData ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No details available</Text>
-              <Text style={styles.emptyText}>This request could not be loaded from the backend.</Text>
+      {!loading && detailData ? (
+        <>
+          <View style={styles.heroCard}>
+            <View style={styles.heroStatus}>
+              <Text style={styles.heroStatusText}>
+                {String(detailData.status || "unassigned").replace("_", " ")}
+              </Text>
             </View>
-          ) : (
-            <>
-              <View style={styles.heroCard}>
-                <View style={styles.heroBadge}>
-                  <Text style={styles.heroBadgeText}>REQ #{detailData.referenceNumber || detailData.id}</Text>
+            <Text style={styles.heroHeading}>{detailData.account || "Unknown account"}</Text>
+            <Text style={styles.heroMeta}>
+              {detailData.location || "No location"} • Due {formatDate(detailData.dueDate)}
+            </Text>
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Field summary</Text>
+            <View style={styles.detailGrid}>
+              {detailRows.map(([label, value]) => (
+                <View key={label} style={styles.detailCard}>
+                  <Text style={styles.detailLabel}>{label}</Text>
+                  <Text style={styles.detailValue}>{value || "-"}</Text>
                 </View>
-                <Text style={styles.heroTitle}>{detailData.actionRequired || "Work Request"}</Text>
-                <Text style={styles.heroSubtitle}>
-                  Submitted by {detailData.techName || "Unknown technician"} for {detailData.account || "Unknown account"}
-                </Text>
-              </View>
+              ))}
+            </View>
+          </View>
 
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>Request Summary</Text>
-                <Text style={styles.sectionSubtitle}>
-                  The most important job, account, and plant information in one place.
-                </Text>
-                <View style={styles.detailGrid}>
-                  {summaryItems.map((item) => (
-                    <DetailItem key={item.label} label={item.label} value={item.value} />
-                  ))}
-                </View>
-              </View>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Notes</Text>
+            <Text style={styles.notesText}>{detailData.notes || "No notes provided."}</Text>
+          </View>
 
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>Notes</Text>
-                <View style={styles.notesCard}>
-                  <Text style={styles.notesText}>{detailData.notes || "No notes provided."}</Text>
-                </View>
-              </View>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Photo</Text>
+            <View style={styles.photoCard}>
+              {detailData.picturePath ? (
+                <Image
+                  source={{ uri: `${process.env.EXPO_PUBLIC_API_BASE_URL}/${detailData.picturePath}` }}
+                  style={styles.photo}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.stateText}>No photo uploaded for this request.</Text>
+              )}
+            </View>
+          </View>
 
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>Photo</Text>
-                <View style={styles.photoCard}>
-                  {detailData.picturePath ? (
-                    <Image
-                      source={{ uri: `${process.env.EXPO_PUBLIC_API_BASE_URL}/${detailData.picturePath}` }}
-                      style={styles.photo}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Text style={styles.emptyText}>No photo uploaded for this request.</Text>
-                  )}
-                </View>
-              </View>
-
-              <View style={styles.actionRow}>
-                <Pressable onPress={() => navigation.goBack()} style={styles.closeButton}>
-                  <Text style={styles.closeButtonText}>Close</Text>
-                </Pressable>
-              </View>
-            </>
-          )}
-
-          <View style={{ height: 90 }} />
-        </ScrollView>
-
-        <View style={styles.tabBar}>
-          <NavBar />
-        </View>
-      </ImageBackground>
-    </SafeAreaView>
+          <Pressable onPress={() => navigation.goBack()} style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>Back to queue</Text>
+          </Pressable>
+        </>
+      ) : null}
+    </MobileScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.forest },
-  bg: { flex: 1 },
-  tint: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.tint },
-  topBar: {
-    height: 58,
-    backgroundColor: COLORS.forest,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(247, 248, 243, 0.12)",
-    elevation: 6,
+  loader: {
+    marginTop: 40,
   },
-  topBarSide: { width: 32 },
-  topBarCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
-  topTitle: { color: COLORS.textOnBrand, fontSize: 17, fontWeight: "800", letterSpacing: 0.3 },
-  topSubtitle: { color: COLORS.sageMist, fontSize: 11, marginTop: -2 },
-  menuBlockWrap: { marginTop: 8, marginBottom: 10, paddingHorizontal: 10 },
-  menuBlock: {
-    minHeight: 60,
+  stateCard: {
     borderRadius: RADII.lg,
-    backgroundColor: "rgba(255, 252, 246, 0.14)",
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: "rgba(247, 248, 243, 0.14)",
+    borderColor: COLORS.border,
+    padding: SPACING.xl,
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 18,
   },
-  menuBlockText: { color: COLORS.textOnBrand, fontSize: 24, fontWeight: "800", letterSpacing: 0.4 },
-  scrollContent: { paddingHorizontal: 12, paddingTop: 4 },
-  loading: { marginTop: 48 },
+  stateTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  stateText: {
+    marginTop: 8,
+    color: COLORS.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+  },
   heroCard: {
     borderRadius: RADII.lg,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 18,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    padding: SPACING.lg,
   },
-  heroBadge: {
+  heroStatus: {
     alignSelf: "flex-start",
     borderRadius: RADII.pill,
     backgroundColor: COLORS.parchment,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  heroBadgeText: {
+  heroStatusText: {
     color: COLORS.textPrimary,
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.8,
     textTransform: "uppercase",
   },
-  heroTitle: {
+  heroHeading: {
     marginTop: 14,
+    color: COLORS.textPrimary,
     fontSize: 24,
     fontWeight: "800",
-    color: COLORS.textPrimary,
   },
-  heroSubtitle: {
+  heroMeta: {
     marginTop: 8,
-    fontSize: 14,
-    lineHeight: 22,
     color: COLORS.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
   },
   sectionCard: {
-    marginTop: 12,
+    marginTop: SPACING.md,
     borderRadius: RADII.lg,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 16,
+    padding: SPACING.lg,
   },
-  sectionTitle: { fontSize: 18, fontWeight: "800", color: COLORS.textPrimary },
-  sectionSubtitle: { marginTop: 4, fontSize: 13, lineHeight: 20, color: COLORS.textMuted },
-  detailGrid: { marginTop: 14, gap: 10 },
+  sectionTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  detailGrid: {
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
+  },
   detailCard: {
     borderRadius: RADII.md,
     backgroundColor: COLORS.parchment,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    padding: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   detailLabel: {
+    color: COLORS.textMuted,
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    color: COLORS.textMuted,
   },
   detailValue: {
     marginTop: 4,
-    fontSize: 15,
-    fontWeight: "600",
     color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: "700",
   },
-  notesCard: {
-    marginTop: 12,
-    borderRadius: RADII.md,
-    backgroundColor: COLORS.parchment,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 14,
+  notesText: {
+    marginTop: 10,
+    color: COLORS.textPrimary,
+    fontSize: 14,
+    lineHeight: 22,
   },
-  notesText: { fontSize: 14, lineHeight: 22, color: COLORS.textPrimary },
   photoCard: {
     marginTop: 12,
-    minHeight: 180,
+    minHeight: 200,
     borderRadius: RADII.md,
+    overflow: "hidden",
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.parchment,
-    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
     padding: 12,
   },
-  photo: { width: "100%", height: 240, borderRadius: RADII.md },
-  actionRow: { alignItems: "center", marginTop: 16 },
-  closeButton: {
-    minWidth: 180,
+  photo: {
+    width: "100%",
+    height: 240,
     borderRadius: RADII.md,
-    backgroundColor: COLORS.forest,
-    alignItems: "center",
-    justifyContent: "center",
+  },
+  closeButton: {
+    marginTop: SPACING.md,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.forestDeep,
     paddingVertical: 14,
-  },
-  closeButtonText: { color: COLORS.textOnBrand, fontWeight: "700", fontSize: 16 },
-  emptyState: {
-    marginTop: 32,
-    borderRadius: RADII.lg,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 18,
     alignItems: "center",
   },
-  emptyTitle: { fontSize: 18, fontWeight: "800", color: COLORS.textPrimary },
-  emptyText: { marginTop: 6, fontSize: 14, color: COLORS.textMuted, textAlign: "center", lineHeight: 21 },
-  tabBar: { backgroundColor: COLORS.forestDeep },
+  closeButtonText: {
+    color: COLORS.textOnBrand,
+    fontSize: 15,
+    fontWeight: "700",
+  },
 });

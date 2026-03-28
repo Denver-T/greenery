@@ -4,25 +4,26 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 
 import { login } from "../util/firebase";
-import { COLORS, RADII } from "../theme";
+import { COLORS, RADII, SPACING } from "../theme";
 
-const BG = require("../assets/bg.jpg");
 const LOGO = require("../assets/logo.png");
 
 export default function LoginPage() {
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -73,28 +74,67 @@ export default function LoginPage() {
 
   const webPointer = Platform.OS === "web" ? { cursor: "pointer" } : undefined;
   const webTextCursor = Platform.OS === "web" ? { cursor: "text" } : undefined;
+  const cardWidth = Math.min(width - 24, 440);
+  const heroWidth = Math.min(width - 24, 440);
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
-        <View style={styles.tint} />
-
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.container}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.container}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.logoCard}>
-            <Image source={LOGO} style={styles.logoImage} resizeMode="cover" />
+          <View style={[styles.heroWrap, { width: heroWidth }]}>
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroBadgeText}>Technician workspace</Text>
+            </View>
+            <View style={styles.heroCard}>
+              <View style={styles.brandRow}>
+                <View style={styles.brandMark}>
+                  <Image source={LOGO} style={styles.logoImage} resizeMode="cover" />
+                </View>
+                <View style={styles.brandCopy}>
+                  <Text style={styles.brandEyebrow}>Greenery Operations</Text>
+                  <Text style={styles.brandTitle}>Sign in for today&apos;s field plan</Text>
+                </View>
+              </View>
+              <Text style={styles.brandSubtitle}>
+                Check requests, follow your schedule, and stay synced with the team from one clear mobile workspace.
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.formCard}>
-            <Text style={styles.heading}>Greenery Login</Text>
+          <View style={[styles.formCard, { width: cardWidth }]}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>Secure sign in</Text>
+            </View>
+            <Text style={styles.heading}>Welcome back</Text>
+            <Text style={styles.subtitle}>
+              Use your work account to open the technician app and pick up where your day left off.
+            </Text>
 
-            <Text style={styles.label}>Email</Text>
+            <View style={styles.valueRow}>
+              <View style={styles.valuePill}>
+                <Text style={styles.valuePillText}>Requests</Text>
+              </View>
+              <View style={styles.valuePill}>
+                <Text style={styles.valuePillText}>Schedule</Text>
+              </View>
+              <View style={styles.valuePill}>
+                <Text style={styles.valuePillText}>Updates</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.label, styles.labelSpacingLarge]}>Email</Text>
             <View style={styles.inputShell}>
               <TextInput
                 placeholder="Enter email"
-                placeholderTextColor="#b9b9b9"
+                placeholderTextColor={COLORS.textSoft}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 textContentType="emailAddress"
@@ -110,7 +150,7 @@ export default function LoginPage() {
             <View style={styles.inputShell}>
               <TextInput
                 placeholder="Enter password"
-                placeholderTextColor="#b9b9b9"
+                placeholderTextColor={COLORS.textSoft}
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
@@ -167,64 +207,168 @@ export default function LoginPage() {
               <Text style={styles.linkText}>Need an account?</Text>
             </Pressable>
           </View>
-        </KeyboardAvoidingView>
-      </ImageBackground>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.forest },
-  bg: { flex: 1, justifyContent: "flex-start" },
-  tint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.tint,
+  safe: { flex: 1, backgroundColor: COLORS.parchment },
+  container: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingTop: 28,
+    paddingBottom: 28,
   },
-  container: { flex: 1, alignItems: "center", paddingHorizontal: 20 },
-  logoCard: {
-    marginTop: 42,
-    width: 250,
-    height: 300,
-    backgroundColor: "rgba(255, 252, 246, 0.94)",
-    borderRadius: RADII.lg,
-    padding: 14,
+  heroWrap: {
+    alignSelf: "center",
+    marginBottom: 14,
+  },
+  heroBadge: {
+    alignSelf: "flex-start",
+    marginBottom: 10,
+    borderRadius: RADII.pill,
+    backgroundColor: "rgba(255, 252, 246, 0.9)",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  heroBadgeText: {
+    color: COLORS.textPrimary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  heroCard: {
+    backgroundColor: COLORS.forestDeep,
+    borderRadius: 28,
+    padding: 18,
     borderWidth: 1,
-    borderColor: "rgba(247, 248, 243, 0.4)",
+    borderColor: COLORS.forestDeep,
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  brandMark: {
+    width: 72,
+    height: 72,
+    borderRadius: RADII.md,
+    backgroundColor: "rgba(255, 252, 246, 0.96)",
+    padding: 8,
+    marginRight: 14,
   },
   logoImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 6,
+    borderRadius: 8,
+  },
+  brandCopy: {
+    flex: 1,
+  },
+  brandEyebrow: {
+    color: "rgba(247, 248, 243, 0.74)",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.1,
+    textTransform: "uppercase",
+  },
+  brandTitle: {
+    marginTop: 6,
+    color: COLORS.textOnBrand,
+    fontSize: 28,
+    fontWeight: "800",
+    lineHeight: 32,
+  },
+  brandSubtitle: {
+    marginTop: 14,
+    color: "rgba(247, 248, 243, 0.86)",
+    fontSize: 14,
+    lineHeight: 21,
   },
   formCard: {
-    width: "94%",
-    marginTop: 20,
+    alignSelf: "center",
     backgroundColor: COLORS.surface,
-    borderRadius: RADII.lg,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    borderBottomLeftRadius: RADII.lg,
+    borderBottomRightRadius: RADII.lg,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
     borderWidth: 1,
     borderColor: COLORS.border,
     shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.16,
-    shadowRadius: 18,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 56,
+    height: 5,
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.border,
+    marginBottom: 14,
+  },
+  badge: {
+    alignSelf: "flex-start",
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.parchment,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  badgeText: {
+    color: COLORS.textPrimary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
   },
   heading: {
-    fontSize: 26,
+    marginTop: 14,
+    fontSize: 32,
     fontWeight: "800",
     color: COLORS.textPrimary,
-    marginBottom: 8,
     textAlign: "left",
+  },
+  subtitle: {
+    marginTop: 8,
+    color: COLORS.textMuted,
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  valueRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 14,
+    gap: 8,
+  },
+  valuePill: {
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.surfaceMuted,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  valuePillText: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
   },
   label: { fontSize: 14, fontWeight: "700", color: COLORS.textMuted, letterSpacing: 0.2 },
   labelSpacing: { marginTop: 12 },
+  labelSpacingLarge: { marginTop: SPACING.lg },
   inputShell: {
     marginTop: 8,
     borderRadius: RADII.md,
@@ -248,8 +392,8 @@ const styles = StyleSheet.create({
   },
   primaryBtn: {
     marginTop: 16,
-    height: 48,
-    borderRadius: RADII.md,
+    height: 52,
+    borderRadius: RADII.lg,
     backgroundColor: COLORS.moss,
     alignItems: "center",
     justifyContent: "center",
@@ -262,8 +406,8 @@ const styles = StyleSheet.create({
   primaryText: { color: "#fff", fontSize: 17, fontWeight: "800" },
   secondaryBtn: {
     marginTop: 12,
-    height: 46,
-    borderRadius: RADII.md,
+    height: 50,
+    borderRadius: RADII.lg,
     backgroundColor: COLORS.surfaceMuted,
     borderWidth: 1,
     borderColor: COLORS.border,

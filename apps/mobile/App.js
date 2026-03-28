@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard';
 import EventCalendar from './pages/EventCalendar';
 import TaskSetList from './pages/TaskSetList';
 import PTO from './pages/PTO';
+import SettingsPage from './pages/SettingsPage';
 import WeeklySchedule from './pages/WeeklySchedule';
 import WorkRequestDetails from './pages/WorkRequestDetails';
 
@@ -35,6 +36,7 @@ export default function App() {
         <Stack.Screen name="EventCalendar" component={EventCalendar} />
         <Stack.Screen name="TaskSetList" component={TaskSetList} />
         <Stack.Screen name="PTO" component={PTO} />
+        <Stack.Screen name="Settings" component={SettingsPage} />
         <Stack.Screen name="WeeklySchedule" component={WeeklySchedule} />
         <Stack.Screen name="WorkRequestDetails" component={WorkRequestDetails} />
       </Stack.Navigator>

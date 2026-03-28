@@ -1,206 +1,245 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  ImageBackground,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
+  Pressable,
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import NavBar from '../components/NavBar';
-import { apiFetch } from '../util/api';
+import MobileScaffold from "../components/MobileScaffold";
+import { apiFetch } from "../util/api";
+import { COLORS, RADII, SPACING } from "../theme";
 
-const BG = require('../assets/bg.jpg');
-const RADIUS = 12;
-const COLORS = {
-  green: '#6f8641',
-  greenDark: '#5e7833',
-  blockGreen: '#6f8641',
-  textOnGreen: '#ffffff',
-  cardFill: '#f8f8f8',
-  cardBorder: '#d9e1c8',
-  tint: 'rgba(125, 145, 98, 0.25)',
-  mutedText: '#e9efd9',
-  titleGreen: '#5a7320',
-};
+function sameWeek(date, today) {
+  const start = new Date(today);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(today.getDate() - today.getDay());
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+
+  return date >= start && date < end;
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Invalid time";
+  }
+
+  return date.toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export default function WeeklySchedule() {
   const [events, setEvents] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showMineOnly, setShowMineOnly] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function fetchSchedule() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [me, schedule] = await Promise.all([
+          apiFetch("/auth/me"),
+          apiFetch("/schedule"),
+        ]);
+
+        if (!cancelled) {
+          setCurrentUser(me);
+          setEvents(Array.isArray(schedule) ? schedule : []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Failed to load schedule.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
     fetchSchedule();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  async function fetchSchedule() {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await apiFetch('/schedule');
-      const eventsArray = Array.isArray(response) ? response : response?.data || [];
-      setEvents(eventsArray);
-    } catch (err) {
-      setError('Failed to load schedule');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const visibleEvents = useMemo(() => {
+    const today = new Date();
+    const myName = String(currentUser?.name || "").trim().toLowerCase();
 
-  function formatDate(dateStr) {
-    if (!dateStr) {
-      return '';
-    }
+    return events
+      .filter((event) => sameWeek(new Date(event.start_time), today))
+      .filter((event) => {
+        if (!showMineOnly) {
+          return true;
+        }
 
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+        return String(event.employee_name || "").trim().toLowerCase() === myName;
+      })
+      .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+  }, [currentUser, events, showMineOnly]);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor={COLORS.green} barStyle="light-content" />
+    <MobileScaffold
+      eyebrow="Schedule"
+      title="Weekly plan"
+      subtitle="Scan your week and open the items that need attention."
+    >
+      <View style={styles.toggleRow}>
+        <Pressable
+          onPress={() => setShowMineOnly(true)}
+          style={[styles.toggleChip, showMineOnly && styles.toggleChipActive]}
+        >
+          <Text style={[styles.toggleText, showMineOnly && styles.toggleTextActive]}>My schedule</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setShowMineOnly(false)}
+          style={[styles.toggleChip, !showMineOnly && styles.toggleChipActive]}
+        >
+          <Text style={[styles.toggleText, !showMineOnly && styles.toggleTextActive]}>All events</Text>
+        </Pressable>
+      </View>
 
-      <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
-        <View style={styles.tint} />
+      {loading ? <ActivityIndicator size="large" color={COLORS.moss} style={styles.loader} /> : null}
 
-        <View style={styles.topBar}>
-          <View style={styles.topBarSide}>
-            <Ionicons name="person-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
-          <View style={styles.topBarCenter}>
-            <Text style={styles.topTitle}>Greenery Team App</Text>
-            <Text style={styles.topSubtitle}>Mobile View</Text>
-          </View>
-          <View style={[styles.topBarSide, { alignItems: 'flex-end' }]}>
-            <Ionicons name="notifications-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
+      {!loading && error ? (
+        <View style={styles.stateCard}>
+          <Text style={styles.stateTitle}>Could not load the schedule</Text>
+          <Text style={styles.stateText}>{error}</Text>
         </View>
+      ) : null}
 
-        <View style={styles.menuBlockWrap}>
-          <View style={styles.menuBlock}>
-            <Text style={styles.menuBlockText}>Weekly Schedule</Text>
-          </View>
+      {!loading && !error && visibleEvents.length === 0 ? (
+        <View style={styles.stateCard}>
+          <MaterialCommunityIcons name="calendar-blank-outline" size={34} color={COLORS.textMuted} />
+          <Text style={styles.stateTitle}>Nothing scheduled this week</Text>
+          <Text style={styles.stateText}>Assignments will appear here once they are scheduled.</Text>
         </View>
+      ) : null}
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {loading ? (
-            <ActivityIndicator size="large" color={COLORS.green} style={{ marginTop: 40 }} />
-          ) : null}
-
-          {error ? (
-            <View style={styles.emptyBox}>
-              <Ionicons name="alert-circle-outline" size={40} color="#cc0000" />
-              <Text style={styles.emptyText}>{error}</Text>
-            </View>
-          ) : null}
-
-          {!loading && !error && events.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Ionicons name="calendar-outline" size={40} color={COLORS.greenDark} />
-              <Text style={styles.emptyText}>No schedule events found</Text>
-            </View>
-          ) : null}
-
-          {!loading && !error && events.map((event) => (
-            <View key={event.id} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Ionicons name="calendar-outline" size={22} color={COLORS.greenDark} />
-                <Text style={styles.cardTitle}>{event.title}</Text>
+      {!loading && !error ? (
+        <View style={styles.list}>
+          {visibleEvents.map((event) => (
+            <View key={event.id} style={styles.eventCard}>
+              <View style={styles.eventIcon}>
+                <MaterialCommunityIcons name="calendar-clock-outline" size={18} color={COLORS.forestDeep} />
               </View>
-              <Text style={styles.cardDetail}>Start: {formatDate(event.start_time)}</Text>
-              <Text style={styles.cardDetail}>End: {formatDate(event.end_time)}</Text>
-              {event.employee_name ? (
-                <Text style={styles.cardDetail}>Employee: {event.employee_name}</Text>
-              ) : null}
+              <View style={styles.eventCopy}>
+                <Text style={styles.eventTitle}>{event.title}</Text>
+                <Text style={styles.eventMeta}>{formatDateTime(event.start_time)}</Text>
+                <Text style={styles.eventMeta}>
+                  Ends {formatDateTime(event.end_time)}{event.employee_name ? ` • ${event.employee_name}` : ""}
+                </Text>
+              </View>
             </View>
           ))}
-
-          <View style={{ height: 90 }} />
-        </ScrollView>
-
-        <View style={styles.tabBar}>
-          <NavBar />
         </View>
-      </ImageBackground>
-    </SafeAreaView>
+      ) : null}
+    </MobileScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.green },
-  bg: { flex: 1 },
-  tint: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.tint },
-  topBar: {
-    height: 52,
-    backgroundColor: COLORS.green,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    elevation: 6,
-    paddingTop: 10,
+  toggleRow: {
+    flexDirection: "row",
+    gap: SPACING.sm,
   },
-  topBarSide: { width: 32 },
-  topBarCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  topTitle: { color: COLORS.textOnGreen, fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
-  topSubtitle: { color: COLORS.mutedText, fontSize: 11, marginTop: -2 },
-  menuBlockWrap: { marginTop: 8, marginBottom: 8, paddingHorizontal: 6 },
-  menuBlock: {
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: COLORS.blockGreen,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-  },
-  menuBlockText: { color: COLORS.textOnGreen, fontSize: 22, fontWeight: '800', letterSpacing: 0.5 },
-  scrollContent: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
-  },
-  card: {
-    backgroundColor: COLORS.cardFill,
-    borderRadius: RADIUS,
-    padding: 16,
-    marginBottom: 10,
-    elevation: 3,
+  toggleChip: {
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.surfaceMuted,
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
+    borderColor: COLORS.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
+  toggleChipActive: {
+    backgroundColor: COLORS.forestDeep,
+    borderColor: COLORS.forestDeep,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.titleGreen,
-  },
-  cardDetail: {
+  toggleText: {
+    color: COLORS.textPrimary,
     fontSize: 13,
-    color: '#555',
+    fontWeight: "700",
+  },
+  toggleTextActive: {
+    color: COLORS.textOnBrand,
+  },
+  loader: {
+    marginTop: 40,
+  },
+  stateCard: {
+    marginTop: SPACING.md,
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.xl,
+    alignItems: "center",
+  },
+  stateTitle: {
+    marginTop: 10,
+    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  stateText: {
+    marginTop: 6,
+    color: COLORS.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+  list: {
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
+  },
+  eventCard: {
+    flexDirection: "row",
+    gap: SPACING.md,
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
+  },
+  eventIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: COLORS.parchment,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  eventCopy: {
+    flex: 1,
+  },
+  eventTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 17,
+    fontWeight: "800",
+  },
+  eventMeta: {
     marginTop: 4,
-    marginLeft: 30,
-  },
-  emptyBox: {
-    alignItems: 'center',
-    marginTop: 60,
-    gap: 12,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: COLORS.greenDark,
-    fontWeight: '600',
+    color: COLORS.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
   },
 });

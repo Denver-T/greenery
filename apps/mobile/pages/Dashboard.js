@@ -1,134 +1,52 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  ImageBackground,
-  SafeAreaView,
+  ActivityIndicator,
+  Pressable,
   StyleSheet,
   Text,
   View,
-  ScrollView,
-  StatusBar,
-  ActivityIndicator,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import NavBar from '../components/NavBar'; 
+} from "react-native";
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+
+import MobileScaffold from "../components/MobileScaffold";
 import { apiFetch } from "../util/api";
-import { COLORS } from '../theme';
+import { COLORS, RADII, SPACING } from "../theme";
 
-const BG = require('../assets/bg.jpg');
+function sameDay(dateA, dateB) {
+  return (
+    dateA.getFullYear() === dateB.getFullYear() &&
+    dateA.getMonth() === dateB.getMonth() &&
+    dateA.getDate() === dateB.getDate()
+  );
+}
 
-function countBy(items, selector) {
-  const map = new Map();
+function formatDateTime(value) {
+  if (!value) {
+    return "No time scheduled";
+  }
 
-  items.forEach((item) => {
-    const key = selector(item) || "Unknown";
-    map.set(key, (map.get(key) || 0) + 1);
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "No time scheduled";
+  }
+
+  return date.toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
-
-  return Array.from(map.entries())
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 5);
-}
-
-function buildDashboardData({ employees, reqs, tasks, schedule }) {
-  const activeReqs = reqs.filter(
-    (req) => !["completed", "cancelled"].includes(String(req.status || "").toLowerCase())
-  );
-  const assignedTasks = tasks.filter((task) => task.assignedTo ?? task.assigned_to);
-  const completedTasks = tasks.filter(
-    (task) => String(task.status || "").toLowerCase() === "completed"
-  );
-
-  return {
-    kpis: [
-      { label: "Employees", value: String(employees.length) },
-      { label: "Open REQs", value: String(activeReqs.length) },
-      { label: "Assigned Tasks", value: String(assignedTasks.length) },
-      { label: "Schedule Events", value: String(schedule.length) },
-    ],
-    weeklyCommonJobsShare:
-      tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0,
-    commonJobsBreakdown: countBy(reqs, (req) => req.actionRequired),
-    plantsIn: countBy(reqs, (req) => req.account),
-    plantRevenue: countBy(schedule, (event) => event.employee_name || "Unassigned"),
-  };
-}
-
-function KpiCard({ label, value, delta, positive }) {
-  return (
-    <View style={styles.kpiCard}>
-      <Text style={styles.kpiLabel}>{label}</Text>
-      <View style={styles.kpiRow}>
-        <Text style={styles.kpiValue}>{value}</Text>
-        {delta ? (
-          <View style={[styles.kpiBadge, positive ? styles.kpiBadgeGreen : styles.kpiBadgeRed]}>
-            <Text style={[styles.kpiBadgeText, positive ? styles.kpiBadgeTextGreen : styles.kpiBadgeTextRed]}>
-              {positive ? '▲' : '▼'} {delta}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-    </View>
-  );
-}
-
-function HBarList({ title, items, suffix = '' }) {
-  const max = Math.max(1, ...items.map((item) => item.value));
-
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.barList}>
-        {items.map((item) => {
-          const pct = Math.round((item.value / max) * 100);
-
-          return (
-            <View key={item.label} style={styles.barRow}>
-              <Text style={styles.barLabel} numberOfLines={1}>{item.label}</Text>
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: `${pct}%` }]} />
-              </View>
-              <Text style={styles.barValue}>{item.value}{suffix}</Text>
-            </View>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
-function RingStat({ title, percent, caption }) {
-  const clamped = Math.max(0, Math.min(100, percent));
-
-  return (
-    <View style={[styles.section, styles.ringSection]}>
-      <View style={styles.ringWrap}>
-        <View style={styles.ringOuter}>
-          <View style={[styles.ringFill, {
-            borderColor: COLORS.emerald,
-            borderTopColor: clamped > 25 ? COLORS.emerald : COLORS.gray100,
-            borderRightColor: clamped > 50 ? COLORS.emerald : COLORS.gray100,
-            borderBottomColor: clamped > 75 ? COLORS.emerald : COLORS.gray100,
-          }]} />
-          <View style={styles.ringInner}>
-            <Text style={styles.ringPercent}>{clamped}%</Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.ringTextWrap}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {caption ? <Text style={styles.ringCaption}>{caption}</Text> : null}
-      </View>
-    </View>
-  );
 }
 
 export default function Dashboard() {
+  const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [sourceData, setSourceData] = useState({
-    employees: [],
+  const [payload, setPayload] = useState({
+    me: null,
     reqs: [],
     tasks: [],
     schedule: [],
@@ -137,21 +55,21 @@ export default function Dashboard() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadDashboard = async () => {
+    async function loadDashboard() {
       try {
         setLoading(true);
         setError("");
 
-        const [employees, reqs, tasks, schedule] = await Promise.all([
-          apiFetch("/employees"),
+        const [me, reqs, tasks, schedule] = await Promise.all([
+          apiFetch("/auth/me"),
           apiFetch("/reqs"),
           apiFetch("/tasks?scope=assignment"),
           apiFetch("/schedule"),
         ]);
 
         if (!cancelled) {
-          setSourceData({
-            employees: Array.isArray(employees) ? employees : [],
+          setPayload({
+            me,
             reqs: Array.isArray(reqs) ? reqs : [],
             tasks: Array.isArray(tasks) ? tasks : [],
             schedule: Array.isArray(schedule) ? schedule : [],
@@ -159,14 +77,14 @@ export default function Dashboard() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err?.message || "Failed to load dashboard");
+          setError(err?.message || "Failed to load technician overview.");
         }
       } finally {
         if (!cancelled) {
           setLoading(false);
         }
       }
-    };
+    }
 
     loadDashboard();
 
@@ -175,292 +93,395 @@ export default function Dashboard() {
     };
   }, []);
 
-  const data = useMemo(() => buildDashboardData(sourceData), [sourceData]);
+  const summary = useMemo(() => {
+    const today = new Date();
+    const myName = String(payload.me?.name || "").trim().toLowerCase();
+
+    const mySchedule = payload.schedule
+      .filter((event) => String(event.employee_name || "").trim().toLowerCase() === myName)
+      .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+
+    const todaysStops = mySchedule.filter((event) => sameDay(new Date(event.start_time), today));
+    const mySubmittedReqs = payload.reqs.filter(
+      (req) => String(req.techName || "").trim().toLowerCase() === myName
+    );
+    const activeReqs = mySubmittedReqs.filter(
+      (req) => !["completed", "cancelled"].includes(String(req.status || "").toLowerCase())
+    );
+    const dueSoonTasks = payload.tasks.filter((task) => {
+      if (!task.dueDate && !task.due_date) {
+        return false;
+      }
+
+      const due = new Date(task.dueDate || task.due_date);
+      const diff = due.getTime() - today.getTime();
+      return diff >= 0 && diff <= 1000 * 60 * 60 * 24 * 2;
+    });
+
+    return {
+      nextStop: todaysStops[0] || mySchedule[0] || null,
+      todaysStops,
+      activeReqs,
+      mySubmittedReqs,
+      dueSoonTasks,
+    };
+  }, [payload]);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor={COLORS.green} barStyle="light-content" />
+    <MobileScaffold
+      eyebrow="Today"
+      title={`Ready for the field${payload.me?.name ? `, ${payload.me.name.split(" ")[0]}` : ""}`}
+      subtitle="See what needs attention next and move straight into the field workflow."
+    >
+      {loading ? <ActivityIndicator size="large" color={COLORS.moss} style={styles.loader} /> : null}
 
-      <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
-        <View style={styles.tint} />
-
-        {/* Top App Bar */}
-        <View style={styles.topBar}>
-          <View style={styles.topBarSide}>
-            <Ionicons name="person-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
-          <View style={styles.topBarCenter}>
-            <Text style={styles.topTitle}>Greenery Team App</Text>
-            <Text style={styles.topSubtitle}>Mobile View</Text>
-          </View>
-          <View style={[styles.topBarSide, { alignItems: 'flex-end' }]}>
-            <Ionicons name="notifications-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
+      {!loading && error ? (
+        <View style={styles.errorCard}>
+          <Text style={styles.errorTitle}>Unable to load your day</Text>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
-        
-        <View style={styles.menuBlockWrap}>
-          <View style={styles.menuBlock}>
-            <Text style={styles.menuBlockText}>Dashboard Analytics</Text>
-          </View>
-        </View>
-        
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {loading ? (
-            <ActivityIndicator size="large" color={COLORS.green} style={styles.loading} />
-          ) : (
-            <>
-              {error ? (
-                <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              ) : null}
+      ) : null}
 
-              <View style={styles.kpiGrid}>
-                {data.kpis.map((item) => (
-                  <KpiCard key={item.label} {...item} />
+      {!loading && !error ? (
+        <>
+          <View style={styles.heroCard}>
+            <View style={styles.heroHeader}>
+              <Text style={styles.heroEyebrow}>Next stop</Text>
+              <View style={styles.statusChip}>
+                <Text style={styles.statusChipText}>
+                  {summary.todaysStops.length} scheduled today
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.heroTitle}>
+              {summary.nextStop?.title || "No stop scheduled yet"}
+            </Text>
+            <Text style={styles.heroSubtitle}>
+              {summary.nextStop
+                ? `${summary.nextStop.employee_name || "Assigned"} • ${formatDateTime(summary.nextStop.start_time)}`
+                : "Use your schedule and request queue to plan your next stop."}
+            </Text>
+          </View>
+
+          <View style={styles.kpiRow}>
+            <KpiCard
+              icon={<MaterialCommunityIcons name="calendar-check-outline" size={18} color={COLORS.forestDeep} />}
+              label="Stops today"
+              value={String(summary.todaysStops.length)}
+            />
+            <KpiCard
+              icon={<MaterialIcons name="assignment-late" size={18} color={COLORS.forestDeep} />}
+              label="Active requests"
+              value={String(summary.activeReqs.length)}
+            />
+            <KpiCard
+              icon={<MaterialCommunityIcons name="timer-sand" size={18} color={COLORS.forestDeep} />}
+              label="Due soon"
+              value={String(summary.dueSoonTasks.length)}
+            />
+          </View>
+
+          <View style={styles.sectionCard}>
+            <SectionHeader
+              title="Today’s plan"
+              actionLabel="Open schedule"
+              onPress={() => navigation.navigate("WeeklySchedule")}
+            />
+            {summary.todaysStops.length === 0 ? (
+              <Text style={styles.emptyText}>No events are assigned to you for today.</Text>
+            ) : (
+              <View style={styles.stack}>
+                {summary.todaysStops.slice(0, 3).map((event) => (
+                  <View key={event.id} style={styles.planItem}>
+                    <View style={styles.planDot} />
+                    <View style={styles.planCopy}>
+                      <Text style={styles.planTitle}>{event.title}</Text>
+                      <Text style={styles.planMeta}>{formatDateTime(event.start_time)}</Text>
+                    </View>
+                  </View>
                 ))}
               </View>
+            )}
+          </View>
 
-              <RingStat
-                title="Weekly Common Jobs"
-                percent={data.weeklyCommonJobsShare}
-                caption={`${100 - data.weeklyCommonJobsShare}% other work`}
-              />
-              <HBarList title="Breakdown" items={data.commonJobsBreakdown} />
-              <HBarList title="Plants In" items={data.plantsIn} />
-              <HBarList title="Plant Revenue" items={data.plantRevenue} suffix="$" />
-            </>
-          )}
+          <View style={styles.sectionCard}>
+            <SectionHeader
+              title="Requests you created"
+              actionLabel="Open queue"
+              onPress={() => navigation.navigate("WorkRequestView")}
+            />
+            {summary.activeReqs.length === 0 ? (
+              <Text style={styles.emptyText}>You have no active submitted requests right now.</Text>
+            ) : (
+              <View style={styles.stack}>
+                {summary.activeReqs.slice(0, 3).map((req) => (
+                  <Pressable
+                    key={req.id}
+                    onPress={() => navigation.navigate("WorkRequestDetails", { id: req.id })}
+                    style={styles.requestCard}
+                  >
+                    <Text style={styles.requestRef}>{req.referenceNumber}</Text>
+                    <Text style={styles.requestTitle}>{req.actionRequired}</Text>
+                    <Text style={styles.requestMeta}>
+                      {req.account || "Unknown account"} • {String(req.status || "unassigned").replace("_", " ")}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
 
-          <View style={{ height: 90 }} />
-        </ScrollView>
-        
-        {/* Bottom Nav Bar */}
-        <View style={styles.tabBar}>
-          <NavBar />
-        </View>
-      </ImageBackground>
-    </SafeAreaView>
+          <View style={styles.actionStrip}>
+            <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("WorkRequestSubmit")}>
+              <Text style={styles.primaryButtonText}>Create request</Text>
+            </Pressable>
+            <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate("HomePage")}>
+              <Text style={styles.secondaryButtonText}>More tools</Text>
+            </Pressable>
+          </View>
+        </>
+      ) : null}
+    </MobileScaffold>
   );
 }
 
-const RADIUS = 12;
+function SectionHeader({ title, actionLabel, onPress }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <Pressable onPress={onPress}>
+        <Text style={styles.sectionLink}>{actionLabel}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function KpiCard({ icon, label, value }) {
+  return (
+    <View style={styles.kpiCard}>
+      <View style={styles.kpiIcon}>{icon}</View>
+      <Text style={styles.kpiValue}>{value}</Text>
+      <Text style={styles.kpiLabel}>{label}</Text>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.green },
-  bg: { flex: 1 },
-  tint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.tint,
-  },
-
-  topBar: {
-    height: 52,
-    backgroundColor: COLORS.green,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    elevation: 6,
-  },
-  topBarSide: { width: 32 },
-  topBarCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  topTitle: {
-    color: COLORS.textOnGreen,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  topSubtitle: {
-    color: COLORS.mutedText,
-    fontSize: 11,
-    marginTop: -2,
-  },
-
-  menuBlockWrap: {
-    marginTop: 8,
-    marginBottom: 8,
-    paddingHorizontal: 6,
-  },
-  menuBlock: {
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: COLORS.blockGreen,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-  },
-  menuBlockText: {
-    color: COLORS.textOnGreen,
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  scrollContent: {
-    paddingHorizontal: 12,
-    paddingTop: 4,
-  },
-  loading: {
+  loader: {
     marginTop: 40,
   },
-  errorBox: {
-    backgroundColor: "#fee2e2",
-    borderColor: "#fecaca",
+  errorCard: {
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.dangerSoft,
     borderWidth: 1,
-    borderRadius: RADIUS,
-    padding: 12,
-    marginBottom: 12,
+    borderColor: "rgba(181, 70, 60, 0.2)",
+    padding: SPACING.lg,
+  },
+  errorTitle: {
+    color: COLORS.danger,
+    fontSize: 18,
+    fontWeight: "800",
   },
   errorText: {
-    color: "#991b1b",
-    fontWeight: "600",
+    marginTop: 6,
+    color: COLORS.textPrimary,
+    fontSize: 14,
+    lineHeight: 21,
   },
-  kpiGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-  kpiCard: {
-    width: '48%',
-    backgroundColor: COLORS.cardFill,
-    borderRadius: RADIUS,
-    padding: 12,
-    elevation: 3,
+  heroCard: {
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
   },
-  kpiLabel: {
-    fontSize: 12,
-    color: COLORS.gray500,
+  heroHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  heroEyebrow: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  statusChip: {
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.parchment,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  statusChipText: {
+    color: COLORS.textPrimary,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  heroTitle: {
+    marginTop: 16,
+    color: COLORS.textPrimary,
+    fontSize: 24,
+    fontWeight: "800",
+  },
+  heroSubtitle: {
+    marginTop: 8,
+    color: COLORS.textMuted,
+    fontSize: 14,
+    lineHeight: 22,
   },
   kpiRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-    gap: 6,
+    flexDirection: "row",
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  kpiCard: {
+    flex: 1,
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+  },
+  kpiIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.parchment,
   },
   kpiValue: {
+    marginTop: 10,
+    color: COLORS.textPrimary,
     fontSize: 22,
-    fontWeight: '700',
-    color: COLORS.gray900,
+    fontWeight: "800",
   },
-  kpiBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 20,
+  kpiLabel: {
+    marginTop: 2,
+    color: COLORS.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
   },
-  kpiBadgeGreen: {
-    backgroundColor: COLORS.emeraldLight,
-  },
-  kpiBadgeRed: {
-    backgroundColor: COLORS.roseLight,
-  },
-  kpiBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  kpiBadgeTextGreen: {
-    color: COLORS.emerald,
-  },
-  kpiBadgeTextRed: {
-    color: COLORS.rose,
-  },
-  section: {
-    backgroundColor: COLORS.cardFill,
-    borderRadius: RADIUS,
-    padding: 14,
-    marginBottom: 10,
-    elevation: 3,
+  sectionCard: {
+    marginTop: SPACING.md,
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: SPACING.md,
   },
   sectionTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 19,
+    fontWeight: "800",
+  },
+  sectionLink: {
+    color: COLORS.moss,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  stack: {
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
+  },
+  planItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.sm,
+    paddingVertical: 2,
+  },
+  planDot: {
+    marginTop: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.accent,
+  },
+  planCopy: {
+    flex: 1,
+  },
+  planTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  planMeta: {
+    marginTop: 2,
+    color: COLORS.textMuted,
+    fontSize: 13,
+  },
+  requestCard: {
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.parchment,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+  },
+  requestRef: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  requestTitle: {
+    marginTop: 6,
+    color: COLORS.textPrimary,
     fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.gray900,
+    fontWeight: "700",
   },
-  barList: {
-    marginTop: 12,
-  },
-  barRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    gap: 6,
-  },
-  barLabel: {
-    width: 110,
-    fontSize: 12,
-    color: COLORS.greenDark,
-  },
-  barTrack: {
-    flex: 1,
-    height: 10,
-    backgroundColor: COLORS.gray100,
-    borderRadius: 6,
-  },
-  barFill: {
-    height: 10,
-    backgroundColor: COLORS.emerald,
-    borderRadius: 6,
-  },
-  barValue: {
-    width: 52,
-    textAlign: 'right',
-    fontSize: 12,
-    color: COLORS.gray900,
-    fontWeight: '600',
-  },
-  ringSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  ringWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringOuter: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 10,
-    borderColor: COLORS.gray100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringFill: {
-    position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 10,
-  },
-  ringInner: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: COLORS.cardFill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringPercent: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.gray900,
-  },
-  ringTextWrap: {
-    flex: 1,
-  },
-  ringCaption: {
-    fontSize: 12,
-    color: COLORS.gray500,
+  requestMeta: {
     marginTop: 4,
+    color: COLORS.textMuted,
+    fontSize: 13,
   },
-  tabBar: {
-    backgroundColor: COLORS.green,
+  emptyText: {
+    marginTop: SPACING.md,
+    color: COLORS.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  actionStrip: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  primaryButton: {
+    flex: 1,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.moss,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  primaryButtonText: {
+    color: COLORS.textOnBrand,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  secondaryButton: {
+    flex: 1,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  secondaryButtonText: {
+    color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
