@@ -10,7 +10,7 @@ The current platform is organized around a single backend source of truth:
 
 - `employees` for people and access control
 - `work_reqs` for work requests and assignment state
-- `schedule_events` for calendar/scheduling
+- `schedule_events` for calendar and scheduling
 - `activity_logs` for super-admin governance history
 
 ## Repository Layout
@@ -58,7 +58,7 @@ Super admins can:
 - Node.js 18+
 - npm
 - Docker Desktop
-- a Firebase project configured for web/mobile sign-in
+- a Firebase project configured for web and mobile sign-in
 
 ### 1. Start MySQL
 
