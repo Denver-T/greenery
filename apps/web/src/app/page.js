@@ -111,12 +111,15 @@ export default function LoginPage() {
   return (
     <div style={styles.page}>
       <div style={styles.bgOverlay} />
+      <div style={styles.bgShapeA} />
+      <div style={styles.bgShapeB} />
       <div style={styles.card}>
         <header style={styles.header}>
           <div style={styles.logoCircle}>
             <span style={styles.logoLeaf}>🌿</span>
           </div>
           <div>
+            <p style={styles.eyebrow}>Greenery Operations</p>
             <h2 style={styles.title}>Greenery Portal</h2>
             <p style={styles.subtitle}>Sign in to access your dashboard</p>
           </div>
@@ -203,7 +206,7 @@ const styles = {
     placeItems: "center",
     padding: "24px",
     backgroundImage:
-      "linear-gradient(135deg, rgba(52, 87, 33, 0.9), rgba(123, 155, 77, 0.9))",
+      "linear-gradient(145deg, #1f3427 0%, #294733 42%, #5f7d4b 100%)",
     position: "relative",
     overflow: "hidden",
     fontFamily:
@@ -213,18 +216,38 @@ const styles = {
     position: "absolute",
     inset: 0,
     backgroundImage:
-      "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.10), transparent 45%), radial-gradient(circle at 70% 30%, rgba(255,255,255,0.08), transparent 40%), radial-gradient(circle at 40% 80%, rgba(0,0,0,0.12), transparent 50%)",
+      "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.10), transparent 45%), radial-gradient(circle at 70% 30%, rgba(201,139,69,0.16), transparent 36%), radial-gradient(circle at 40% 80%, rgba(0,0,0,0.12), transparent 50%)",
     pointerEvents: "none",
+  },
+  bgShapeA: {
+    position: "absolute",
+    width: 360,
+    height: 360,
+    borderRadius: "999px",
+    background: "rgba(244, 241, 232, 0.08)",
+    top: "-140px",
+    right: "-90px",
+    filter: "blur(10px)",
+  },
+  bgShapeB: {
+    position: "absolute",
+    width: 280,
+    height: 280,
+    borderRadius: "999px",
+    background: "rgba(201, 139, 69, 0.12)",
+    bottom: "-100px",
+    left: "-40px",
+    filter: "blur(6px)",
   },
   card: {
     width: "min(520px, 92vw)",
-    background: "rgba(255,255,255,0.92)",
-    borderRadius: "18px",
-    padding: "26px",
-    boxShadow: "0 18px 60px rgba(0,0,0,0.25)",
+    background: "rgba(255, 253, 247, 0.94)",
+    borderRadius: "24px",
+    padding: "30px",
+    boxShadow: "0 24px 70px rgba(18, 33, 23, 0.28)",
     border: "1px solid rgba(255,255,255,0.6)",
     position: "relative",
-    backdropFilter: "blur(8px)",
+    backdropFilter: "blur(10px)",
   },
   header: {
     display: "flex",
@@ -233,41 +256,49 @@ const styles = {
     marginBottom: "18px",
   },
   logoCircle: {
-    width: "48px",
-    height: "48px",
-    borderRadius: "14px",
-    background: "linear-gradient(135deg, #2f5f1f, #7fa24a)",
+    width: "54px",
+    height: "54px",
+    borderRadius: "18px",
+    background: "linear-gradient(135deg, #294733, #5f7d4b)",
     display: "grid",
     placeItems: "center",
-    boxShadow: "0 10px 24px rgba(47,95,31,0.25)",
+    boxShadow: "0 12px 30px rgba(41,71,51,0.28)",
   },
   logoLeaf: { fontSize: "22px" },
+  eyebrow: {
+    margin: 0,
+    fontSize: "11px",
+    fontWeight: 700,
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+    color: "#617060",
+  },
   title: {
     margin: 0,
-    fontSize: "22px",
-    color: "#214617",
+    fontSize: "26px",
+    color: "#223126",
     letterSpacing: "0.2px",
   },
   subtitle: {
     margin: "4px 0 0",
     fontSize: "14px",
-    color: "rgba(33,70,23,0.72)",
+    color: "rgba(34,49,38,0.72)",
   },
   form: { display: "grid", gap: "12px" },
   label: {
     display: "grid",
     gap: "8px",
     fontSize: "13px",
-    color: "#214617",
+    color: "#223126",
     fontWeight: 600,
   },
   input: {
     width: "100%",
     padding: "12px 12px",
     borderRadius: "12px",
-    border: "1px solid rgba(33,70,23,0.18)",
+    border: "1px solid rgba(95,125,75,0.18)",
     outline: "none",
-    background: "rgba(255,255,255,0.9)",
+    background: "#f4f1e8",
     fontSize: "14px",
   },
   row: {
@@ -277,11 +308,11 @@ const styles = {
     gap: "12px",
   },
   checkboxWrap: { display: "flex", alignItems: "center", gap: "8px" },
-  checkboxText: { fontSize: "13px", color: "rgba(33,70,23,0.75)" },
+  checkboxText: { fontSize: "13px", color: "rgba(34,49,38,0.75)" },
   linkBtn: {
     background: "transparent",
     border: "none",
-    color: "#2f5f1f",
+    color: "#5f7d4b",
     fontWeight: 700,
     cursor: "pointer",
     padding: 0,
@@ -302,8 +333,8 @@ const styles = {
     cursor: "pointer",
     fontWeight: 800,
     color: "white",
-    background: "linear-gradient(135deg, #2f5f1f, #7fa24a)",
-    boxShadow: "0 12px 30px rgba(47,95,31,0.25)",
+    background: "linear-gradient(135deg, #294733, #5f7d4b)",
+    boxShadow: "0 16px 34px rgba(41,71,51,0.22)",
   },
   divider: {
     display: "flex",
@@ -314,26 +345,26 @@ const styles = {
   dividerLine: {
     flex: 1,
     height: "1px",
-    background: "rgba(33,70,23,0.15)",
+    background: "rgba(95,125,75,0.18)",
   },
   dividerText: {
     fontSize: "12px",
-    color: "rgba(33,70,23,0.55)",
+    color: "rgba(34,49,38,0.55)",
     fontWeight: 700,
   },
   secondaryBtn: {
     padding: "12px 14px",
     borderRadius: "12px",
-    border: "1px solid rgba(33,70,23,0.22)",
-    background: "rgba(255,255,255,0.85)",
+    border: "1px solid rgba(95,125,75,0.22)",
+    background: "rgba(255,253,247,0.9)",
     cursor: "pointer",
     fontWeight: 800,
-    color: "#214617",
+    color: "#223126",
   },
   footerText: {
     margin: "6px 0 0",
     fontSize: "12px",
-    color: "rgba(33,70,23,0.55)",
+    color: "rgba(34,49,38,0.55)",
     textAlign: "center",
   },
 };

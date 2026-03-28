@@ -1,10 +1,9 @@
 "use client";
 
 import AppShell from "@/components/AppShell";
+import { fetchApi } from "@/lib/api/api";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export default function ReqPage() {
   const router = useRouter();
@@ -26,41 +25,17 @@ export default function ReqPage() {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const onSubmit = async (e) => {
+  async function onSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
     setError("");
 
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        throw new Error("You are not logged in. Please sign in again.");
-      }
-
       const fd = new FormData(e.currentTarget);
-
-      const res = await fetch(`${API_BASE}/reqs`, {
+      await fetchApi("/reqs", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: fd,
       });
-
-      if (!res.ok) {
-        let message = "Failed to submit";
-
-        try {
-          const data = await res.json();
-          message = data?.message || data?.error || message;
-        } catch {
-          const text = await res.text();
-          message = text || message;
-        }
-
-        throw new Error(message);
-      }
 
       router.push("/tasks?created=1");
     } catch (err) {
@@ -68,242 +43,246 @@ export default function ReqPage() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }
 
   return (
     <AppShell title="Create Work REQ">
-      <section className="rounded-card bg-white p-6 shadow-soft">
-        <h2 className="mb-4 text-xl font-extrabold text-brand-700">Work Req Form</h2>
+      <section className="mb-6 rounded-card border border-border-soft bg-surface p-6 shadow-soft">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="w-fit rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#1f3427]">
+              Request Intake
+            </div>
+            <h2 className="mt-4 text-2xl font-black tracking-tight text-[#1f3427]">
+              Create Work Request
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
+              Capture the essentials first, then fill in plant and staging details only when they
+              apply. This version is laid out to reduce missed fields and make technician handoff
+              easier.
+            </p>
+          </div>
 
+          <div className="min-w-[220px] rounded-2xl border border-border-soft bg-[#f8f4ea] px-4 py-4">
+            <div className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">
+              Generated Reference
+            </div>
+            <div className="mt-2 text-lg font-black text-[#1f3427]">{generatedRef}</div>
+            <div className="mt-1 text-sm text-gray-600">Request date {today}</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
         <form onSubmit={onSubmit} encType="multipart/form-data" className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Reference Number</label>
-              <input
-                name="referenceNumber"
-                defaultValue={generatedRef}
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Date</label>
-              <input
-                type="date"
-                name="requestDate"
-                defaultValue={today}
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Tech Name</label>
-              <input
-                name="techName"
-                placeholder="Magnus"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Account</label>
-              <input
-                name="account"
-                placeholder="Inter Pipeline"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Account Contact</label>
-              <input
-                name="accountContact"
-                placeholder="Georgia Blevins"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Account Address</label>
-              <input
-                name="accountAddress"
-                placeholder="123 Sesame St."
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            <div className="flex flex-col md:col-span-2">
-              <label className="mb-1 text-sm font-medium text-gray-700">Action Required</label>
-              <input
-                name="actionRequired"
-                placeholder="Soil top up"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Number of Plants</label>
-              <input
-                type="number"
-                min="0"
-                name="numberOfPlants"
-                placeholder="4"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Which plant is wanted?</label>
-              <input
-                name="plantWanted"
-                placeholder="Aglaonema"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Which plant is getting replaced?</label>
-              <input
-                name="plantReplaced"
-                placeholder="Aglaonema"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Plant Size</label>
-              <select
-                name="plantSize"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900"
-                defaultValue="3 Gal"
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr_1fr]">
+            <div className="space-y-6">
+              <FormSection
+                title="Core Details"
+                description="Identify the request, who submitted it, and the account it belongs to."
               >
-                <option>1 Gal</option>
-                <option>2 Gal</option>
-                <option>3 Gal</option>
-                <option>5 Gal</option>
-              </select>
-            </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label="Reference Number" required>
+                    <input
+                      name="referenceNumber"
+                      defaultValue={generatedRef}
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400"
+                      required
+                    />
+                  </Field>
+                  <Field label="Date" required>
+                    <input
+                      type="date"
+                      name="requestDate"
+                      defaultValue={today}
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400"
+                      required
+                    />
+                  </Field>
+                  <Field label="Tech Name" required>
+                    <input
+                      name="techName"
+                      placeholder="Magnus"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400"
+                      required
+                    />
+                  </Field>
+                  <Field label="Account" required>
+                    <input
+                      name="account"
+                      placeholder="Inter Pipeline"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400"
+                      required
+                    />
+                  </Field>
+                  <Field label="Account Contact">
+                    <input
+                      name="accountContact"
+                      placeholder="Georgia Blevins"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400"
+                    />
+                  </Field>
+                  <Field label="Account Address">
+                    <input
+                      name="accountAddress"
+                      placeholder="123 Sesame St."
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400"
+                    />
+                  </Field>
+                  <Field label="Action Required" className="md:col-span-2">
+                    <input
+                      name="actionRequired"
+                      placeholder="Soil top up"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400"
+                    />
+                  </Field>
+                </div>
+              </FormSection>
 
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Plant Height</label>
-              <select
-                name="plantHeight"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900"
-                defaultValue="Shorter than 2 feet"
+              <FormSection
+                title="Plant and Placement"
+                description="Use this section when the request includes swaps, installs, staging, or location notes."
               >
-                <option>Shorter than 2 feet</option>
-                <option>2-4 feet</option>
-                <option>4-6 feet</option>
-                <option>Taller than 6 feet</option>
-              </select>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label="Number of Plants">
+                    <input type="number" min="0" name="numberOfPlants" placeholder="4" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                  </Field>
+                  <Field label="Plant Wanted">
+                    <input name="plantWanted" placeholder="Aglaonema" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                  </Field>
+                  <Field label="Plant Replaced">
+                    <input name="plantReplaced" placeholder="Aglaonema" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                  </Field>
+                  <Field label="Plant Size">
+                    <select name="plantSize" defaultValue="3 Gal" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400">
+                      <option>1 Gal</option>
+                      <option>2 Gal</option>
+                      <option>3 Gal</option>
+                      <option>5 Gal</option>
+                    </select>
+                  </Field>
+                  <Field label="Plant Height">
+                    <select name="plantHeight" defaultValue="Shorter than 2 feet" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400">
+                      <option>Shorter than 2 feet</option>
+                      <option>2-4 feet</option>
+                      <option>4-6 feet</option>
+                      <option>Taller than 6 feet</option>
+                    </select>
+                  </Field>
+                  <Field label="Planter Type and Size">
+                    <input name="planterTypeSize" placeholder="Lechuza 40" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                  </Field>
+                  <Field label="Planter Colour">
+                    <input name="planterColour" placeholder="White" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                  </Field>
+                  <Field label="Staging Material" className="md:col-span-2">
+                    <input name="stagingMaterial" placeholder="Grey Spanish Moss" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                  </Field>
+                </div>
+              </FormSection>
             </div>
 
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Planter Type and Size</label>
-              <input
-                name="planterTypeSize"
-                placeholder="Lechuza 40"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Planter Colour</label>
-              <input
-                name="planterColour"
-                placeholder="White"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            <div className="flex flex-col md:col-span-2">
-              <label className="mb-1 text-sm font-medium text-gray-700">Type and Colour of Staging Material</label>
-              <input
-                name="stagingMaterial"
-                placeholder="Grey Spanish Moss"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Lighting</label>
-              <select
-                name="lighting"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900"
-                defaultValue="Medium"
+            <div className="space-y-6">
+              <FormSection
+                title="Execution Notes"
+                description="Capture site instructions that help the field team complete the request correctly the first time."
               >
-                <option>Low</option>
-                <option>Medium</option>
-                <option>High</option>
-              </select>
-            </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <Field label="Lighting">
+                    <select name="lighting" defaultValue="Medium" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400">
+                      <option>Low</option>
+                      <option>Medium</option>
+                      <option>High</option>
+                    </select>
+                  </Field>
+                  <Field label="Method">
+                    <input name="method" placeholder="Use spade to insert soil" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                  </Field>
+                  <Field label="Location">
+                    <input name="location" placeholder="Lobby" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                  </Field>
+                  <Field label="Notes">
+                    <textarea name="notes" rows={4} placeholder="Bring key to get into building" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                  </Field>
+                </div>
+              </FormSection>
 
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Method</label>
-              <input
-                name="method"
-                placeholder="Use spade to insert soil"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
+              <FormSection
+                title="Photo Attachment"
+                description="Upload a reference photo when it clarifies plant condition, site access, or staging context."
+              >
+                <input
+                  type="file"
+                  name="picture"
+                  accept="image/*"
+                  className="rounded-xl border border-border-soft bg-white text-gray-900 file:mr-4 file:rounded-xl file:border-0 file:bg-emerald-700 file:px-4 file:py-2.5 file:font-semibold file:text-white hover:file:bg-emerald-800"
+                />
+              </FormSection>
 
-            <div className="flex flex-col">
-              <label className="mb-1 text-sm font-medium text-gray-700">Location</label>
-              <input
-                name="location"
-                placeholder="Lobby"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            <div className="flex flex-col md:col-span-2">
-              <label className="mb-1 text-sm font-medium text-gray-700">Notes</label>
-              <textarea
-                name="notes"
-                rows={3}
-                placeholder="Bring key to get into building"
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400 text-gray-900 placeholder:text-gray-400"
-              />
-            </div>
-
-            <div className="flex flex-col md:col-span-2">
-              <label className="mb-1 text-sm font-medium text-gray-700">Picture Upload</label>
-              <input
-                type="file"
-                name="picture"
-                accept="image/*"
-                className="rounded-md border border-gray-300 bg-white file:mr-4 file:rounded-md file:border-0 file:bg-emerald-700 file:px-4 file:py-2 file:font-medium file:text-white hover:file:bg-emerald-700 text-gray-900"
-              />
+              <div className="rounded-2xl border border-border-soft bg-[#f8f4ea] p-5">
+                <h4 className="text-sm font-black uppercase tracking-[0.16em] text-[#1f3427]">
+                  Submission Flow
+                </h4>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-gray-600">
+                  <li>1. Confirm the account and work type.</li>
+                  <li>2. Add plant details only when they matter to execution.</li>
+                  <li>3. Include notes or a photo when field context matters.</li>
+                </ul>
+              </div>
             </div>
           </div>
 
-          {error && (
-            <p className="rounded bg-red-100 px-3 py-2 text-sm text-red-700">{error}</p>
-          )}
+          {error ? (
+            <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              {error}
+            </p>
+          ) : null}
 
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center rounded-lg bg-emerald-700 px-5 py-2.5 font-medium text-white shadow hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? "Submitting..." : "Submit REQ"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="rounded-lg bg-gray-200 px-4 py-2 font-medium text-gray-800 hover:bg-gray-300"
-            >
-              Cancel
-            </button>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-soft pt-4">
+            <div className="text-sm text-gray-600">
+              Review the core account details before submitting. The app will route you back to the queue after a successful save.
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="rounded-xl bg-gray-200 px-4 py-2.5 font-medium text-gray-800 hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex items-center rounded-xl bg-emerald-700 px-5 py-2.5 font-semibold text-white shadow hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting ? "Submitting..." : "Submit REQ"}
+              </button>
+            </div>
           </div>
         </form>
       </section>
     </AppShell>
+  );
+}
+
+function FormSection({ title, description, children }) {
+  return (
+    <div className="rounded-2xl border border-border-soft bg-[#fffdf7] p-5">
+      <h3 className="text-lg font-black tracking-tight text-[#1f3427]">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-gray-600">{description}</p>
+      <div className="mt-4">{children}</div>
+    </div>
+  );
+}
+
+function Field({ label, required = false, className = "", children }) {
+  return (
+    <label className={`flex flex-col ${className}`}>
+      <span className="mb-1 text-sm font-medium text-gray-700">
+        {label}
+        {required ? <span className="text-red-600"> *</span> : null}
+      </span>
+      {children}
+    </label>
   );
 }

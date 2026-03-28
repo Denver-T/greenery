@@ -13,6 +13,7 @@ import { fetchApi } from "@/lib/api/api";
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -30,6 +31,45 @@ export default function EmployeesPage() {
   const [editing, setEditing] = useState(null);
   const [editErrors, setEditErrors] = useState({});
 
+  const isSuperAdmin = currentUser?.permissionLevel === "SuperAdmin";
+
+  function getPermissionOptions(selectedValue = "Technician") {
+    const base = ["Technician"];
+
+    if (isSuperAdmin) {
+      return [...base, "Manager", "Administrator", "SuperAdmin"];
+    }
+
+    if (selectedValue && !base.includes(selectedValue)) {
+      return [...base, selectedValue];
+    }
+
+    return base;
+  }
+
+  function getRoleOptions(selectedValue = "Technician") {
+    const base = ["Technician"];
+
+    if (isSuperAdmin) {
+      return [...base, "Manager", "Administrator"];
+    }
+
+    if (selectedValue && !base.includes(selectedValue)) {
+      return [...base, selectedValue];
+    }
+
+    return base;
+  }
+
+  async function loadCurrentUser() {
+    try {
+      const data = await fetchApi("/auth/me", { cache: "no-store" });
+      setCurrentUser(data);
+    } catch {
+      setCurrentUser(null);
+    }
+  }
+
   async function refresh() {
     setError("");
     setLoading(true);
@@ -44,6 +84,7 @@ export default function EmployeesPage() {
   }
 
   useEffect(() => {
+    loadCurrentUser();
     refresh();
   }, []);
 
@@ -169,17 +210,41 @@ export default function EmployeesPage() {
           </div>
         ) : null}
 
-        <div className="mb-6 2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 text-lg font-extrabold text-brand-700">
-            Create New Employee
+        <div className="mb-6 rounded-card border border-border-soft bg-surface p-6 shadow-soft">
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="w-fit rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#1f3427]">
+                Team Workspace
+              </div>
+              <div className="mt-4 text-2xl font-black tracking-tight text-[#1f3427]">
+                Create New Employee
+              </div>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
+                Add staff members, set roles, and control who can access operational workflows.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border-soft bg-[#f8f4ea] px-4 py-4 text-sm text-gray-600">
+              <div>
+                <span className="font-semibold text-[#1f3427]">{employees.length}</span> total employees
+              </div>
+              <div className="mt-1">
+                <span className="font-semibold text-[#1f3427]">
+                  {employees.filter((employee) => String(employee.status || "Active").toLowerCase() === "active").length}
+                </span>{" "}
+                active right now
+              </div>
+              <div className="mt-3 rounded-xl border border-border-soft bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#1f3427]">
+                Access level: {currentUser?.permissionLevel || currentUser?.role || "Unknown"}
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="grid gap-1">
               <span className="text-sm font-bold text-gray-700">Name</span>
               <input
-                className={`rounded-xl border px-3 py-2 ${
-                  formErrors.name ? "border-red-500" : "border-gray-200"
+                className={`rounded-xl border bg-white px-3 py-2.5 ${
+                  formErrors.name ? "border-red-500" : "border-border-soft"
                 }`}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -193,21 +258,21 @@ export default function EmployeesPage() {
             <label className="grid gap-1">
               <span className="text-sm font-bold text-gray-700">Role</span>
               <select
-                className="rounded-xl border border-gray-200 px-3 py-2"
+                className="rounded-xl border border-border-soft bg-white px-3 py-2.5"
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
               >
-                <option>Technician</option>
-                <option>Manager</option>
-                <option>Administrator</option>
+                {getRoleOptions(form.role).map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
               </select>
             </label>
 
             <label className="grid gap-1">
               <span className="text-sm font-bold text-gray-700">Email</span>
               <input
-                className={`rounded-xl border px-3 py-2 ${
-                  formErrors.email ? "border-red-500" : "border-gray-200"
+                className={`rounded-xl border bg-white px-3 py-2.5 ${
+                  formErrors.email ? "border-red-500" : "border-border-soft"
                 }`}
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -221,8 +286,8 @@ export default function EmployeesPage() {
             <label className="grid gap-1">
               <span className="text-sm font-bold text-gray-700">Phone</span>
               <input
-                className={`rounded-xl border px-3 py-2 ${
-                  formErrors.phone ? "border-red-500" : "border-gray-200"
+                className={`rounded-xl border bg-white px-3 py-2.5 ${
+                  formErrors.phone ? "border-red-500" : "border-border-soft"
                 }`}
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -236,7 +301,7 @@ export default function EmployeesPage() {
             <label className="grid gap-1">
               <span className="text-sm font-bold text-gray-700">Status</span>
               <select
-                className="rounded-xl border border-gray-200 px-3 py-2"
+                className="rounded-xl border border-border-soft bg-white px-3 py-2.5"
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
               >
@@ -248,22 +313,29 @@ export default function EmployeesPage() {
             <label className="grid gap-1">
               <span className="text-sm font-bold text-gray-700">Permission Level</span>
               <select
-                className="rounded-xl border border-gray-200 px-3 py-2"
+                className="rounded-xl border border-border-soft bg-white px-3 py-2.5"
                 value={form.permissionLevel}
                 onChange={(e) =>
                   setForm({ ...form, permissionLevel: e.target.value })
                 }
               >
-                <option>Technician</option>
-                <option>Manager</option>
-                <option>Administrator</option>
+                {getPermissionOptions(form.permissionLevel).map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
               </select>
             </label>
           </div>
 
+          {!isSuperAdmin ? (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Team management is limited to technician accounts here. Use the dedicated Super Admin
+              workspace for administrator-level staffing and access changes.
+            </div>
+          ) : null}
+
           <div className="mt-4 flex gap-3">
             <button
-              className="rounded-xl bg-brand-700 px-4 py-2 font-extrabold text-white disabled:opacity-60"
+              className="rounded-xl bg-brand-700 px-4 py-2.5 font-extrabold text-white disabled:opacity-60"
               disabled={busy || !form.name.trim()}
               onClick={createEmployee}
             >
@@ -271,7 +343,7 @@ export default function EmployeesPage() {
             </button>
 
             <button
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2 font-extrabold text-gray-800 disabled:opacity-60"
+              className="rounded-xl border border-border-soft bg-white px-4 py-2.5 font-extrabold text-gray-800 disabled:opacity-60"
               disabled={busy}
               onClick={refresh}
             >
@@ -280,10 +352,13 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        <div className="2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="mb-3 text-lg font-extrabold text-brand-700">
-            All Employees
+        <div className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
+          <div className="mb-4 text-2xl font-black tracking-tight text-[#1f3427]">
+            Team Directory
           </div>
+          <p className="mb-5 text-sm leading-6 text-gray-600">
+            View employee status, role access, and contact details from one consistent directory.
+          </p>
 
           {loading ? (
             <div className="text-gray-600">Loading...</div>
@@ -294,14 +369,14 @@ export default function EmployeesPage() {
               {employees.map((emp) => (
                 <div
                   key={emp.id}
-                  className="rounded-2xl border border-gray-200 p-4 shadow-sm"
+                  className="rounded-2xl border border-border-soft bg-[#fffdf7] p-4 shadow-soft"
                 >
                   <div className="mb-2 flex items-center gap-3">
-                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-green-50 text-xl">
-                      U
+                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#f0ebde] text-xl font-black text-[#1f3427]">
+                      {emp.name?.[0]?.toUpperCase() || "U"}
                     </div>
                     <div>
-                      <div className="text-lg font-extrabold text-gray-900">
+                      <div className="text-lg font-extrabold text-[#1f3427]">
                         {emp.name}
                       </div>
                       <div className="text-sm font-bold text-gray-600">
@@ -330,7 +405,7 @@ export default function EmployeesPage() {
 
                   <div className="mt-3 flex gap-2">
                     <button
-                      className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 font-extrabold text-black disabled:opacity-60"
+                      className="flex-1 rounded-xl border border-border-soft bg-white px-3 py-2.5 font-extrabold text-black disabled:opacity-60"
                       disabled={busy}
                       onClick={() => {
                         setEditing({ ...emp });
@@ -359,19 +434,22 @@ export default function EmployeesPage() {
             onClick={() => setEditing(null)}
           >
             <div
-              className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl"
+              className="w-full max-w-2xl rounded-2xl border border-border-soft bg-[#fffdf7] p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="mb-3 text-lg font-extrabold text-brand-700">
+              <div className="mb-3 text-xl font-extrabold text-[#1f3427]">
                 Edit Employee
               </div>
+              <p className="mb-4 text-sm text-gray-600">
+                Update role, contact info, status, and access level from one place.
+              </p>
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">Name</span>
                   <input
-                    className={`rounded-xl border px-3 py-2 ${
-                      editErrors.name ? "border-red-500" : "border-gray-200"
+                    className={`rounded-xl border bg-white px-3 py-2.5 ${
+                      editErrors.name ? "border-red-500" : "border-border-soft"
                     }`}
                     value={editing.name || ""}
                     onChange={(e) =>
@@ -386,23 +464,23 @@ export default function EmployeesPage() {
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">Role</span>
                   <select
-                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    className="rounded-xl border border-border-soft bg-white px-3 py-2.5"
                     value={editing.role || "Technician"}
                     onChange={(e) =>
                       setEditing({ ...editing, role: e.target.value })
                     }
                   >
-                    <option>Technician</option>
-                    <option>Manager</option>
-                    <option>Administrator</option>
+                    {getRoleOptions(editing.role || "Technician").map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
                   </select>
                 </label>
 
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">Email</span>
                   <input
-                    className={`rounded-xl border px-3 py-2 ${
-                      editErrors.email ? "border-red-500" : "border-gray-200"
+                    className={`rounded-xl border bg-white px-3 py-2.5 ${
+                      editErrors.email ? "border-red-500" : "border-border-soft"
                     }`}
                     value={editing.email || ""}
                     onChange={(e) =>
@@ -417,8 +495,8 @@ export default function EmployeesPage() {
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">Phone</span>
                   <input
-                    className={`rounded-xl border px-3 py-2 ${
-                      editErrors.phone ? "border-red-500" : "border-gray-200"
+                    className={`rounded-xl border bg-white px-3 py-2.5 ${
+                      editErrors.phone ? "border-red-500" : "border-border-soft"
                     }`}
                     value={editing.phone || ""}
                     onChange={(e) =>
@@ -433,7 +511,7 @@ export default function EmployeesPage() {
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">Status</span>
                   <select
-                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    className="rounded-xl border border-border-soft bg-white px-3 py-2.5"
                     value={editing.status || "Active"}
                     onChange={(e) =>
                       setEditing({ ...editing, status: e.target.value })
@@ -447,22 +525,22 @@ export default function EmployeesPage() {
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">Permission Level</span>
                   <select
-                    className="rounded-xl border border-gray-200 px-3 py-2"
+                    className="rounded-xl border border-border-soft bg-white px-3 py-2.5"
                     value={editing.permissionLevel || editing.role || "Technician"}
                     onChange={(e) =>
                       setEditing({ ...editing, permissionLevel: e.target.value })
                     }
                   >
-                    <option>Technician</option>
-                    <option>Manager</option>
-                    <option>Administrator</option>
+                    {getPermissionOptions(editing.permissionLevel || editing.role || "Technician").map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
                   </select>
                 </label>
               </div>
 
               <div className="mt-4 flex justify-end gap-2">
                 <button
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-2 font-extrabold"
+                  className="rounded-xl border border-border-soft bg-white px-4 py-2.5 font-extrabold"
                   disabled={busy}
                   onClick={() => {
                     setEditing(null);
@@ -472,7 +550,7 @@ export default function EmployeesPage() {
                   Cancel
                 </button>
                 <button
-                  className="rounded-xl bg-brand-700 px-4 py-2 font-extrabold text-white disabled:opacity-60"
+                  className="rounded-xl bg-brand-700 px-4 py-2.5 font-extrabold text-white disabled:opacity-60"
                   disabled={busy || !editing.name?.trim()}
                   onClick={saveEdit}
                 >

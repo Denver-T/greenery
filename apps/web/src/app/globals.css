@@ -3,15 +3,15 @@
 
 /* 2) Color variables for light/dark */
 :root {
-  --background: #f8faf8;      /* app background */
-  --foreground: #1f2937;      /* gray-800 */
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b0f0a;
-    --foreground: #e5e7eb;
-  }
+  --background: #f4f1e8;
+  --foreground: #223126;
+  --surface: #fffdf7;
+  --surface-muted: #f0ebde;
+  --border-soft: #d5ddc8;
+  --brand: #5f7d4b;
+  --brand-700: #294733;
+  --accent: #c98b45;
+  --muted: #617060;
 }
 
 /* 3) Tailwind v4 @theme: define design tokens you want as Tailwind colors/fonts */
@@ -21,8 +21,13 @@
   --color-foreground: var(--foreground);
 
   /* project brand greens (from your mock) */
-  --color-brand: #6a8f41;
-  --color-brand-700: #50712f;
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border-soft: var(--border-soft);
+  --color-brand: var(--brand);
+  --color-brand-700: var(--brand-700);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
 
   /* optional fonts (if you wire them in layout.js) */
   --font-sans: ui-sans-serif, system-ui, sans-serif;
@@ -35,6 +40,7 @@
 /* 4) Global defaults */
 html {
   scroll-behavior: smooth;
+  color-scheme: light;
 }
 
 ::selection {
@@ -46,6 +52,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  background-image:
+    radial-gradient(circle at top left, rgba(201, 139, 69, 0.1), transparent 30%),
+    radial-gradient(circle at 85% 15%, rgba(95, 125, 75, 0.16), transparent 28%);
 }
 
 /* 5) High-visibility keyboard focus */
@@ -62,8 +71,8 @@ a, button {
 /* 6) Tailwind v4 custom utilities used by components */
 @utility shadow-soft {
   box-shadow:
-    0 1px 2px rgba(0,0,0,.06),
-    0 1px 3px rgba(0,0,0,.10);
+    0 2px 8px rgba(18, 33, 23, .06),
+    0 14px 28px rgba(18, 33, 23, .08);
 }
 
 @utility rounded-card {
@@ -73,15 +82,15 @@ a, button {
 /* Subtle, reusable shadow for nav items */
 @utility shadow-elevated {
   box-shadow:
-    0 1px 1px rgba(0,0,0,.06),
-    0 2px 4px rgba(0,0,0,.10);
+    0 2px 6px rgba(18, 33, 23, .08),
+    0 10px 20px rgba(18, 33, 23, .10);
 }
 
 /* A bit stronger when hovered/active */
 @utility shadow-elevated-lg {
   box-shadow:
-    0 2px 3px rgba(0,0,0,.08),
-    0 6px 12px rgba(0,0,0,.16);
+    0 6px 14px rgba(18, 33, 23, .10),
+    0 18px 30px rgba(18, 33, 23, .14);
 }
 
 /* === Form control defaults ===
