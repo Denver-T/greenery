@@ -1,6 +1,7 @@
 // apps/api/src/middleware/authMiddleware.js
 
 const admin = require("../../config/firebase");
+const employeesService = require("../services/employeesService");
 const { httpError } = require("../utils/httpError");
 
 /**
@@ -36,18 +37,35 @@ async function verifyToken(req, res, next) {
 
     const decoded = await admin.auth().verifyIdToken(token);
 
+    const normalizedEmail =
+      typeof decoded.email === "string"
+        ? decoded.email.trim().toLowerCase()
+        : null;
+    const employee = normalizedEmail
+      ? await employeesService.getEmployeeByEmail(normalizedEmail)
+      : null;
+
     // Normalize token data once here so downstream middleware/controllers
     // do not need to understand Firebase's raw decoded-claims shape.
+    // When an employee row exists, the DB record becomes the source of truth
+    // for role/permission so access changes take effect without new token claims.
     req.user = {
       uid: decoded.uid,
-      email:
-        typeof decoded.email === "string"
-          ? decoded.email.trim().toLowerCase()
-          : null,
+      email: normalizedEmail,
+      employeeId: employee?.id || null,
       role:
-        typeof decoded.role === "string"
-          ? decoded.role.trim().toLowerCase()
-          : null,
+        typeof employee?.role === "string"
+          ? employee.role
+          : typeof decoded.role === "string"
+            ? decoded.role.trim()
+            : null,
+      permissionLevel:
+        typeof employee?.permissionLevel === "string"
+          ? employee.permissionLevel
+          : typeof decoded.permissionLevel === "string"
+            ? decoded.permissionLevel.trim()
+            : null,
+      employee,
       claims: decoded,
     };
 

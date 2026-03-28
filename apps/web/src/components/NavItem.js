@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export default function NavItem({ href, label, icon }) {
+export default function NavItem({ href, label, description, icon }) {
   const pathname = usePathname();
   const active = pathname === href;
 
@@ -31,7 +31,12 @@ export default function NavItem({ href, label, icon }) {
       ].join(" ")}
     >
       <span aria-hidden="true">{icon}</span>
-      <span className="font-semibold">{label}</span>
+      <span className="min-w-0">
+        <span className="block font-semibold">{label}</span>
+        {description ? (
+          <span className="mt-0.5 block text-xs text-white/65">{description}</span>
+        ) : null}
+      </span>
     </Link>
   );
 }

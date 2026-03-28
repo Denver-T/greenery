@@ -3,15 +3,12 @@ import TopBar from "./TopBar";
 
 export default function AppShell({ title, children }) {
   return (
-    <div className="grid min-h-screen grid-cols-[280px_1fr] bg-background text-foreground">
-      {/* Left column */}
+    <div className="grid min-h-screen grid-cols-[300px_1fr] bg-background text-foreground">
       <Sidebar />
-
-      {/* Right column */}
-      <div className="grid grid-rows-[64px_1fr] bg-background">
+      <div className="grid grid-rows-[76px_1fr] bg-transparent">
         <TopBar title={title} />
-        <main role="main" className="p-6">
-          {children}
+        <main role="main" className="px-8 py-7">
+          <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>
     </div>

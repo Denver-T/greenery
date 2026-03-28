@@ -2,12 +2,20 @@ require("dotenv").config();
 const admin = require("./config/firebase");
 const db = require("./src/db");
 
-const VALID_ROLES = ["admin", "manager", "technician"];
+const VALID_ROLES = ["admin", "manager", "technician", "superadmin"];
 
 const ROLE_MAP = {
   admin: "Administrator",
   manager: "Manager",
   technician: "Technician",
+  superadmin: "Administrator",
+};
+
+const PERMISSION_MAP = {
+  admin: "Administrator",
+  manager: "Manager",
+  technician: "Technician",
+  superadmin: "SuperAdmin",
 };
 
 function buildDefaultName(email) {
@@ -35,6 +43,7 @@ async function setRole() {
     await admin.auth().setCustomUserClaims(user.uid, { role });
 
     const dbRole = ROLE_MAP[role];
+    const dbPermissionLevel = PERMISSION_MAP[role];
 
     // Check if employee exists
     const [rows] = await db.query(
@@ -59,7 +68,7 @@ async function setRole() {
         )
         VALUES (?, ?, ?, ?, ?, ?)
         `,
-        [displayName, dbRole, email, null, "Active", dbRole]
+        [displayName, dbRole, email, null, "Active", dbPermissionLevel]
       );
 
       console.log(`Created new employee for ${email}`);
@@ -70,7 +79,7 @@ async function setRole() {
         SET role = ?, permissionLevel = ?, status = 'Active'
         WHERE LOWER(email) = ?
         `,
-        [dbRole, dbRole, email]
+        [dbRole, dbPermissionLevel, email]
       );
 
       console.log(`Updated employee for ${email}`);

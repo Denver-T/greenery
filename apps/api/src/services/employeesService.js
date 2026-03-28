@@ -1,12 +1,8 @@
 const db = require("../db");
-
-// Maps used to bridge API role wording and the DB enum values in `employees`.
-const DB_ROLE_MAP = {
-  technician: "Technician",
-  manager: "Manager",
-  admin: "Administrator",
-  administrator: "Administrator",
-};
+const {
+  normalizePermissionLevelInput,
+  normalizeRoleInput,
+} = require("../utils/permissions");
 
 const API_ROLE_MAP = {
   Technician: "technician",
@@ -50,15 +46,6 @@ function normalizeOptionalString(value) {
   return trimmed || null;
 }
 
-function normalizeDbRole(value, defaultRole = "Technician") {
-  if (value === undefined || value === null || value === "") {
-    return defaultRole;
-  }
-
-  const normalized = String(value).trim();
-  return DB_ROLE_MAP[normalized.toLowerCase()] || normalized;
-}
-
 function normalizeStatus(value, defaultStatus = "Active") {
   if (value === undefined || value === null || value === "") {
     return defaultStatus;
@@ -76,7 +63,7 @@ function normalizeStatus(value, defaultStatus = "Active") {
 
 function normalizeEmployeeInput(body = {}) {
   // Normalize once at the service boundary so every write path produces schema-safe values.
-  const role = normalizeDbRole(body.role);
+  const role = normalizeRoleInput(body.role);
 
   return {
     name: normalizeRequiredName(body.name),
@@ -84,7 +71,7 @@ function normalizeEmployeeInput(body = {}) {
     email: normalizeOptionalString(body.email),
     phone: normalizeOptionalString(body.phone),
     status: normalizeStatus(body.status),
-    permissionLevel: normalizeDbRole(body.permissionLevel, role),
+    permissionLevel: normalizePermissionLevelInput(body.permissionLevel, role),
   };
 }
 

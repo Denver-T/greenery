@@ -154,39 +154,40 @@ export default function Page() {
   return (
     <AppShell title="View Calendar">
       <section className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-emerald-900">Schedule</h1>
+          <div>
+            <div className="w-fit rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#1f3427]">
+              Schedule Workspace
+            </div>
+            <h1 className="mt-4 text-2xl font-black tracking-tight text-[#1f3427]">Schedule</h1>
+          </div>
           <button
             onClick={goToday}
-            className="rounded-md bg-emerald-100 px-3 py-1.5 text-emerald-700 hover:bg-emerald-200"
+            className="rounded-xl bg-[#f0ebde] px-4 py-2 text-sm font-semibold text-[#1f3427] hover:bg-[#e7e0cf]"
           >
             Today
           </button>
         </div>
 
-        {/* Calendar Card */}
-        <div className="rounded-card bg-white p-4 shadow-soft">
-          {/* Month header */}
+        <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
           <div className="mb-3 flex items-center justify-between">
             <button
               aria-label="Previous month"
               onClick={goPrev}
-              className="rounded-md p-2 text-emerald-700 hover:bg-emerald-50"
+              className="rounded-xl p-2 text-[#1f3427] hover:bg-[#f0ebde]"
             >
               ←
             </button>
-            <div className="text-lg font-medium text-gray-900">{monthLabel(y, m)}</div>
+            <div className="text-lg font-semibold text-[#1f3427]">{monthLabel(y, m)}</div>
             <button
               aria-label="Next month"
               onClick={goNext}
-              className="rounded-md p-2 text-emerald-700 hover:bg-emerald-50"
+              className="rounded-xl p-2 text-[#1f3427] hover:bg-[#f0ebde]"
             >
               →
             </button>
           </div>
 
-          {/* Week header */}
           <div className="grid grid-cols-7 gap-1 px-1 pb-2 text-center text-sm font-medium text-gray-500">
             {["S", "M", "T", "W", "T", "F", "S"].map((d) => (
               <div key={d} className="py-1">{d}</div>
@@ -206,7 +207,7 @@ export default function Page() {
                   onClick={() => setSelectedDayKey(cell.key)}
                   className={[
                     "relative aspect-square rounded-md p-2 text-left outline-none ring-emerald-400 transition",
-                    cell.inMonth ? "bg-gray-200 hover:bg-emerald-50" : "bg-gray-50 text-gray-600",
+                    cell.inMonth ? "bg-[#f8f4ea] hover:bg-[#f0ebde]" : "bg-[#faf8f2] text-gray-600",
                     isSelected ? "ring-2" : "",
                   ].join(" ")}
                 >
@@ -226,10 +227,10 @@ export default function Page() {
                     <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1">
                       {count <= 3 ? (
                         [...Array(count)].map((_, i) => (
-                          <span key={i} className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                          <span key={i} className="h-1.5 w-1.5 rounded-full bg-brand-700" />
                         ))
                       ) : (
-                        <span className="rounded-full bg-emerald-600 px-1.5 text-[10px] font-medium text-white">
+                        <span className="rounded-full bg-brand-700 px-1.5 text-[10px] font-medium text-white">
                           {count}
                         </span>
                       )}
@@ -247,28 +248,27 @@ export default function Page() {
           )}
         </div>
 
-        {/* Day Panel */}
-        <div className="rounded-card bg-emerald-900/90 p-4 shadow-soft">
+        <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-black text-[#1f3427]">
               {selectedWeekday} — {selectedDayKey}
             </h2>
 
             <button
               onClick={() => router.push(`/tasks/new?date=${selectedDayKey}`)}
-              className="inline-flex items-center gap-1 rounded-md bg-white px-3 py-1.5 text-emerald-900 shadow hover:bg-gray-100"
+              className="inline-flex items-center gap-1 rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white shadow-soft hover:bg-[#1f3427]"
             >
               <span>＋</span> Add Task
             </button>
           </div>
 
           {selectedTasks.length === 0 ? (
-            <p className="text-sm text-emerald-100">No schedule entries for this day.</p>
+            <p className="text-sm text-gray-600">No schedule entries for this day.</p>
           ) : (
             <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
               {selectedTasks.map((t) => (
-                <li key={t.id} className="rounded-lg bg-white p-3 shadow">
-                  <h3 className="mb-1 font-medium text-gray-900">{t.title}</h3>
+                <li key={t.id} className="rounded-2xl border border-border-soft bg-[#fffdf7] p-4 shadow-soft">
+                  <h3 className="mb-1 font-semibold text-[#1f3427]">{t.title}</h3>
 
                   {t.employeeName && (
                     <p className="text-sm text-gray-600">
@@ -287,13 +287,13 @@ export default function Page() {
                       <>
                         <button
                           onClick={() => router.push(`/tasks/${t.workReqId}`)}
-                          className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                          className="rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white hover:bg-[#1f3427]"
                         >
                           View
                         </button>
                         <button
                           onClick={() => router.push(`/tasks/${t.workReqId}/edit`)}
-                          className="rounded-md bg-gray-200 px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-300"
+                          className="rounded-xl bg-gray-200 px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-300"
                         >
                           Edit
                         </button>

@@ -8,15 +8,15 @@ export default function UserChip({ name }) {
   return (
     <Link
       href="/profile"
-      className="grid grid-cols-[40px_1fr] items-center gap-3 rounded-[10px] bg-white/15 px-3 py-2 hover:bg-white/25 transition"
+      className="mt-5 grid grid-cols-[44px_1fr] items-center gap-3 rounded-[18px] border border-white/10 bg-white/10 px-3 py-3 transition hover:bg-white/14"
       aria-label="Open profile"
     >
-      <div className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#4f6c2d] font-bold">
+      <div className="grid h-11 w-11 place-items-center rounded-full bg-[#f4f1e8] text-[#294733] font-black">
         {initial}
       </div>
       <div className="leading-tight">
         <div className="font-bold">{name ?? "User"}</div>
-        <div className="text-xs opacity-90">Online</div>
+        <div className="text-xs uppercase tracking-[0.16em] text-white/70">Online</div>
       </div>
     </Link>
   );

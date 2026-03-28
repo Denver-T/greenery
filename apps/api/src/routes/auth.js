@@ -81,7 +81,9 @@ router.get("/health", verifyToken, (req, res) => {
     user: {
       uid: req.user?.uid || null,
       email: req.user?.email || null,
+      employeeId: req.user?.employeeId || null,
       role: req.user?.role || null,
+      permissionLevel: req.user?.permissionLevel || null,
     },
   });
 });

@@ -184,12 +184,32 @@ export default function AssignmentsPage() {
   return (
     <AppShell title="Assign Tasks">
       <section className="space-y-6 p-6">
-        <div className="bg-white p-4 shadow-soft">
+        <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="w-fit rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#1f3427]">
+                Scheduling Workspace
+              </div>
+              <h2 className="mt-4 text-2xl font-black tracking-tight text-[#1f3427]">
+                Assign Work Intentionally
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
+                Pair open requests with the right employee, capture a due date, and keep the active
+                assignment board easy to scan.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border-soft bg-[#f8f4ea] px-4 py-4 text-sm text-gray-600">
+              <div><span className="font-semibold text-[#1f3427]">{employees.length}</span> employees loaded</div>
+              <div className="mt-1"><span className="font-semibold text-[#1f3427]">{tasks.length}</span> total tasks in scope</div>
+              <div className="mt-1"><span className="font-semibold text-[#1f3427]">{selectedCount}</span> selected for assignment</div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Employee</label>
               <select
-                className="w-full rounded-md border border-gray-300 bg-white p-2"
+                className="w-full rounded-xl border border-border-soft bg-white p-2.5"
                 value={selectedEmployeeId}
                 onChange={(e) => setSelectedEmployeeId(e.target.value)}
               >
@@ -206,7 +226,7 @@ export default function AssignmentsPage() {
               <label className="text-sm font-medium text-gray-700">Due date</label>
               <input
                 type="date"
-                className="w-full rounded-md border border-gray-300 p-2"
+                className="w-full rounded-xl border border-border-soft p-2.5"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
               />
@@ -215,13 +235,16 @@ export default function AssignmentsPage() {
               </p>
             </div>
 
-            <div className="flex flex-col justify-end gap-2">
+            <div className="flex flex-col gap-2">
+              <div className="hidden text-sm font-medium text-transparent md:block">
+                Action
+              </div>
               <button
                 onClick={assignTasks}
                 disabled={!canAssign}
                 className={clsx(
-                  "rounded-md px-3 py-2 text-sm font-medium text-white",
-                  canAssign ? "bg-emerald-600 hover:bg-emerald-700" : "bg-emerald-300"
+                  "mt-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-white",
+                  canAssign ? "bg-emerald-700 hover:bg-emerald-800" : "bg-emerald-300"
                 )}
               >
                 Assign {selectedCount > 0 ? `(${selectedCount})` : ""}
@@ -232,16 +255,16 @@ export default function AssignmentsPage() {
           </div>
         </div>
 
-        <div className="bg-white p-4 shadow-soft">
+        <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
           <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="inline-flex gap-1 rounded-md bg-gray-100 p-1">
+            <div className="inline-flex gap-1 rounded-full bg-[#f0ebde] p-1">
               {["unassigned", "assigned", "all"].map((key) => (
                 <button
                   key={key}
                   onClick={() => setFilter(key)}
                   className={clsx(
-                    "rounded px-3 py-1.5 text-sm capitalize",
-                    filter === key ? "bg-white text-emerald-700 shadow" : "text-gray-700"
+                    "rounded-full px-4 py-2 text-sm font-semibold capitalize",
+                    filter === key ? "bg-white text-[#1f3427] shadow-soft" : "text-gray-700"
                   )}
                 >
                   {key}
@@ -252,19 +275,19 @@ export default function AssignmentsPage() {
             <div className="flex items-center gap-2">
               <input
                 placeholder="Search tasks..."
-                className="w-full rounded-md border border-gray-300 p-2 md:w-72"
+                className="w-full rounded-xl border border-border-soft p-2.5 md:w-72"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
               <button
                 onClick={selectAllOnPage}
-                className="rounded-md bg-gray-200 px-3 py-2 text-sm text-gray-800 hover:bg-gray-300"
+                className="rounded-xl bg-gray-200 px-3 py-2 text-sm text-gray-800 hover:bg-gray-300"
               >
                 Select all
               </button>
               <button
                 onClick={clearAll}
-                className="rounded-md bg-gray-200 px-3 py-2 text-sm text-gray-800 hover:bg-gray-300"
+                className="rounded-xl bg-gray-200 px-3 py-2 text-sm text-gray-800 hover:bg-gray-300"
               >
                 Clear
               </button>
@@ -282,7 +305,7 @@ export default function AssignmentsPage() {
                 const disabled = !!task.assignedTo && Number(task.assignedTo) !== Number(selectedEmployeeId || 0);
 
                 return (
-                  <li key={task.id} className="rounded-lg border border-gray-200 p-3">
+                  <li key={task.id} className="rounded-2xl border border-border-soft bg-[#fffdf7] p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-2">
                         <input
@@ -293,18 +316,18 @@ export default function AssignmentsPage() {
                           onChange={() => toggleSelect(task.id)}
                         />
                         <div>
-                          <div className="font-medium text-gray-900">{task.title}</div>
+                          <div className="font-semibold text-[#1f3427]">{task.title}</div>
                           <div className="text-sm text-gray-600">
-                            {[task.account, task.location].filter(Boolean).join(" - ") || "No account/location"}
+                            {[task.account, task.location].filter(Boolean).join(" - ") || "No account or location"}
                           </div>
 
                           {task.assignedTo ? (
-                            <div className="mt-1 text-xs text-emerald-700">
+                            <div className="mt-2 w-fit rounded-full bg-[#e6f3ea] px-3 py-1 text-xs font-semibold text-emerald-800">
                               Assigned to {employees.find((employee) => Number(employee.id) === Number(task.assignedTo))?.name || task.assignedTo}
                               {task.date ? ` - due ${task.date}` : ""}
                             </div>
                           ) : (
-                            <div className="mt-1 text-xs text-gray-500">Unassigned</div>
+                            <div className="mt-2 w-fit rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-semibold text-[#1f3427]">Unassigned</div>
                           )}
                         </div>
                       </div>
@@ -312,7 +335,7 @@ export default function AssignmentsPage() {
                       {!!task.assignedTo && (
                         <button
                           onClick={() => unassignTask(task.id)}
-                          className="rounded-md bg-white px-2 py-1 text-xs text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
+                          className="rounded-xl bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
                           title="Unassign"
                         >
                           Unassign
@@ -326,13 +349,13 @@ export default function AssignmentsPage() {
           )}
         </div>
 
-        <div className="bg-white p-4 shadow-soft">
-          <h2 className="mb-3 text-lg font-semibold text-gray-900">Current Assignments</h2>
+        <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
+          <h2 className="mb-3 text-lg font-black text-[#1f3427]">Current Assignments</h2>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             {groupedByEmployee.map(({ employee, tasks: employeeTasks }) => (
-              <div key={employee.id} className="rounded-lg border border-gray-200 p-3">
-                <div className="mb-2 font-medium text-gray-900">
+              <div key={employee.id} className="rounded-2xl border border-border-soft bg-[#fffdf7] p-4">
+                <div className="mb-2 font-semibold text-[#1f3427]">
                   {employee.name} {employee.role ? `- ${employee.role}` : ""}
                 </div>
 

@@ -16,6 +16,7 @@ const plantRoutes = require("./routes/plants");
 const employeeRoutes = require("./routes/employees");
 const reqRoutes = require("./routes/reqs");
 const scheduleRoutes = require("./routes/schedule");
+const superAdminRoutes = require("./routes/superadmin");
 
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
@@ -47,6 +48,7 @@ app.use("/plants", plantRoutes);
 app.use("/employees", employeeRoutes);
 app.use("/reqs", reqRoutes);
 app.use("/schedule", scheduleRoutes);
+app.use("/superadmin", superAdminRoutes);
 
 /**
  * API documentation

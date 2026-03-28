@@ -3,7 +3,92 @@
 
 const employeesService = require("../services/employeesService");
 const { httpError } = require("../utils/httpError");
+const {
+  getAccessRank,
+  isHighPrivilegePermission,
+  normalizeAccessLevel,
+  normalizePermissionLevelInput,
+  normalizeRoleInput,
+} = require("../utils/permissions");
+const { logActivity } = require("../utils/activityLogger");
 const { toPositiveInt } = require("../utils/validators");
+
+function assertEmployeeWriteAllowed(
+  req,
+  requestedRole,
+  requestedPermission,
+  existingEmployee = null
+) {
+  const actorLevel = normalizeAccessLevel(
+    req.user?.permissionLevel || req.user?.role || "technician"
+  );
+  const nextRole = normalizeRoleInput(
+    requestedRole,
+    existingEmployee?.role || "Technician"
+  );
+  const nextPermission = normalizePermissionLevelInput(
+    requestedPermission,
+    existingEmployee?.permissionLevel || nextRole || "Technician"
+  );
+  const currentPermission = existingEmployee?.permissionLevel
+    ? normalizePermissionLevelInput(existingEmployee.permissionLevel)
+    : existingEmployee?.role
+      ? normalizePermissionLevelInput(existingEmployee.role)
+      : null;
+  const currentRole = existingEmployee?.role
+    ? normalizeRoleInput(existingEmployee.role)
+    : null;
+
+  if (nextPermission === "SuperAdmin" && actorLevel !== "superadmin") {
+    throw httpError(
+      403,
+      "Only super admins can assign SuperAdmin access",
+      "AUTH_FORBIDDEN"
+    );
+  }
+
+  if (isHighPrivilegePermission(nextPermission) && actorLevel !== "superadmin") {
+    throw httpError(
+      403,
+      "Only super admins can assign administrator-level access",
+      "AUTH_FORBIDDEN"
+    );
+  }
+
+  if (
+    currentPermission === "SuperAdmin" &&
+    actorLevel !== "superadmin"
+  ) {
+    throw httpError(
+      403,
+      "Only super admins can modify another super admin",
+      "AUTH_FORBIDDEN"
+    );
+  }
+
+  if (
+    actorLevel !== "superadmin" &&
+    (nextRole !== "Technician" || nextPermission !== "Technician")
+  ) {
+    throw httpError(
+      403,
+      "Only super admins can create or manage non-technician employees",
+      "AUTH_FORBIDDEN"
+    );
+  }
+
+  if (
+    actorLevel !== "superadmin" &&
+    existingEmployee &&
+    (currentRole !== "Technician" || currentPermission !== "Technician")
+  ) {
+    throw httpError(
+      403,
+      "Only super admins can modify or remove non-technician employees",
+      "AUTH_FORBIDDEN"
+    );
+  }
+}
 
 async function getAll(req, res, next) {
   try {
@@ -42,6 +127,8 @@ async function getById(req, res, next) {
 
 async function create(req, res, next) {
   try {
+    assertEmployeeWriteAllowed(req, req.body?.role, req.body?.permissionLevel);
+
     // Duplicate-email protection lives here so the API can return a precise 409
     // before the write layer is invoked.
     const normalizedEmail =
@@ -60,6 +147,18 @@ async function create(req, res, next) {
     }
 
     const created = await employeesService.createEmployee(req.body);
+    await logActivity({
+      req,
+      action: "employee.created",
+      targetType: "employee",
+      targetId: created?.id || null,
+      metadata: {
+        name: created?.name || null,
+        email: created?.email || null,
+        role: created?.role || null,
+        permissionLevel: created?.permissionLevel || null,
+      },
+    });
     return res.status(201).json({ data: created });
   } catch (err) {
     if (err.message === "Name is required") {
@@ -88,6 +187,13 @@ async function update(req, res, next) {
       return next(httpError(404, "Employee not found", "EMPLOYEE_NOT_FOUND"));
     }
 
+    assertEmployeeWriteAllowed(
+      req,
+      req.body?.role,
+      req.body?.permissionLevel,
+      existing
+    );
+
     // Guard email uniqueness on update as well, excluding the current employee row.
     const normalizedEmail =
       typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : null;
@@ -105,6 +211,29 @@ async function update(req, res, next) {
     }
 
     const updated = await employeesService.updateEmployee(id, req.body);
+    await logActivity({
+      req,
+      action:
+        existing.permissionLevel !== updated?.permissionLevel
+          ? "employee.permission_updated"
+          : "employee.updated",
+      targetType: "employee",
+      targetId: id,
+      metadata: {
+        before: {
+          role: existing.role,
+          status: existing.status,
+          permissionLevel: existing.permissionLevel,
+        },
+        after: updated
+          ? {
+              role: updated.role,
+              status: updated.status,
+              permissionLevel: updated.permissionLevel,
+            }
+          : null,
+      },
+    });
 
     return res.json({ data: updated });
   } catch (err) {
@@ -128,11 +257,38 @@ async function remove(req, res, next) {
       );
     }
 
+    const existing = await employeesService.getEmployeeById(id);
+
+    if (getAccessRank(existing?.permissionLevel || existing?.role) >= getAccessRank("superadmin")
+      && normalizeAccessLevel(req.user?.permissionLevel || req.user?.role) !== "superadmin") {
+      return next(
+        httpError(403, "Only super admins can delete a super admin", "AUTH_FORBIDDEN")
+      );
+    }
+
+    try {
+      assertEmployeeWriteAllowed(req, existing?.role, existing?.permissionLevel, existing);
+    } catch (err) {
+      return next(err);
+    }
+
     const deleted = await employeesService.deleteEmployee(id);
 
     if (!deleted) {
       return next(httpError(404, "Employee not found", "EMPLOYEE_NOT_FOUND"));
     }
+
+    await logActivity({
+      req,
+      action: "employee.deleted",
+      targetType: "employee",
+      targetId: id,
+      metadata: {
+        name: existing?.name || null,
+        email: existing?.email || null,
+        permissionLevel: existing?.permissionLevel || null,
+      },
+    });
 
     return res.json({ message: "Employee deleted successfully" });
   } catch (err) {
