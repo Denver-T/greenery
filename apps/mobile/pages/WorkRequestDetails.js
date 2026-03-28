@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
+  Alert,
   ImageBackground,
   Image,
   SafeAreaView,
@@ -76,13 +77,14 @@ export default function WorkRequestDetails({ route, navigation }) {
             <Text style={styles.topTitle}>Greenery Team App</Text>
             <Text style={styles.topSubtitle}>Mobile View</Text>
           </View>
-          <View style={[styles.topBarSide, { alignItems: "flex-end" }]}>
-            <Ionicons
-              name="notifications-outline"
-              size={22}
-              color={COLORS.white}
-            />
-          </View>
+          <Pressable
+            style={[styles.topBarSide, { alignItems: 'flex-end' }]}
+            onPress={() => Alert.alert('\U0001F514 Notifications', 'No new notifications at this time.', [{ text: 'OK' }])}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+          >
+            <Ionicons name="notifications-outline" size={22} color={COLORS.white} />
+          </Pressable>
         </View>
 
         

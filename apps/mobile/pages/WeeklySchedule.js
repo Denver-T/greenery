@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Pressable,
+  Alert,
   ActivityIndicator,
   ImageBackground,
   SafeAreaView,
@@ -81,9 +83,14 @@ export default function WeeklySchedule() {
             <Text style={styles.topTitle}>Greenery Team App</Text>
             <Text style={styles.topSubtitle}>Mobile View</Text>
           </View>
-          <View style={[styles.topBarSide, { alignItems: 'flex-end' }]}>
+          <Pressable
+            style={[styles.topBarSide, { alignItems: 'flex-end' }]}
+            onPress={() => Alert.alert('\U0001F514 Notifications', 'No new notifications at this time.', [{ text: 'OK' }])}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+          >
             <Ionicons name="notifications-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
+          </Pressable>
         </View>
 
         <View style={styles.menuBlockWrap}>

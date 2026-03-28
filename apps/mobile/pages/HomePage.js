@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Alert,
   ImageBackground,
   SafeAreaView,
   StyleSheet,
@@ -15,15 +16,14 @@ import {
   Ionicons,
   MaterialIcons,
   MaterialCommunityIcons,
-  FontAwesome5,
   Feather,
 } from '@expo/vector-icons';
-import NavBar from '../components/NavBar'; 
+import NavBar from '../components/NavBar';
 
 const BG = require('../assets/bg.jpg');
 
 const COLORS = {
-  green: '#6f8641',      
+  green: '#6f8641',
   greenDark: '#5e7833',
   blockGreen: '#6f8641',
   black: '#000000',
@@ -84,7 +84,13 @@ const MENU_ITEMS = [
 export default function HomePage() {
   const navigation = useNavigation();
 
-
+  function handleNotifications() {
+    Alert.alert(
+      '🔔 Notifications',
+      'No new notifications at this time.',
+      [{ text: 'OK' }]
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -102,9 +108,14 @@ export default function HomePage() {
             <Text style={styles.topTitle}>Greenery Team App</Text>
             <Text style={styles.topSubtitle}>Mobile View</Text>
           </View>
-          <View style={[styles.topBarSide, { alignItems: 'flex-end' }]}>
+          <Pressable
+            style={[styles.topBarSide, { alignItems: 'flex-end' }]}
+            onPress={handleNotifications}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+          >
             <Ionicons name="notifications-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
+          </Pressable>
         </View>
 
         <ScrollView
@@ -170,14 +181,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.tint,
   },
 
-  /* Top bar */
   topBar: {
     height: 52,
     backgroundColor: COLORS.green,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    elevation: 6, // Android shadow
+    elevation: 6,
   },
   topBarSide: { width: 32 },
   topBarCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -198,7 +208,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
 
-  /* Main Menu chip */
   menuBlockWrap: {
     marginTop: 8,
     marginBottom: 8,
@@ -219,7 +228,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  /* Blocks */
   blockWrap: {
     marginTop: 10,
   },
