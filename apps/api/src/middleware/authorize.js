@@ -11,6 +11,7 @@
  */
 
 const { httpError } = require("../utils/httpError");
+const { getAccessRank, normalizeAccessLevel } = require("../utils/permissions");
 
 exports.authorize = (...allowedRoles) => {
   return (req, res, next) => {
@@ -21,12 +22,18 @@ exports.authorize = (...allowedRoles) => {
       );
     }
 
-    const userRole = (req.user.role || "").toLowerCase();
-    const normalizedAllowed = allowedRoles.map(r => r.toLowerCase());
+    const userLevel = normalizeAccessLevel(
+      req.user.permissionLevel || req.user.role || ""
+    );
+    const userRank = getAccessRank(userLevel);
+    const minAllowedRank = allowedRoles.reduce((highest, role) => {
+      const rank = getAccessRank(role);
+      return rank > highest ? rank : highest;
+    }, 0);
 
-    // Roles are compared case-insensitively because they may come from
-    // Firebase claims while DB roles use a separate canonical format.
-    if (!normalizedAllowed.includes(userRole)) {
+    // Authorization is hierarchical so higher-privilege users can access
+    // lower-privilege routes without duplicating "superadmin" everywhere.
+    if (!userRank || userRank < minAllowedRank) {
       return next(
         httpError(
           403,

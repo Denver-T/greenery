@@ -18,7 +18,7 @@ CREATE TABLE employees (
   email VARCHAR(255) NULL,
   phone VARCHAR(50) NULL,
   status ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active',
-  permissionLevel ENUM('Technician', 'Manager', 'Administrator') NOT NULL DEFAULT 'Technician',
+  permissionLevel ENUM('Technician', 'Manager', 'Administrator', 'SuperAdmin') NOT NULL DEFAULT 'Technician',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -99,5 +99,21 @@ CREATE TABLE notifications (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_notif_employee
     FOREIGN KEY (employee_id) REFERENCES employees(id)
+    ON DELETE SET NULL
+);
+
+-- Activity logs
+CREATE TABLE activity_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  actor_employee_id INT NULL,
+  actor_email VARCHAR(255) NULL,
+  actor_permission_level VARCHAR(50) NULL,
+  action VARCHAR(100) NOT NULL,
+  target_type VARCHAR(100) NOT NULL,
+  target_id INT NULL,
+  metadata JSON NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_activity_employee
+    FOREIGN KEY (actor_employee_id) REFERENCES employees(id)
     ON DELETE SET NULL
 );
