@@ -34,12 +34,16 @@ export async function apiFetch(path, options = {}) {
 
   try {
     const response = await fetch(`${BASE_URL}${path}`, config);
-    const data = await response.json();
+    const contentType = response.headers.get("content-type") || "";
+    const payload = contentType.includes("application/json")
+      ? await response.json()
+      : await response.text();
 
     if (!response.ok) {
-      // Throw an error that components can catch
       const status = response.status;
-      const errorMessage = data.error || data.message || `HTTP Error ${status}`;
+      const errorMessage =
+        (typeof payload === "string" ? payload : payload?.error || payload?.message) ||
+        `HTTP Error ${status}`;
 
       switch (status) {
         case 400:
@@ -66,9 +70,15 @@ export async function apiFetch(path, options = {}) {
         default:
           console.error(`⚠️ Unhandled Error (${status}):`, errorMessage);
       }
+
+      throw new Error(errorMessage);
     }
 
-    return data;
+    if (typeof payload === "string") {
+      return payload;
+    }
+
+    return payload?.data ?? payload;
   } catch (error) {
     console.error(`[API Error] ${method} ${path}:`, error);
     throw error;

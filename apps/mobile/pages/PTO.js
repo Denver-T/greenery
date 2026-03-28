@@ -2,41 +2,22 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  ImageBackground,
   Pressable,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import NavBar from "../components/NavBar";
+import MobileScaffold from "../components/MobileScaffold";
 import { apiFetch } from "../util/api";
-
-const BG = require("../assets/bg.jpg");
-const RADIUS = 12;
-
-const COLORS = {
-  green: "#6f8641",
-  greenDark: "#5e7833",
-  blockGreen: "#6f8641",
-  textOnGreen: "#ffffff",
-  cardFill: "#ffffff",
-  cardBorder: "#d9e1c8",
-  tint: "rgba(125, 145, 98, 0.25)",
-  mutedText: "#e9efd9",
-  titleGreen: "#5a7320",
-  gray500: "#6b7280",
-};
+import { COLORS, RADII, SPACING } from "../theme";
 
 const STATUS_COLORS = {
-  pending: { bg: "#fef9c3", text: "#854d0e" },
-  approved: { bg: "#dcfce7", text: "#166534" },
-  denied: { bg: "#fee2e2", text: "#991b1b" },
+  pending: { bg: "#f7e7bf", text: "#8c6418" },
+  approved: { bg: "#ddf1e4", text: "#1d6540" },
+  denied: { bg: "#f4deda", text: "#9d433b" },
 };
 
 function normalizePtoListResponse(response) {
@@ -56,6 +37,35 @@ function normalizePtoListResponse(response) {
   return { items: [], error: message };
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) {
+    return "";
+  }
+
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function Field({ label, value, onChangeText, placeholder, multiline = false }) {
+  return (
+    <View style={styles.fieldWrap}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput
+        style={[styles.input, multiline && styles.inputMultiline]}
+        placeholder={placeholder}
+        placeholderTextColor={COLORS.textSoft}
+        value={value}
+        onChangeText={onChangeText}
+        multiline={multiline}
+        numberOfLines={multiline ? 3 : 1}
+      />
+    </View>
+  );
+}
+
 export default function PTO() {
   const [ptoList, setPtoList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +82,7 @@ export default function PTO() {
     fetchPTO();
   }, []);
 
-  const fetchPTO = async () => {
+  async function fetchPTO() {
     try {
       setLoading(true);
       const response = await apiFetch("/pto");
@@ -86,11 +96,11 @@ export default function PTO() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const submitPTO = async () => {
+  async function submitPTO() {
     if (!employeeName || !startDate || !endDate) {
-      Alert.alert("Missing Fields", "Please fill in Name, Start Date and End Date");
+      Alert.alert("Missing fields", "Please fill in your name, start date, and end date.");
       return;
     }
 
@@ -110,7 +120,7 @@ export default function PTO() {
         throw new Error(response?.error || response?.message || "Failed to submit PTO request");
       }
 
-      Alert.alert("Success", "PTO request submitted.");
+      Alert.alert("Submitted", "Your PTO request has been sent.");
       setEmployeeName("");
       setStartDate("");
       setEndDate("");
@@ -118,353 +128,224 @@ export default function PTO() {
       setShowForm(false);
       fetchPTO();
     } catch (err) {
-      console.error(err);
-      Alert.alert("Error", err?.message || "Failed to submit PTO request");
+      Alert.alert("Submission failed", err?.message || "Failed to submit PTO request.");
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) {
-      return "";
-    }
-
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
+  }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor={COLORS.green} barStyle="light-content" />
+    <MobileScaffold
+      eyebrow="Time away"
+      title="Time off"
+      subtitle="Review and submit PTO requests."
+    >
+      <Pressable
+        style={[styles.primaryAction, !!serviceError && styles.disabledAction]}
+        onPress={() => setShowForm((value) => !value)}
+        disabled={!!serviceError}
+      >
+        <MaterialCommunityIcons
+          name={showForm ? "close-circle-outline" : "calendar-plus"}
+          size={18}
+          color={COLORS.textOnBrand}
+        />
+        <Text style={styles.primaryActionText}>{showForm ? "Cancel request" : "New PTO request"}</Text>
+      </Pressable>
 
-      <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
-        <View style={styles.tint} />
-
-        <View style={styles.topBar}>
-          <View style={styles.topBarSide}>
-            <Ionicons name="person-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
-          <View style={styles.topBarCenter}>
-            <Text style={styles.topTitle}>Greenery Team App</Text>
-            <Text style={styles.topSubtitle}>Mobile View</Text>
-          </View>
-          <View style={[styles.topBarSide, { alignItems: "flex-end" }]}>
-            <Ionicons name="notifications-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
+      {serviceError ? (
+        <View style={styles.noticeCard}>
+          <Text style={styles.noticeTitle}>PTO backend not ready</Text>
+          <Text style={styles.noticeText}>{serviceError}</Text>
         </View>
+      ) : null}
 
-        {/* Header Block */}
-        <View style={styles.menuBlockWrap}>
-          <View style={styles.menuBlock}>
-            <Text style={styles.menuBlockText}>Book Time Off</Text>
-          </View>
-        </View>
+      {showForm && !serviceError ? (
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Request time off</Text>
+          <Field label="Your name" value={employeeName} onChangeText={setEmployeeName} placeholder="Technician name" />
+          <Field label="Start date" value={startDate} onChangeText={setStartDate} placeholder="YYYY-MM-DD" />
+          <Field label="End date" value={endDate} onChangeText={setEndDate} placeholder="YYYY-MM-DD" />
+          <Field label="Reason" value={reason} onChangeText={setReason} placeholder="Optional context" multiline />
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <Pressable
-            style={[styles.newRequestBtn, !!serviceError && styles.disabledBtn]}
-            onPress={() => setShowForm(!showForm)}
-            disabled={!!serviceError}
-          >
-            <Ionicons
-              name={showForm ? "close-circle-outline" : "add-circle-outline"}
-              size={20}
-              color="#fff"
-            />
-            <Text style={styles.newRequestText}>
-              {showForm ? "Cancel" : "New PTO Request"}
-            </Text>
+          <Pressable style={styles.submitButton} onPress={submitPTO} disabled={submitting}>
+            {submitting ? <ActivityIndicator color={COLORS.textOnBrand} /> : <Text style={styles.submitButtonText}>Submit request</Text>}
           </Pressable>
+        </View>
+      ) : null}
 
-          {serviceError ? (
-            <View style={styles.noticeCard}>
-              <Text style={styles.noticeTitle}>PTO backend not ready</Text>
-              <Text style={styles.noticeText}>
-                {serviceError}
-              </Text>
-            </View>
-          ) : null}
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>My PTO requests</Text>
 
-          {showForm && !serviceError ? (
-            <View style={styles.formCard}>
-              <Text style={styles.formTitle}>Submit PTO Request</Text>
+        {loading ? <ActivityIndicator size="large" color={COLORS.moss} style={styles.loader} /> : null}
 
-              <Text style={styles.label}>Your Name *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your name"
-                value={employeeName}
-                onChangeText={setEmployeeName}
-              />
+        {!loading && !serviceError && ptoList.length === 0 ? (
+          <Text style={styles.emptyText}>No PTO requests found.</Text>
+        ) : null}
 
-              <Text style={styles.label}>Start Date * (YYYY-MM-DD)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 2026-04-01"
-                value={startDate}
-                onChangeText={setStartDate}
-              />
-
-              <Text style={styles.label}>End Date * (YYYY-MM-DD)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 2026-04-03"
-                value={endDate}
-                onChangeText={setEndDate}
-              />
-
-              <Text style={styles.label}>Reason (optional)</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Enter reason..."
-                value={reason}
-                onChangeText={setReason}
-                multiline
-                numberOfLines={3}
-              />
-
-              <Pressable
-                style={styles.submitBtn}
-                onPress={submitPTO}
-                disabled={submitting}
-              >
-                {submitting ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.submitText}>Submit Request</Text>
-                )}
-              </Pressable>
-            </View>
-          ) : null}
-
-          <Text style={styles.sectionTitle}>My PTO Requests</Text>
-
-          {loading ? (
-            <ActivityIndicator size="large" color={COLORS.green} style={{ marginTop: 20 }} />
-          ) : null}
-
-          {!loading && !serviceError && ptoList.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Ionicons name="calendar-outline" size={40} color={COLORS.greenDark} />
-              <Text style={styles.emptyText}>No PTO requests found</Text>
-            </View>
-          ) : null}
-
-          {!loading &&
-            !serviceError &&
-            ptoList.map((pto) => {
+        {!loading && !serviceError ? (
+          <View style={styles.stack}>
+            {ptoList.map((pto) => {
               const statusStyle = STATUS_COLORS[pto.status] || STATUS_COLORS.pending;
 
               return (
-                <View key={pto.id} style={styles.card}>
-                  <View style={styles.cardHeader}>
-                    <View style={styles.cardHeaderPill}>
-                      <Text style={styles.cardHeaderText}>PTO Request</Text>
-                    </View>
-                    <View style={{ flex: 1 }} />
+                <View key={pto.id} style={styles.requestCard}>
+                  <View style={styles.requestHeader}>
+                    <Text style={styles.requestName}>{pto.employee_name}</Text>
                     <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-                      <Text style={[styles.statusText, { color: statusStyle.text }]}>
-                        {pto.status?.toUpperCase()}
-                      </Text>
+                      <Text style={[styles.statusText, { color: statusStyle.text }]}>{pto.status?.toUpperCase()}</Text>
                     </View>
                   </View>
-
-                  <View style={styles.cardRow}>
-                    <Ionicons name="person-outline" size={14} color={COLORS.greenDark} />
-                    <Text style={styles.cardRowText}>{pto.employee_name}</Text>
-                  </View>
-
-                  <View style={styles.cardRow}>
-                    <Ionicons name="calendar-outline" size={14} color={COLORS.greenDark} />
-                    <Text style={styles.cardRowText}>
-                      {formatDate(pto.start_date)} to {formatDate(pto.end_date)}
-                    </Text>
-                  </View>
-
-                  {pto.reason ? (
-                    <View style={styles.cardRow}>
-                      <Ionicons name="chatbubble-outline" size={14} color={COLORS.greenDark} />
-                      <Text style={styles.cardRowText}>{pto.reason}</Text>
-                    </View>
-                  ) : null}
+                  <Text style={styles.requestMeta}>
+                    {formatDate(pto.start_date)} to {formatDate(pto.end_date)}
+                  </Text>
+                  {pto.reason ? <Text style={styles.requestReason}>{pto.reason}</Text> : null}
                 </View>
               );
             })}
-
-          <View style={{ height: 90 }} />
-        </ScrollView>
-
-        <View style={styles.tabBar}>
-          <NavBar />
-        </View>
-      </ImageBackground>
-    </SafeAreaView>
+          </View>
+        ) : null}
+      </View>
+    </MobileScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.green },
-  bg: { flex: 1 },
-  tint: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.tint },
-  topBar: {
-    height: 52,
-    backgroundColor: COLORS.green,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    elevation: 6,
-  },
-  topBarSide: { width: 32 },
-  topBarCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
-  topTitle: {
-    color: COLORS.textOnGreen,
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-  },
-  menuBlockText: { color: COLORS.textOnGreen, fontSize: 22, fontWeight: '800', letterSpacing: 0.5 },
-
-  scrollContent: { paddingHorizontal: 12, paddingTop: 8 },
-
-  // New Request Button
-  newRequestBtn: {
-    backgroundColor: COLORS.green,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 14,
-    borderRadius: RADIUS,
-    marginBottom: 12,
-    elevation: 3,
-  },
-  menuBlockWrap: { marginTop: 8, marginBottom: 8, paddingHorizontal: 6 },
-  menuBlock: {
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: COLORS.blockGreen,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 6,
-  },
-  menuBlockText: {
-    color: COLORS.textOnGreen,
-    fontSize: 22,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  scrollContent: { paddingHorizontal: 12, paddingTop: 8 },
-  newRequestBtn: {
-    backgroundColor: COLORS.green,
+  primaryAction: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    padding: 14,
-    borderRadius: RADIUS,
-    marginBottom: 12,
-    elevation: 3,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.moss,
+    paddingVertical: 14,
   },
-  disabledBtn: {
-    opacity: 0.55,
+  disabledAction: {
+    opacity: 0.6,
   },
-  newRequestText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  primaryActionText: {
+    color: COLORS.textOnBrand,
+    fontSize: 15,
+    fontWeight: "700",
+  },
   noticeCard: {
-    backgroundColor: "#fff7ed",
-    borderColor: "#fdba74",
+    marginTop: SPACING.md,
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.warningSoft,
     borderWidth: 1,
-    borderRadius: RADIUS,
-    padding: 14,
-    marginBottom: 12,
+    borderColor: "rgba(168, 119, 30, 0.18)",
+    padding: SPACING.lg,
   },
   noticeTitle: {
-    color: "#9a3412",
+    color: COLORS.warning,
+    fontSize: 17,
     fontWeight: "800",
-    marginBottom: 4,
   },
   noticeText: {
-    color: "#9a3412",
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  formCard: {
-    backgroundColor: COLORS.cardFill,
-    borderRadius: RADIUS,
-    padding: 16,
-    marginBottom: 12,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-  },
-  formTitle: { fontSize: 16, fontWeight: "800", color: COLORS.titleGreen, marginBottom: 12 },
-  label: { fontSize: 13, fontWeight: "600", color: COLORS.gray500, marginBottom: 4 },
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    borderRadius: 8,
-    padding: 10,
+    marginTop: 6,
+    color: COLORS.textPrimary,
     fontSize: 14,
-    marginBottom: 12,
-    backgroundColor: "#fafafa",
+    lineHeight: 21,
   },
-  textArea: { height: 80, textAlignVertical: "top" },
-  submitBtn: {
-    backgroundColor: COLORS.green,
-    padding: 14,
-    borderRadius: RADIUS,
-    alignItems: "center",
-    marginTop: 4,
+  sectionCard: {
+    marginTop: SPACING.md,
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
   },
-  submitText: { color: "#fff", fontSize: 15, fontWeight: "700" },
   sectionTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 19,
+    fontWeight: "800",
+  },
+  fieldWrap: {
+    marginTop: SPACING.md,
+  },
+  fieldLabel: {
+    marginBottom: 6,
+    color: COLORS.textMuted,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  input: {
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.parchment,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 13,
+    color: COLORS.textPrimary,
+    fontSize: 15,
+  },
+  inputMultiline: {
+    minHeight: 90,
+    textAlignVertical: "top",
+  },
+  submitButton: {
+    marginTop: SPACING.md,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.forestDeep,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  submitButtonText: {
+    color: COLORS.textOnBrand,
     fontSize: 15,
     fontWeight: "800",
-    color: COLORS.titleGreen,
-    marginBottom: 8,
   },
-  card: {
-    backgroundColor: COLORS.cardFill,
-    borderRadius: RADIUS,
-    padding: 12,
-    marginBottom: 10,
-    elevation: 3,
+  loader: {
+    marginTop: 20,
+  },
+  emptyText: {
+    marginTop: SPACING.md,
+    color: COLORS.textMuted,
+    fontSize: 14,
+  },
+  stack: {
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
+  },
+  requestCard: {
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.parchment,
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
   },
-  cardHeader: {
+  requestHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    justifyContent: "space-between",
+    gap: SPACING.sm,
   },
-  cardHeaderPill: {
-    backgroundColor: COLORS.green,
-    paddingHorizontal: 12,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
+  requestName: {
+    flex: 1,
+    color: COLORS.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
   },
-  cardHeaderText: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  requestMeta: {
+    marginTop: 8,
+    color: COLORS.textMuted,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  requestReason: {
+    marginTop: 8,
+    color: COLORS.textPrimary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   statusBadge: {
+    borderRadius: RADII.pill,
     paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingVertical: 6,
   },
-  statusText: { fontSize: 11, fontWeight: "700" },
-  cardRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
+  statusText: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.7,
   },
-  cardRowText: { fontSize: 13, color: "#444", flex: 1 },
-  emptyBox: { alignItems: "center", paddingVertical: 30, gap: 8 },
-  emptyText: { fontSize: 14, color: COLORS.greenDark, fontWeight: "600" },
-  tabBar: { backgroundColor: COLORS.green },
 });

@@ -1,251 +1,140 @@
-import React from 'react';
+import React from "react";
 import {
-  ImageBackground,
-  SafeAreaView,
+  Pressable,
   StyleSheet,
   Text,
   View,
-  Pressable,
-  ScrollView,
-  StatusBar,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import NavBar from '../components/NavBar';
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-const BG = require('../assets/bg.jpg');
-const RADIUS = 12;
-const COLORS = {
-  green: '#6f8641',
-  greenDark: '#5e7833',
-  blockGreen: '#6f8641',
-  black: '#000000',
-  textOnGreen: '#ffffff',
-  cardFill: '#f8f8f8',
-  cardBorder: '#d9e1c8',
-  tint: 'rgba(125, 145, 98, 0.25)',
-  tabIcon: '#fff',
-  mutedText: '#e9efd9',
-  reqText: '#999999',
-  titleGreen: '#5a7320',
-};
+import MobileScaffold from "../components/MobileScaffold";
+import { COLORS, RADII, SPACING } from "../theme";
 
-//Replace with real data
 const TASK_SETS = [
   {
     id: 1,
-    title: 'Task Set #1',
-    forms: [1738, 1328, 7543],
+    title: "Lobby maintenance set",
+    forms: ["REQ-1738", "REQ-1328", "REQ-7543"],
+    summary: "Recurring placements and cleanup work grouped for repeat service visits.",
   },
   {
     id: 2,
-    title: 'Task Set #2',
-    forms: [3333, 4444, 5555],
+    title: "Replacement install set",
+    forms: ["REQ-3333", "REQ-4444", "REQ-5555"],
+    summary: "Tasks grouped around plant swap-outs and staging prep.",
   },
   {
     id: 3,
-    title: 'Task Set #3',
-    forms: [6666, 7777, 8888],
+    title: "Atrium service set",
+    forms: ["REQ-6666", "REQ-7777", "REQ-8888"],
+    summary: "A larger grouped job set for shared field execution.",
   },
 ];
 
-function TaskSetCard({ item, onViewMore }) {
+export default function TaskSetList() {
   return (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Ionicons name="information-circle-outline" size={28} color={COLORS.black} style={styles.infoIcon} />
-        <Text style={styles.cardTitle}>{item.title}</Text>
-      </View>
-      <View style={styles.cardForms}>
-        {item.forms.map((form, index) => (
-          <Text key={index} style={styles.formText}>REQ Form: {form}</Text>
+    <MobileScaffold
+      eyebrow="Task sets"
+      title="Grouped field work"
+      subtitle="Reusable bundles for repeat field work."
+    >
+      <View style={styles.stack}>
+        {TASK_SETS.map((item) => (
+          <View key={item.id} style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.iconWrap}>
+                <MaterialCommunityIcons name="clipboard-text-outline" size={18} color={COLORS.forestDeep} />
+              </View>
+              <View style={styles.headerCopy}>
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                <Text style={styles.cardSummary}>{item.summary}</Text>
+              </View>
+            </View>
+
+            <View style={styles.formList}>
+              {item.forms.map((form) => (
+                <View key={form} style={styles.formPill}>
+                  <Text style={styles.formText}>{form}</Text>
+                </View>
+              ))}
+            </View>
+
+            <Pressable style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>View task set</Text>
+            </Pressable>
+          </View>
         ))}
       </View>
-      <Pressable
-        style={({ pressed }) => [styles.viewMoreBtn, pressed && styles.viewMoreBtnPressed]}
-        onPress={() => onViewMore?.(item)}
-      >
-        <Text style={styles.viewMoreText}>View More</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-export default function TaskSetList() {
-  const navigation = useNavigation();
-
-  const handleViewMore = (item) => {
-    // Navigate to task set detail screen
-    console.log('View More pressed for:', item.title);
-  };
-
-  return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor={COLORS.green} barStyle="light-content" />
-
-      <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
-        <View style={styles.tint} />
-
-        {/* Top App Bar */}
-        <View style={styles.topBar}>
-          <View style={styles.topBarSide}>
-            <Ionicons name="person-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
-          <View style={styles.topBarCenter}>
-            <Text style={styles.topTitle}>Greenery Team App</Text>
-            <Text style={styles.topSubtitle}>Mobile View</Text>
-          </View>
-          <View style={[styles.topBarSide, { alignItems: 'flex-end' }]}>
-            <Ionicons name="notifications-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
-        </View>
-
-        {/* Header Block */}
-        <View style={styles.menuBlockWrap}>
-          <View style={styles.menuBlock}>
-            <Text style={styles.menuBlockText}>List of Task Sets</Text>
-          </View>
-        </View>
-
-        {/* Task Set Cards */}
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {TASK_SETS.map((item) => (
-            <TaskSetCard key={item.id} item={item} onViewMore={handleViewMore} />
-          ))}
-          <View style={{ height: 20 }} />
-        </ScrollView>
-
-        {/* Bottom Nav Bar */}
-        <View style={styles.tabBar}>
-          <NavBar />
-        </View>
-      </ImageBackground>
-    </SafeAreaView>
+    </MobileScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.green },
-  bg: { flex: 1 },
-  tint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.tint,
+  stack: {
+    gap: SPACING.sm,
   },
-
-  /* Top bar */
-  topBar: {
-    height: 52,
-    backgroundColor: COLORS.green,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    elevation: 6,
-  },
-  topBarSide: { width: 32 },
-  topBarCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  topTitle: {
-    color: COLORS.textOnGreen,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  topSubtitle: {
-    color: COLORS.mutedText,
-    fontSize: 11,
-    marginTop: -2,
-  },
-
-  /* Header block */
-  menuBlockWrap: {
-    marginTop: 8,
-    marginBottom: 8,
-    paddingHorizontal: 6,
-  },
-  menuBlock: {
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: COLORS.blockGreen,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    elevation: 6,
-  },
-  backBtn: {
-    marginRight: 10,
-    padding: 4,
-  },
-  menuBlockText: {
-    color: COLORS.textOnGreen,
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    flex: 1,
-    textAlign: 'center',
-  },
-
-  /* Scroll */
-  scrollContent: {
-    paddingHorizontal: 10,
-    paddingTop: 4,
-  },
-
-  /* Task Set Card */
   card: {
-    backgroundColor: COLORS.cardFill,
-    borderRadius: RADIUS,
-    padding: 16,
-    marginBottom: 10,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
   },
   cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    flexDirection: "row",
+    gap: SPACING.md,
+    alignItems: "flex-start",
   },
-  infoIcon: {
-    marginRight: 10,
+  iconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.parchment,
+  },
+  headerCopy: {
+    flex: 1,
   },
   cardTitle: {
+    color: COLORS.textPrimary,
     fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.titleGreen,
+    fontWeight: "800",
   },
-  cardForms: {
-    marginLeft: 38,
-    marginBottom: 14,
+  cardSummary: {
+    marginTop: 6,
+    color: COLORS.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  formList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: SPACING.md,
+  },
+  formPill: {
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.parchment,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
   },
   formText: {
-    fontSize: 13,
-    color: COLORS.reqText,
-    lineHeight: 20,
+    color: COLORS.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
   },
-  viewMoreBtn: {
-    alignSelf: 'flex-start',
-    marginLeft: 38,
-    borderWidth: 1,
-    borderColor: '#aaaaaa',
-    borderRadius: 8,
-    paddingVertical: 7,
-    paddingHorizontal: 20,
+  secondaryButton: {
+    alignSelf: "flex-start",
+    marginTop: SPACING.md,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.forestDeep,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  viewMoreBtnPressed: {
-    backgroundColor: '#e8e8e8',
-  },
-  viewMoreText: {
-    fontSize: 13,
-    color: '#333333',
-    fontWeight: '500',
-  },
-
-  /* Bottom tab bar */
-  tabBar: {
-    backgroundColor: COLORS.green,
+  secondaryButtonText: {
+    color: COLORS.textOnBrand,
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

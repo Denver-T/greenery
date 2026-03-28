@@ -1,280 +1,245 @@
-import React from 'react';
+import React from "react";
 import {
-  ImageBackground,
-  SafeAreaView,
+  Alert,
+  Pressable,
   StyleSheet,
   Text,
   View,
-  Pressable,
-  ScrollView,
-  Platform,
-  StatusBar,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import {
-  Ionicons,
-  MaterialIcons,
-  MaterialCommunityIcons,
-  FontAwesome5,
   Feather,
-} from '@expo/vector-icons';
-import NavBar from '../components/NavBar'; 
+  MaterialCommunityIcons,
+  MaterialIcons,
+} from "@expo/vector-icons";
 
-const BG = require('../assets/bg.jpg');
+import MobileScaffold from "../components/MobileScaffold";
+import { logout } from "../util/firebase";
+import { COLORS, RADII, SPACING } from "../theme";
 
-const COLORS = {
-  green: '#6f8641',      
-  greenDark: '#5e7833',
-  blockGreen: '#6f8641',
-  black: '#000000',
-  textOnGreen: '#ffffff',
-  cardFill: '#f8f8f8',
-  cardBorder: '#d9e1c8',
-  arrowBg: '#6f8641',
-  tint: 'rgba(125, 145, 98, 0.25)',
-  tabIcon: '#fff',
-  mutedText: '#e9efd9',
-};
+const PRIMARY_ACTIONS = [
+  {
+    label: "Today overview",
+    description: "See today’s workload, upcoming stops, and request activity.",
+    route: "Dashboard",
+    icon: (color) => <MaterialCommunityIcons name="clipboard-check-outline" size={20} color={color} />,
+  },
+  {
+    label: "Request queue",
+    description: "Open requests, review status, and jump into field details.",
+    route: "WorkRequestView",
+    icon: (color) => <MaterialIcons name="assignment" size={20} color={color} />,
+  },
+  {
+    label: "Create request",
+    description: "Log a new site request with photos and placement notes.",
+    route: "WorkRequestSubmit",
+    icon: (color) => <Feather name="plus-circle" size={20} color={color} />,
+  },
+];
 
-const MENU_ITEMS = [
+const SECONDARY_ACTIONS = [
   {
-    key: 'work_request_submit',
-    label: 'Submit a Work Request',
-    leftIcon: (props) => <MaterialIcons name="edit" {...props} />,
-    route: 'WorkRequestSubmit',
+    label: "Weekly schedule",
+    route: "WeeklySchedule",
+    icon: (color) => <MaterialCommunityIcons name="calendar-week" size={18} color={color} />,
   },
   {
-    key: 'work_requests_view',
-    label: 'View Work Requests',
-    leftIcon: (props) => <MaterialIcons name="insert-drive-file" {...props} />,
-    route: 'WorkRequestView',
+    label: "Calendar view",
+    route: "EventCalendar",
+    icon: (color) => <MaterialIcons name="calendar-today" size={18} color={color} />,
   },
   {
-    key: 'dashboard_analytics',
-    label: 'Dashboard Analytics',
-    leftIcon: (props) => <MaterialIcons name="pie-chart" {...props} />,
-    route: 'Dashboard',
+    label: "Task sets",
+    route: "TaskSetList",
+    icon: (color) => <MaterialCommunityIcons name="clipboard-text-outline" size={18} color={color} />,
   },
   {
-    key: 'calendar',
-    label: 'Event Calendar',
-    leftIcon: (props) => <MaterialIcons name="calendar-today" {...props} />,
-    route: 'EventCalendar',
+    label: "Time off",
+    route: "PTO",
+    icon: (color) => <MaterialCommunityIcons name="clock-outline" size={18} color={color} />,
   },
   {
-    key: 'tasks',
-    label: 'Task Sets',
-    leftIcon: (props) => <MaterialCommunityIcons name="clipboard-text-outline" {...props} />,
-    route: 'TaskSetList',
-  },
-  {
-    key: 'pto',
-    label: 'Book Time Off',
-    leftIcon: (props) => <MaterialCommunityIcons name="clock-outline" {...props} />,
-    route: 'PTO',
-  },
-  {
-    key: 'schedule',
-    label: 'Weekly Schedule',
-    leftIcon: (props) => <MaterialCommunityIcons name="calendar-week" {...props} />,
-    route: 'WeeklySchedule',
+    label: "Settings",
+    route: "Settings",
+    icon: (color) => <Feather name="settings" size={18} color={color} />,
   },
 ];
 
 export default function HomePage() {
   const navigation = useNavigation();
 
-
+  async function handleLogout() {
+    try {
+      await logout();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+    } catch {
+      Alert.alert("Logout failed", "Please try again.");
+    }
+  }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor={COLORS.green} barStyle="light-content" />
+    <MobileScaffold
+      eyebrow="Technician toolkit"
+      title="Field menu"
+      subtitle="Keep the most common field actions one tap away."
+    >
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>Primary actions</Text>
 
-      <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
-        <View style={styles.tint} />
-
-        {/* Top App Bar */}
-        <View style={styles.topBar}>
-          <View style={styles.topBarSide}>
-            <Ionicons name="person-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
-          <View style={styles.topBarCenter}>
-            <Text style={styles.topTitle}>Greenery Team App</Text>
-            <Text style={styles.topSubtitle}>Mobile View</Text>
-          </View>
-          <View style={[styles.topBarSide, { alignItems: 'flex-end' }]}>
-            <Ionicons name="notifications-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
-        </View>
-
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Main Menu Block */}
-          <View style={styles.menuBlockWrap}>
-            <View style={styles.menuBlock}>
-              <Text style={styles.menuBlockText}>Main Menu</Text>
-            </View>
-          </View>
-
-          {/* List of blocks */}
-          {MENU_ITEMS.map((item) => (
-            <View key={item.key} style={styles.blockWrap}>
-              <View style={styles.blockBar} />
-              <Pressable
-                onPress={() => navigation.navigate(item.route)}
-                android_ripple={{ color: '#dfe8c9' }}
-                style={({ pressed }) => [
-                  styles.blockCard,
-                  pressed && Platform.OS === 'android' ? { elevation: 2 } : null,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={item.label}
-              >
-                <View style={styles.blockLeft}>
-                  <View style={styles.iconInner}>
-                    {item.leftIcon({ size: 20, color: COLORS.greenDark })}
-                  </View>
-                </View>
-
-                <View style={styles.blockLabelWrap}>
-                  <Text style={styles.blockLabel}>{item.label}</Text>
-                </View>
-
-                <View style={styles.blockArrow}>
-                  <Feather name="arrow-right" size={20} color="#fff" />
-                </View>
-              </Pressable>
-            </View>
+        <View style={styles.actionList}>
+          {PRIMARY_ACTIONS.map((item) => (
+            <Pressable
+              key={item.route}
+              onPress={() => navigation.navigate(item.route)}
+              style={styles.primaryAction}
+            >
+              <View style={styles.primaryIconWrap}>{item.icon(COLORS.forestDeep)}</View>
+              <View style={styles.primaryCopy}>
+                <Text style={styles.primaryLabel}>{item.label}</Text>
+                <Text style={styles.primaryDescription}>{item.description}</Text>
+              </View>
+              <Feather name="arrow-right" size={18} color={COLORS.moss} />
+            </Pressable>
           ))}
-
-          <View style={{ height: 90 }} />
-        </ScrollView>
-
-        <View style={styles.tabBar}>
-          <NavBar />
         </View>
-      </ImageBackground>
-    </SafeAreaView>
+      </View>
+
+      <View style={styles.gridSection}>
+        <Text style={styles.sectionTitle}>Supporting tools</Text>
+
+        <View style={styles.toolGrid}>
+          {SECONDARY_ACTIONS.map((item) => (
+            <Pressable
+              key={item.route}
+              onPress={() => navigation.navigate(item.route)}
+              style={styles.toolCard}
+            >
+              <View style={styles.toolIcon}>{item.icon(COLORS.moss)}</View>
+              <Text style={styles.toolLabel}>{item.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <Pressable onPress={handleLogout} style={styles.logoutButton}>
+        <Feather name="log-out" size={18} color={COLORS.textOnBrand} />
+        <Text style={styles.logoutText}>Sign out</Text>
+      </Pressable>
+    </MobileScaffold>
   );
 }
 
-const RADIUS = 12;
-
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.green },
-  bg: { flex: 1 },
-  tint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.tint,
-  },
-
-  /* Top bar */
-  topBar: {
-    height: 52,
-    backgroundColor: COLORS.green,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    elevation: 6, // Android shadow
-  },
-  topBarSide: { width: 32 },
-  topBarCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  topTitle: {
-    color: COLORS.textOnGreen,
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  topSubtitle: {
-    color: COLORS.mutedText,
-    fontSize: 11,
-    marginTop: -2,
-  },
-
-  scrollContent: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
-  },
-
-  /* Main Menu chip */
-  menuBlockWrap: {
-    marginTop: 8,
-    marginBottom: 8,
-    paddingHorizontal: 6,
-  },
-  menuBlock: {
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: COLORS.blockGreen,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 6,
-  },
-  menuBlockText: {
-    color: COLORS.textOnGreen,
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-
-  /* Blocks */
-  blockWrap: {
-    marginTop: 10,
-  },
-  blockBar: {
-    height: 18,
-    marginHorizontal: 4,
-    backgroundColor: COLORS.green,
-    borderTopLeftRadius: RADIUS,
-    borderTopRightRadius: RADIUS,
-    elevation: 2,
-  },
-  blockCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.cardFill,
+  sectionCard: {
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    borderBottomLeftRadius: RADIUS,
-    borderBottomRightRadius: RADIUS,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
     elevation: 4,
   },
-  blockLeft: {
-    width: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
+  sectionTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 20,
+    fontWeight: "800",
   },
-  iconInner: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#fff',
+  actionList: {
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
+  },
+  primaryAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.parchment,
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
   },
-  blockLabelWrap: {
+  primaryIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  primaryCopy: {
     flex: 1,
-    paddingHorizontal: 8,
   },
-  blockLabel: {
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
+  primaryLabel: {
+    color: COLORS.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
+    textTransform: "capitalize",
   },
-  blockArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.arrowBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 2,
+  primaryDescription: {
+    marginTop: 4,
+    color: COLORS.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  gridSection: {
+    marginTop: SPACING.md,
+  },
+  toolGrid: {
+    marginTop: SPACING.sm,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.sm,
+  },
+  toolCard: {
+    flexGrow: 1,
+    flexBasis: "48%",
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+    minHeight: 104,
+    justifyContent: "space-between",
+  },
+  toolIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.parchment,
+  },
+  toolLabel: {
+    marginTop: SPACING.lg,
+    color: COLORS.textPrimary,
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 20,
+    textTransform: "capitalize",
+  },
+  logoutButton: {
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.forestDeep,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  logoutText: {
+    color: COLORS.textOnBrand,
+    fontSize: 15,
+    fontWeight: "700",
   },
 });

@@ -1,481 +1,295 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  ImageBackground,
+  ActivityIndicator,
   Image,
-  SafeAreaView,
+  Pressable,
   StyleSheet,
   Text,
   View,
-  Pressable,
-  ScrollView,
-  StatusBar,
-  Dimensions,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import NavBar from "../components/NavBar";
+
+import MobileScaffold from "../components/MobileScaffold";
 import { getWorkRequestById } from "../util/workRequest";
+import { COLORS, RADII, SPACING } from "../theme";
 
-/*Test Comment*/
-/*Test Comment 2*/
-
-const BG = require("../assets/bg.jpg");
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-const COLORS = {
-  green: "#6f8641",
-  greenDark: "#5e7833",
-  blockGreen: "#6f8641",
-  black: "#000000",
-  white: "#ffffff",
-  cardFill: "#f8f8f8",
-  cardBorder: "#d9e1c8",
-  tint: "rgba(125, 145, 98, 0.25)",
-  tabIcon: "#fff",
-  mutedText: "#e9efd9",
-  red: "#96050d",
-};
-
-export default function WorkRequestDetails({ route, navigation }) {
-  const id = route.params;
-  function onClose() {
-    navigation.goBack();
+function formatDate(value) {
+  if (!value) {
+    return "Not scheduled";
   }
 
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Not scheduled";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export default function WorkRequestDetails({ route, navigation }) {
+  // Some older entry points passed the raw id directly; newer ones pass a params object.
+  const id = route?.params?.id ?? route?.params;
   const [detailData, setDetailData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const fetchDetails = async () => {
-      setIsLoading(true);
+    let cancelled = false;
+
+    async function fetchDetails() {
+      setLoading(true);
 
       try {
         const response = await getWorkRequestById(id);
         const requestDetails = response?.data ?? response ?? null;
-        setDetailData(requestDetails);
+
+        if (!cancelled) {
+          setDetailData(requestDetails);
+        }
       } catch (error) {
         console.error("Error fetching details:", error);
+        if (!cancelled) {
+          setDetailData(null);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    };
+    }
 
     fetchDetails();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
+  const detailRows = useMemo(() => {
+    if (!detailData) {
+      return [];
+    }
+
+    return [
+      ["Reference", detailData.referenceNumber],
+      ["Account", detailData.account],
+      ["Submitted by", detailData.techName],
+      ["Requested date", formatDate(detailData.requestDate)],
+      ["Due date", formatDate(detailData.dueDate)],
+      ["Location", detailData.location],
+      ["Action", detailData.actionRequired],
+      ["Plants", detailData.numberOfPlants],
+      ["Lighting", detailData.lighting],
+      ["Method", detailData.method],
+      ["Plant wanted", detailData.plantWanted],
+      ["Plant replaced", detailData.plantReplaced],
+      ["Planter type", detailData.planterTypeSize],
+      ["Planter colour", detailData.planterColour],
+      ["Staging material", detailData.stagingMaterial],
+      ["Contact", detailData.accountContact],
+      ["Address", detailData.accountAddress],
+    ];
+  }, [detailData]);
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor={COLORS.green} barStyle="light-content" />
+    <MobileScaffold
+      eyebrow="Request detail"
+      title={detailData?.actionRequired || "Work request"}
+      subtitle={detailData ? `${detailData.account || "Unknown account"} • ${detailData.referenceNumber}` : "Review the complete field request and supporting context."}
+    >
+      {loading ? <ActivityIndicator size="large" color={COLORS.moss} style={styles.loader} /> : null}
 
-      <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
-        <View style={styles.tint} />
-
-        {/* Top App Bar */}
-        <View style={styles.topBar}>
-          <View style={styles.topBarSide}>
-            <Ionicons name="person-outline" size={22} color={COLORS.white} />
-          </View>
-          <View style={styles.topBarCenter}>
-            <Text style={styles.topTitle}>Greenery Team App</Text>
-            <Text style={styles.topSubtitle}>Mobile View</Text>
-          </View>
-          <View style={[styles.topBarSide, { alignItems: "flex-end" }]}>
-            <Ionicons
-              name="notifications-outline"
-              size={22}
-              color={COLORS.white}
-            />
-          </View>
+      {!loading && !detailData ? (
+        <View style={styles.stateCard}>
+          <Text style={styles.stateTitle}>No details available</Text>
+          <Text style={styles.stateText}>This request could not be loaded from the backend.</Text>
         </View>
+      ) : null}
 
-        
-          <View style={styles.menuBlockWrap}>
-            <View style={styles.menuBlock}>
-              <Text style={styles.menuBlockText}>Work Request Details</Text>
+      {!loading && detailData ? (
+        <>
+          <View style={styles.heroCard}>
+            <View style={styles.heroStatus}>
+              <Text style={styles.heroStatusText}>
+                {String(detailData.status || "unassigned").replace("_", " ")}
+              </Text>
+            </View>
+            <Text style={styles.heroHeading}>{detailData.account || "Unknown account"}</Text>
+            <Text style={styles.heroMeta}>
+              {detailData.location || "No location"} • Due {formatDate(detailData.dueDate)}
+            </Text>
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Field summary</Text>
+            <View style={styles.detailGrid}>
+              {detailRows.map(([label, value]) => (
+                <View key={label} style={styles.detailCard}>
+                  <Text style={styles.detailLabel}>{label}</Text>
+                  <Text style={styles.detailValue}>{value || "-"}</Text>
+                </View>
+              ))}
             </View>
           </View>
-          {isLoading ? (
-            <Text>Loading details...</Text>
-          ) : !detailData ? (
-            <Text>No work request details found.</Text>
-          ) : (
-            
-              <View style={styles.formBlockWrap}>
-                <View style={styles.formBlock}>
-                  <ScrollView>
-                  <Text
-                    style={[
-                      styles.fieldLabelText,
-                      { marginBottom: 10 },
-                      { color: COLORS.black },
-                      { paddingTop: 15 },
-                    ]}
-                  >
-                    REQ#{detailData.referenceNumber || detailData.id} - Submitted by {detailData.techName}
-                  </Text>
 
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>REQ#</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.referenceNumber}
-                      </Text>
-                    </View>
-                  </View>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Notes</Text>
+            <Text style={styles.notesText}>{detailData.notes || "No notes provided."}</Text>
+          </View>
 
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Submitted By</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.techName}
-                      </Text>
-                    </View>
-                  </View>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Photo</Text>
+            <View style={styles.photoCard}>
+              {detailData.picturePath ? (
+                <Image
+                  source={{ uri: `${process.env.EXPO_PUBLIC_API_BASE_URL}/${detailData.picturePath}` }}
+                  style={styles.photo}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.stateText}>No photo uploaded for this request.</Text>
+              )}
+            </View>
+          </View>
 
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Account Name</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.account}
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Account Contact</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.accountContact}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Address</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.accountAddress}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Type of Work</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.actionRequired}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Number of Plants</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.numberOfPlants}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Plant Wanted</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.plantWanted}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Plant Getting Replaced</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.plantReplaced}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Plant Size</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.plantSize}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Plant Height</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.plantHeight}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Planter Type/Size</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.planterTypeSize}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Planter Colour</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.planterColour}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Staging Material Type/Colour</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.stagingMaterial}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Lighting</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.lighting}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Method</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.method}
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Plant Location</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.location}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Notes</Text>
-                    </View>
-                    <View style={styles.fieldInfo}>
-                      <Text style={styles.fieldInfoText}>
-                        {detailData.notes}
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.fieldRow}>
-                    <View style={styles.fieldLabelBox}>
-                      <Text style={styles.fieldLabelText}>Photo</Text>
-                    </View>
-                    <View style={[styles.fieldInfo, { height: 150 }]}>
-                      {detailData.picturePath ? (
-                        
-                        /* Currently not working, will fix soon */
-                        <Image
-                            source={{ uri: `${process.env.EXPO_PUBLIC_API_BASE_URL}/${detailData.picturePath}` }}
-                            style={{ width: '100%', height: '100%', borderRadius: 8 }}
-                            resizeMode="cover"
-                        />
-                      ) : (
-                        <Text style={styles.fieldInfoText}>No photo uploaded</Text>
-                      )}
-                    </View>
-                  </View>
-                  
-                  <View style={{ alignItems: "center", marginBottom: 20 }}>
-                    <Pressable onPress={onClose} style={styles.submitButton}>
-                      <Text
-                        style={{
-                          color: COLORS.white,
-                          fontWeight: "700",
-                          fontSize: 16,
-                        }}
-                      >
-                        Close
-                      </Text>
-                    </Pressable>
-                  </View>
-                  </ScrollView>
-                </View>
-              </View>
-          )}
-
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={{ height: 90 }} />
-        </ScrollView>
-
-        <View style={styles.tabBar}>
-          <NavBar />
-        </View>
-      </ImageBackground>
-    </SafeAreaView>
+          <Pressable onPress={() => navigation.goBack()} style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>Back to queue</Text>
+          </Pressable>
+        </>
+      ) : null}
+    </MobileScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.green },
-  bg: { flex: 1 },
-  tint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.tint,
+  loader: {
+    marginTop: 40,
   },
-  /* Top bar */
-  topBar: {
-    height: 52,
-    backgroundColor: COLORS.green,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    elevation: 6,
-  },
-  topBarSide: { width: 32 },
-  topBarCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
-  topTitle: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-  },
-  topSubtitle: {
-    color: COLORS.mutedText,
-    fontSize: 11,
-    marginTop: -2,
-  },
-  scrollContent: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
-  },
-  menuBlockWrap: {
-    marginTop: 15,
-    marginBottom: 8,
-    paddingHorizontal: 6,
-  },
-  menuBlock: {
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: COLORS.blockGreen,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 6,
-  },
-  menuBlockText: {
-    color: COLORS.white,
-    fontSize: 22,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  formBlockWrap: {
-    alignItems: "center",
-    marginTop: 10,
-  },
-  formBlock: {
-    width: 370,
-    backgroundColor: COLORS.white,
-    borderRadius: 10,
-    borderWidth: 0,
-    maxHeight: SCREEN_HEIGHT * 0.65,
-    overflow: "hidden",
-  },
-  submitButton: {
-    borderRadius: 10,
-    backgroundColor: COLORS.red,
-    width: 200,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 20,
-    height: 44,
-  },
-  fieldRow: {
-    width: "100%",
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 10,
-    paddingHorizontal: 12,
-    marginBottom: 15,
-  },
-  fieldLabel: {
-    color: "#2e2e2e",
-    fontWeight: "600",
-  },
-  fieldLabelBox: {
-    width: 120,
-    height: 44,
+  stateCard: {
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    borderRadius: 8,
-    backgroundColor: COLORS.blockGreen,
-    paddingHorizontal: 10,
-    justifyContent: "center",
-    marginRight: 8,
+    borderColor: COLORS.border,
+    padding: SPACING.xl,
+    alignItems: "center",
   },
-  fieldLabelText: {
-    color: COLORS.white,
-    fontWeight: "600",
+  stateTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  stateText: {
+    marginTop: 8,
+    color: COLORS.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
     textAlign: "center",
   },
-  fieldInfo: {
-    flex: 1,
-    height: 44,
+  heroCard: {
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    color: COLORS.black,
-    marginLeft: 5,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
   },
-  fieldInfoText: {
-    paddingTop: 10,
-    color: COLORS.black,
-    fontWeight: "500",
+  heroStatus: {
+    alignSelf: "flex-start",
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.parchment,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  heroStatusText: {
+    color: COLORS.textPrimary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  heroHeading: {
+    marginTop: 14,
+    color: COLORS.textPrimary,
+    fontSize: 24,
+    fontWeight: "800",
+  },
+  heroMeta: {
+    marginTop: 8,
+    color: COLORS.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  sectionCard: {
+    marginTop: SPACING.md,
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
+  },
+  sectionTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  detailGrid: {
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
+  },
+  detailCard: {
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.parchment,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  detailLabel: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  detailValue: {
+    marginTop: 4,
+    color: COLORS.textPrimary,
     fontSize: 15,
+    fontWeight: "700",
+  },
+  notesText: {
+    marginTop: 10,
+    color: COLORS.textPrimary,
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  photoCard: {
+    marginTop: 12,
+    minHeight: 200,
+    borderRadius: RADII.md,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.parchment,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+  },
+  photo: {
+    width: "100%",
+    height: 240,
+    borderRadius: RADII.md,
+  },
+  closeButton: {
+    marginTop: SPACING.md,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.forestDeep,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  closeButtonText: {
+    color: COLORS.textOnBrand,
+    fontSize: 15,
+    fontWeight: "700",
   },
 });

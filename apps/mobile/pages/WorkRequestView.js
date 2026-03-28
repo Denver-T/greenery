@@ -1,356 +1,378 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  ImageBackground,
   Pressable,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
-import NavBar from "../components/NavBar";
+import MobileScaffold from "../components/MobileScaffold";
+import { apiFetch } from "../util/api";
 import { getAllWorkRequest } from "../util/workRequest";
+import { COLORS, RADII, SPACING } from "../theme";
 
-const BG = require("../assets/bg.jpg");
-
-const COLORS = {
-  green: "#6f8641",
-  greenDark: "#5e7833",
-  blockGreen: "#6f8641",
-  black: "#000000",
-  textOnGreen: "#ffffff",
-  cardFill: "#ffffff",
-  cardBorder: "#d9e1c8",
-  tint: "rgba(125,145,98,0.25)",
-  mutedText: "#e9efd9",
-};
+const FILTERS = ["All", "Mine", "Open", "Completed"];
 
 const STATUS_COLORS = {
-  unassigned: { bg: "#fef9c3", text: "#854d0e" },
-  assigned: { bg: "#dbeafe", text: "#1e40af" },
-  in_progress: { bg: "#fef3c7", text: "#92400e" },
-  completed: { bg: "#dcfce7", text: "#166534" },
-  cancelled: { bg: "#fee2e2", text: "#991b1b" },
+  unassigned: { bg: "#f7e7bf", text: "#8c6418" },
+  assigned: { bg: "#ddecf0", text: "#2d5f6b" },
+  in_progress: { bg: "#f3e0c7", text: "#8a5a1f" },
+  completed: { bg: "#ddf1e4", text: "#1d6540" },
+  cancelled: { bg: "#f4deda", text: "#9d433b" },
 };
+
+function formatDate(value) {
+  if (!value) {
+    return "No due date";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "No due date";
+  }
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export default function WorkRequestView() {
   const navigation = useNavigation();
-  const [reqs, setReqs] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [selectedFilter, setSelectedFilter] = useState("All");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  function openRequest(id) {
-    navigation.navigate("WorkRequestDetails", id);
-  }
-
-  async function fetchWorkRequestList() {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await getAllWorkRequest();
-      const reqsArray = Array.isArray(res) ? res : res?.data || res?.reqs || [];
-      setReqs(reqsArray);
-    } catch (err) {
-      setError("Failed to load work requests");
-      console.log(err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchWorkRequestList();
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [me, reqs] = await Promise.all([
+          apiFetch("/auth/me"),
+          getAllWorkRequest(),
+        ]);
+
+        if (!cancelled) {
+          const reqsArray = Array.isArray(reqs) ? reqs : reqs?.data || reqs?.reqs || [];
+          setCurrentUser(me);
+          setRequests(reqsArray);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err?.message || "Failed to load work requests.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  function getStatusStyle(status) {
-    return STATUS_COLORS[status] || { bg: "#f3f4f6", text: "#374151" };
-  }
+  const filteredRequests = useMemo(() => {
+    const myName = String(currentUser?.name || "").trim().toLowerCase();
+
+    return requests.filter((request) => {
+      const status = String(request.status || "").toLowerCase();
+      const isMine = String(request.techName || "").trim().toLowerCase() === myName;
+
+      if (selectedFilter === "Mine") {
+        return isMine;
+      }
+
+      if (selectedFilter === "Open") {
+        return !["completed", "cancelled"].includes(status);
+      }
+
+      if (selectedFilter === "Completed") {
+        return status === "completed";
+      }
+
+      return true;
+    });
+  }, [currentUser, requests, selectedFilter]);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor={COLORS.green} barStyle="light-content" />
-      <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
-        <View style={styles.tint} />
+    <MobileScaffold
+      eyebrow="Request queue"
+      title="Field requests"
+      subtitle="Check active requests and open the details you need."
+    >
+      <View style={styles.summaryRow}>
+        <SummaryCard label="All requests" value={String(requests.length)} />
+        <SummaryCard
+          label="Open"
+          value={String(
+            requests.filter((request) => !["completed", "cancelled"].includes(String(request.status || "").toLowerCase())).length
+          )}
+        />
+        <SummaryCard label="Visible" value={String(filteredRequests.length)} />
+      </View>
 
-        <View style={styles.topBar}>
-          <View style={styles.topBarSide}>
-            <Ionicons name="person-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
+      <View style={styles.filterRow}>
+        {FILTERS.map((filter) => {
+          const active = filter === selectedFilter;
 
-          <View style={styles.topBarCenter}>
-            <Text style={styles.topTitle}>Greenery Team App</Text>
-            <Text style={styles.topSubtitle}>Mobile View</Text>
-          </View>
+          return (
+            <Pressable
+              key={filter}
+              onPress={() => setSelectedFilter(filter)}
+              style={[styles.filterChip, active && styles.filterChipActive]}
+            >
+              <Text style={[styles.filterText, active && styles.filterTextActive]}>{filter}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
-          <View style={[styles.topBarSide, { alignItems: "flex-end" }]}>
-            <Ionicons name="notifications-outline" size={22} color={COLORS.textOnGreen} />
-          </View>
+      {loading ? <ActivityIndicator size="large" color={COLORS.moss} style={styles.loader} /> : null}
+
+      {!loading && error ? (
+        <View style={styles.stateCard}>
+          <Text style={styles.stateTitle}>Could not load requests</Text>
+          <Text style={styles.stateText}>{error}</Text>
         </View>
+      ) : null}
 
-        <View style={styles.menuBlockWrap}>
-          <View style={styles.menuBlock}>
-            <Text style={styles.menuBlockText}>Work Requests</Text>
-          </View>
+      {!loading && !error && filteredRequests.length === 0 ? (
+        <View style={styles.stateCard}>
+          <MaterialCommunityIcons name="clipboard-search-outline" size={34} color={COLORS.textMuted} />
+          <Text style={styles.stateTitle}>Nothing in this view</Text>
+          <Text style={styles.stateText}>Try another filter or create a new request from the field toolkit.</Text>
         </View>
+      ) : null}
 
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {loading ? (
-            <ActivityIndicator size="large" color={COLORS.green} style={{ marginTop: 40 }} />
-          ) : null}
-
-          {!loading && error ? (
-            <View style={styles.emptyBox}>
-              <Ionicons name="alert-circle-outline" size={40} color="#cc0000" />
-              <Text style={styles.emptyText}>{error}</Text>
-              <Pressable style={styles.retryBtn} onPress={fetchWorkRequestList}>
-                <Text style={styles.retryText}>Retry</Text>
-              </Pressable>
-            </View>
-          ) : null}
-
-          {!loading && !error && reqs.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Ionicons name="document-outline" size={40} color={COLORS.greenDark} />
-              <Text style={styles.emptyText}>No work requests found</Text>
-            </View>
-          ) : null}
-
-          {!loading && !error && reqs.map((req) => {
-            const statusStyle = getStatusStyle(req.status);
+      {!loading && !error ? (
+        <View style={styles.requestList}>
+          {filteredRequests.map((request) => {
+            const statusKey = String(request.status || "unassigned").toLowerCase();
+            const badge = STATUS_COLORS[statusKey] || STATUS_COLORS.unassigned;
 
             return (
-              <View key={req.id} style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.cardHeaderPill}>
-                    <Text style={styles.cardHeaderText}>Work Request</Text>
+              <Pressable
+                key={request.id}
+                onPress={() => navigation.navigate("WorkRequestDetails", { id: request.id })}
+                style={styles.requestCard}
+              >
+                <View style={styles.requestHeader}>
+                  <View style={styles.requestHeaderCopy}>
+                    <Text style={styles.requestRef}>{request.referenceNumber}</Text>
+                    <Text style={styles.requestTitle}>{request.actionRequired || "Work request"}</Text>
                   </View>
-
-                  <View style={{ flex: 1 }} />
-
-                  <View style={styles.cardHeaderPill}>
-                    <Text style={styles.cardHeaderText}>#{req.referenceNumber}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
+                    <Text style={[styles.statusText, { color: badge.text }]}>
+                      {statusKey.replace("_", " ")}
+                    </Text>
                   </View>
                 </View>
 
-                {req.account ? (
-                  <View style={styles.accountRow}>
-                    <Ionicons name="business-outline" size={14} color={COLORS.greenDark} />
-                    <Text style={styles.accountText}>{req.account}</Text>
-                  </View>
-                ) : null}
+                <Text style={styles.requestAccount}>{request.account || "Unknown account"}</Text>
 
-                <View style={styles.cardBody}>
-                  <View style={styles.inlineRow}>
-                    <Text style={styles.submittedLabel}>Submitted By:</Text>
-                    <Text style={styles.submittedName}>{req.techName || "N/A"}</Text>
-                  </View>
-
-                  <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
-                    <Text style={[styles.statusText, { color: statusStyle.text }]}>
-                      {req.status?.replace("_", " ").toUpperCase() || "UNKNOWN"}
-                    </Text>
-                  </View>
-
-                  <Pressable
-                    style={styles.arrowButton}
-                    onPress={() => openRequest(req.id)}
-                  >
-                    <Ionicons name="arrow-forward" size={20} color="#fff" />
-                  </Pressable>
+                <View style={styles.metaRow}>
+                  <MetaPill label={`Submitted by ${request.techName || "Unknown"}`} />
+                  <MetaPill label={`Due ${formatDate(request.dueDate)}`} />
                 </View>
 
-                {req.dueDate ? (
-                  <View style={styles.dueDateRow}>
-                    <Ionicons name="calendar-outline" size={13} color={COLORS.greenDark} />
-                    <Text style={styles.dueDateText}>
-                      Due: {new Date(req.dueDate).toLocaleDateString()}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
+                <View style={styles.locationRow}>
+                  <MaterialCommunityIcons name="map-marker-outline" size={16} color={COLORS.textMuted} />
+                  <Text style={styles.locationText}>{request.location || "No location added yet"}</Text>
+                </View>
+              </Pressable>
             );
           })}
-
-          <View style={{ height: 90 }} />
-        </ScrollView>
-
-        <View style={styles.tabBar}>
-          <NavBar />
         </View>
-      </ImageBackground>
-    </SafeAreaView>
+      ) : null}
+    </MobileScaffold>
+  );
+}
+
+function SummaryCard({ label, value }) {
+  return (
+    <View style={styles.summaryCard}>
+      <Text style={styles.summaryValue}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function MetaPill({ label }) {
+  return (
+    <View style={styles.metaPill}>
+      <Text style={styles.metaPillText}>{label}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.green },
-  bg: { flex: 1 },
-  tint: { ...StyleSheet.absoluteFillObject, backgroundColor: COLORS.tint },
-  topBar: {
-    height: 52,
-    backgroundColor: COLORS.green,
+  summaryRow: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    elevation: 6,
+    gap: SPACING.sm,
   },
-  topBarSide: { width: 32 },
-  topBarCenter: { flex: 1, alignItems: "center" },
-  topTitle: {
-    color: COLORS.textOnGreen,
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-  },
-  topSubtitle: {
-    color: COLORS.mutedText,
-    fontSize: 11,
-    marginTop: -2,
-  },
-  menuBlockWrap: {
-    marginTop: 8,
-    marginBottom: 8,
-    paddingHorizontal: 6,
-  },
-  menuBlock: {
-    height: 56,
-    backgroundColor: COLORS.blockGreen,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 6,
-  },
-  menuBlockText: {
-    color: COLORS.textOnGreen,
-    fontSize: 22,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  scrollContent: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
-  },
-  emptyBox: {
-    alignItems: "center",
-    marginTop: 60,
-    gap: 12,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: COLORS.greenDark,
-    fontWeight: "600",
-  },
-  retryBtn: {
-    backgroundColor: COLORS.green,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  retryText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-  card: {
-    backgroundColor: COLORS.cardFill,
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    marginBottom: 12,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  cardHeaderPill: {
-    backgroundColor: COLORS.green,
-    paddingHorizontal: 12,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-  },
-  cardHeaderText: {
-    color: COLORS.textOnGreen,
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  accountRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 6,
-    marginLeft: 4,
-  },
-  accountText: {
-    fontSize: 13,
-    color: COLORS.greenDark,
-    fontWeight: "600",
-  },
-  cardBody: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  inlineRow: {
+  summaryCard: {
     flex: 1,
-    flexDirection: "column",
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
   },
-  submittedLabel: {
-    fontSize: 12,
-    color: "#666",
-    fontWeight: "600",
-    marginLeft: 5,
-  },
-  submittedName: {
-    fontSize: 16,
+  summaryValue: {
+    color: COLORS.textPrimary,
+    fontSize: 24,
     fontWeight: "800",
-    color: COLORS.black,
-    marginLeft: 5,
+  },
+  summaryLabel: {
+    marginTop: 4,
+    color: COLORS.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
+  },
+  filterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  filterChip: {
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.surfaceMuted,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  filterChipActive: {
+    backgroundColor: COLORS.forestDeep,
+    borderColor: COLORS.forestDeep,
+  },
+  filterText: {
+    color: COLORS.textPrimary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  filterTextActive: {
+    color: COLORS.textOnBrand,
+  },
+  loader: {
+    marginTop: 40,
+  },
+  stateCard: {
+    marginTop: SPACING.md,
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.xl,
+    alignItems: "center",
+  },
+  stateTitle: {
+    marginTop: 10,
+    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  stateText: {
+    marginTop: 6,
+    color: COLORS.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+  requestList: {
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
+  },
+  requestCard: {
+    borderRadius: RADII.lg,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.lg,
+  },
+  requestHeader: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    alignItems: "flex-start",
+  },
+  requestHeaderCopy: {
+    flex: 1,
+  },
+  requestRef: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  requestTitle: {
+    marginTop: 6,
+    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: "800",
+    lineHeight: 24,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: RADII.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   statusText: {
-    fontSize: 10,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
+  },
+  requestAccount: {
+    marginTop: 8,
+    color: COLORS.moss,
+    fontSize: 15,
     fontWeight: "700",
   },
-  arrowButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.green,
-    alignItems: "center",
-    justifyContent: "center",
+  metaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
   },
-  dueDateRow: {
+  metaPill: {
+    borderRadius: RADII.pill,
+    backgroundColor: COLORS.parchment,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  metaPillText: {
+    color: COLORS.textPrimary,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  locationRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    marginTop: 8,
-    marginLeft: 4,
+    gap: 6,
+    marginTop: 14,
   },
-  dueDateText: {
-    fontSize: 12,
-    color: "#666",
-  },
-  tabBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
+  locationText: {
+    flex: 1,
+    color: COLORS.textMuted,
+    fontSize: 13,
+    lineHeight: 19,
   },
 });
