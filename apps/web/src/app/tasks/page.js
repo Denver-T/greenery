@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
+import WorkspaceHeader from "@/components/WorkspaceHeader";
+import WorkspaceToolbar from "@/components/WorkspaceToolbar";
 import { fetchApi } from "@/lib/api/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -85,6 +87,10 @@ function toRestorePayload(req) {
   };
 }
 
+function canFullyRestore(req) {
+  return !req?.picturePath;
+}
+
 export default function TasksPage() {
   const [reqs, setReqs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,6 +104,7 @@ export default function TasksPage() {
   const [deleteCandidate, setDeleteCandidate] = useState(null);
   const [recentlyDeleted, setRecentlyDeleted] = useState([]);
   const [activeTab, setActiveTab] = useState("queue");
+  const [openReqId, setOpenReqId] = useState(null);
 
   async function loadReqs() {
     setError("");
@@ -133,6 +140,26 @@ export default function TasksPage() {
   useEffect(() => {
     loadReqs();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    setOpenReqId(params.get("open"));
+  }, []);
+
+  useEffect(() => {
+    if (!openReqId || selectedReq || loading) {
+      return;
+    }
+
+    const reqExists = reqs.some((req) => String(req.id) === String(openReqId));
+    if (reqExists) {
+      openReqDetails(openReqId);
+    }
+  }, [openReqId, reqs, selectedReq, loading]);
 
   async function saveReq() {
     if (!selectedReq) {
@@ -232,17 +259,15 @@ export default function TasksPage() {
   return (
     <AppShell title="View Tasks">
       <div className="p-6">
-        <section className="mb-6 rounded-card border border-border-soft bg-surface p-6 shadow-soft">
-          <div className="w-fit rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#1f3427]">
-            Request Workspace
-          </div>
-          <h2 className="mb-2 text-xl font-extrabold text-[#1f3427]">
-            Submitted Work Requests
-          </h2>
-          <p className="text-sm text-gray-600">
-            Review submitted REQs, edit details, or remove old requests.
-          </p>
-        </section>
+        <WorkspaceHeader
+          eyebrow="Request Workspace"
+          title="Submitted Work Requests"
+          description="Review live requests, edit details, and recover recent deletions when they can be restored faithfully."
+          stats={[
+            { label: "live requests", value: reqs.length },
+            { label: "recent deletions", value: recentlyDeleted.length },
+          ]}
+        />
 
         {error ? (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-sm font-medium text-red-700">
@@ -251,15 +276,10 @@ export default function TasksPage() {
         ) : null}
 
         <section className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-extrabold text-[#1f3427]">Work Request Queue</h3>
-              <p className="mt-1 text-sm text-gray-600">
-                Review live requests, then recover mistakes from the recent delete queue if needed.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="rounded-full bg-[#f0ebde] p-1">
+          <WorkspaceToolbar
+            left={
+              <>
+                <div className="rounded-full bg-white p-1 shadow-soft">
                 <button
                   onClick={() => setActiveTab("queue")}
                   className={`rounded-full px-4 py-2 text-sm font-semibold ${
@@ -278,17 +298,27 @@ export default function TasksPage() {
                       : "text-gray-600"
                   }`}
                 >
-                  Recently Deleted
-                </button>
-              </div>
+                    Recently Deleted
+                  </button>
+                </div>
+                <div className="text-sm text-gray-600">
+                  {activeTab === "queue"
+                    ? "Open active requests."
+                    : "Recover recent deletions when no uploaded image was involved."}
+                </div>
+              </>
+            }
+            right={
+              <>
               <button
                 onClick={loadReqs}
                 className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
               >
                 Refresh
               </button>
-            </div>
-          </div>
+              </>
+            }
+          />
 
           {activeTab === "queue" && loading ? (
             <p className="text-gray-600">Loading requests...</p>
@@ -369,16 +399,25 @@ export default function TasksPage() {
                       <p className="mt-2 text-sm text-gray-600">
                         {req.actionRequired || "No action listed"} at {req.location || "no location"}
                       </p>
+                      {req.picturePath ? (
+                        <p className="mt-1 text-xs text-amber-700">
+                          Image-backed requests cannot be fully restored after deletion.
+                        </p>
+                      ) : null}
                       <p className="mt-1 text-xs uppercase tracking-wide text-gray-500">
                         Deleted {new Date(req.deletedAt).toLocaleString()}
                       </p>
                     </div>
                     <button
                       onClick={() => undoDelete(req)}
-                      disabled={deletingId === req.id}
-                      className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                      disabled={deletingId === req.id || !canFullyRestore(req)}
+                      className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {deletingId === req.id ? "Restoring..." : "Undo Delete"}
+                      {deletingId === req.id
+                        ? "Restoring..."
+                        : canFullyRestore(req)
+                          ? "Undo Delete"
+                          : "Cannot Restore"}
                     </button>
                   </div>
                 ))}
@@ -539,7 +578,9 @@ export default function TasksPage() {
                 <span className="font-semibold text-gray-800">
                   {deleteCandidate.account || "unknown account"}
                 </span>.
-                It will move to the Recently Deleted tab so you can undo it if this was a mistake.
+                {deleteCandidate.picturePath
+                  ? " This request includes an uploaded image, so deleting it cannot be fully undone."
+                  : " It will move to the Recently Deleted tab so you can undo it if this was a mistake."}
               </p>
               <div className="mt-6 flex justify-end gap-3">
                 <button

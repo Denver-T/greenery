@@ -1,44 +1,66 @@
 "use client";
 
-import AppShell from "@/components/AppShell";
-import { fetchApi } from "@/lib/api/api";
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
-/**
- * Helper: compute max for simple bar charts
- */
+import AppShell from "@/components/AppShell";
+import WorkspaceHeader from "@/components/WorkspaceHeader";
+import { fetchApi } from "@/lib/api/api";
+
 function maxOf(arr, key) {
   return arr.reduce((m, x) => (x[key] > m ? x[key] : m), 0);
 }
 
-/**
- * KPI Tile
- */
-function Kpi({ label, value, delta, positive = true }) {
+function countBy(items, selector) {
+  const map = new Map();
+  items.forEach((item) => {
+    const key = selector(item) || "Unknown";
+    map.set(key, (map.get(key) || 0) + 1);
+  });
+
+  return Array.from(map.entries())
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "No time scheduled";
+  }
+
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function isToday(value) {
+  const date = new Date(value);
+  const now = new Date();
+
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
+function Kpi({ label, value }) {
   return (
     <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
       <div className="text-sm font-medium text-muted">{label}</div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <div className="text-3xl font-black tracking-tight text-[#1f3427]">{value}</div>
-        {delta != null && (
-          <div
-            className={`text-xs px-2 py-0.5 rounded-full ${
-              positive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
-            }`}
-          >
-            {positive ? "▲" : "▼"} {delta}
-          </div>
-        )}
-      </div>
+      <div className="mt-1 text-3xl font-black tracking-tight text-[#1f3427]">{value}</div>
     </div>
   );
 }
 
-/**
- * Simple horizontal bar list
- */
-function HBarList({ title, items, valueKey = "value", labelKey = "label", suffix = "" }) {
+function HBarList({ title, items, valueKey = "value", labelKey = "label" }) {
   const max = Math.max(1, maxOf(items, valueKey));
+
   return (
     <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
       <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
@@ -60,7 +82,6 @@ function HBarList({ title, items, valueKey = "value", labelKey = "label", suffix
               </div>
               <div className="col-span-2 text-right text-sm tabular-nums font-semibold text-[#1f3427]">
                 {val}
-                {suffix}
               </div>
             </div>
           );
@@ -70,44 +91,62 @@ function HBarList({ title, items, valueKey = "value", labelKey = "label", suffix
   );
 }
 
-/**
- * Simple ring (donut-style) KPI for % share using pure CSS
- */
-function RingStat({ title, percent, caption }) {
-  const clamped = Math.max(0, Math.min(100, percent));
-  const angle = (clamped / 100) * 360;
-  const gradient = `conic-gradient(#5f7d4b ${angle}deg, #f0ebde 0deg)`;
+function ActionCard({ title, description, href, actionLabel }) {
   return (
-    <section className="rounded-card flex items-center gap-4 border border-border-soft bg-surface p-5 shadow-soft">
-      <div
-        className="relative h-24 w-24 rounded-full"
-        style={{ background: gradient }}
-        role="img"
-        aria-label={`${clamped}%`}
+    <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
+      <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-gray-600">{description}</p>
+      <Link
+        href={href}
+        className="mt-4 inline-flex rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f3427]"
       >
-        <div className="absolute inset-2 grid place-items-center rounded-full bg-surface">
-          <span className="text-lg font-black text-[#1f3427]">{clamped}%</span>
-        </div>
-      </div>
-      <div>
-        <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
-        {caption && <p className="mt-1 text-sm text-muted">{caption}</p>}
-      </div>
+        {actionLabel}
+      </Link>
     </section>
   );
 }
 
-function countBy(items, selector) {
-  const map = new Map();
-  items.forEach((item) => {
-    const key = selector(item) || "Unknown";
-    map.set(key, (map.get(key) || 0) + 1);
-  });
+function FocusList({ title, items, empty }) {
+  return (
+    <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
+      <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
+      {items.length === 0 ? (
+        <p className="mt-3 text-sm text-gray-600">{empty}</p>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {items.map((item) => (
+            <div key={`${item.title}-${item.meta}`} className="rounded-xl border border-border-soft bg-[#fffdf7] px-4 py-3">
+              <div className="font-semibold text-[#1f3427]">{item.title}</div>
+              <div className="mt-1 text-sm text-gray-600">{item.meta}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
 
-  return Array.from(map.entries())
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 5);
+function ScheduleList({ title, items, empty }) {
+  return (
+    <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
+      <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
+      {items.length === 0 ? (
+        <p className="mt-3 text-sm text-gray-600">{empty}</p>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {items.map((item) => (
+            <div
+              key={`${item.label}-${item.value}`}
+              className="flex items-center justify-between rounded-xl border border-border-soft bg-[#fffdf7] px-4 py-3"
+            >
+              <div className="font-medium text-[#1f3427]">{item.label}</div>
+              <div className="text-sm font-semibold text-gray-600">{item.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function buildDashboardData({ employees, reqs, tasks, schedule }) {
@@ -115,22 +154,50 @@ function buildDashboardData({ employees, reqs, tasks, schedule }) {
     (req) => !["completed", "cancelled"].includes(String(req.status || "").toLowerCase())
   );
   const assignedTasks = tasks.filter((task) => task.assignedTo ?? task.assigned_to);
-  const completedTasks = tasks.filter(
-    (task) => String(task.status || "").toLowerCase() === "completed"
-  );
+  const todaysSchedule = schedule
+    .filter((event) => isToday(event.start_time))
+    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+
+  const unassignedReqs = activeReqs
+    .filter((req) => !req.assignedTo && !req.assigned_to)
+    .slice(0, 4)
+    .map((req) => ({
+      title: req.actionRequired || req.referenceNumber || "Open request",
+      meta: `${req.account || "Unknown account"}${req.location ? ` • ${req.location}` : ""}`,
+    }));
+
+  const dueSoon = assignedTasks
+    .filter((task) => task.dueDate || task.due_date)
+    .sort((a, b) => new Date(a.dueDate || a.due_date) - new Date(b.dueDate || b.due_date))
+    .slice(0, 4)
+    .map((task) => ({
+      title: task.actionRequired || task.title || task.referenceNumber || "Assigned task",
+      meta: `Due ${String(task.dueDate || task.due_date).slice(0, 10)}${task.account ? ` • ${task.account}` : ""}`,
+    }));
+
+  const nextStops = todaysSchedule.slice(0, 4).map((event) => ({
+    title: event.title || "Scheduled stop",
+    meta: `${event.employee_name || "Unassigned"} • ${formatDateTime(event.start_time)}`,
+  }));
 
   return {
     kpis: [
       { label: "Employees", value: employees.length },
       { label: "Open REQs", value: activeReqs.length },
       { label: "Assigned Tasks", value: assignedTasks.length },
-      { label: "Schedule Events", value: schedule.length },
+      { label: "Stops Today", value: todaysSchedule.length },
     ],
-    weeklyCommonJobsShare:
-      tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0,
-    commonJobsBreakdown: countBy(reqs, (req) => req.actionRequired),
-    plantsIn: countBy(reqs, (req) => req.account),
-    plantRevenue: countBy(schedule, (event) => event.employee_name || "Unassigned"),
+    activeReqs,
+    todaysSchedule,
+    unassignedReqs,
+    dueSoon,
+    nextStops,
+    actionRequiredBreakdown: countBy(activeReqs, (req) => req.actionRequired),
+    accountLoad: countBy(activeReqs, (req) => req.account),
+    byAssignee: countBy(todaysSchedule, (event) => event.employee_name || "Unassigned").map((item) => ({
+      label: item.label,
+      value: `${item.value} stop${item.value === 1 ? "" : "s"} today`,
+    })),
   };
 }
 
@@ -194,38 +261,71 @@ export default function Page() {
       ) : null}
       {!loading && !error ? (
         <>
-        <section className="grid grid-cols-1 gap-6 p-0 md:grid-cols-4">
-          {data.kpis.map((k) => (
-            <Kpi
-              key={k.label}
-              label={k.label}
-              value={k.value}
+          <WorkspaceHeader
+            eyebrow="Operations Overview"
+            title="Today’s command surface"
+            description="Prioritize live work, staffing pressure, and today’s schedule from one operating view."
+            stats={[
+              { label: "open requests", value: data.kpis[1]?.value ?? 0 },
+              { label: "assigned tasks", value: data.kpis[2]?.value ?? 0 },
+              { label: "stops today", value: data.kpis[3]?.value ?? 0 },
+            ]}
+          />
+
+          <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-4">
+            {data.kpis.map((k) => (
+              <Kpi key={k.label} label={k.label} value={k.value} />
+            ))}
+          </section>
+
+          <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+            <ActionCard
+              title="Review request queue"
+              description={`${data.activeReqs.length} open request${data.activeReqs.length === 1 ? "" : "s"} currently need attention.`}
+              href="/tasks"
+              actionLabel="Open queue"
             />
-          ))}
-        </section>
+            <ActionCard
+              title="Manage assignments"
+              description="Match open work to the right employee and update due dates."
+              href="/assigntasks"
+              actionLabel="Open assignments"
+            />
+            <ActionCard
+              title="Check today’s schedule"
+              description={`${data.todaysSchedule.length} scheduled stop${data.todaysSchedule.length === 1 ? "" : "s"} are on today’s board.`}
+              href="/calendar"
+              actionLabel="Open schedule"
+            />
+          </section>
 
-        <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Weekly Common Jobs: ring + breakdown */}
-          <div className="space-y-4">
-            <RingStat
-            title="Weekly Common Jobs"
-            percent={data.weeklyCommonJobsShare}
-            caption={`${100 - data.weeklyCommonJobsShare}% other work`}
-          />
-            <HBarList title="Breakdown" items={data.commonJobsBreakdown} />
-          </div>
+          <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
+            <FocusList
+              title="Unassigned Requests"
+              items={data.unassignedReqs}
+              empty="No unassigned requests are waiting in the queue."
+            />
+            <FocusList
+              title="Due Soon"
+              items={data.dueSoon}
+              empty="No assigned tasks are due soon."
+            />
+            <FocusList
+              title="Next Stops"
+              items={data.nextStops}
+              empty="No stops are scheduled for today."
+            />
+          </section>
 
-          {/* Plants In */}
-          <HBarList title="Plants In" items={data.plantsIn} />
-
-          {/* Plant Revenue */}
-          <HBarList
-            title="Plant Revenue"
-            items={data.plantRevenue}
-            suffix="$"
-            // Show dollars with thousands separators in the number cell:
-          />
-        </section>
+          <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <HBarList title="Open Work by Type" items={data.actionRequiredBreakdown} />
+            <HBarList title="Open Work by Account" items={data.accountLoad} />
+            <ScheduleList
+              title="Today’s Coverage"
+              items={data.byAssignee}
+              empty="No technicians are scheduled today."
+            />
+          </section>
         </>
       ) : null}
     </AppShell>

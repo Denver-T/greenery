@@ -57,9 +57,7 @@ export default function ReqPage() {
               Create Work Request
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
-              Capture the essentials first, then fill in plant and staging details only when they
-              apply. This version is laid out to reduce missed fields and make technician handoff
-              easier.
+              Capture the core request details first, then add plant and staging information if needed.
             </p>
           </div>
 
@@ -79,7 +77,7 @@ export default function ReqPage() {
             <div className="space-y-6">
               <FormSection
                 title="Core Details"
-                description="Identify the request, who submitted it, and the account it belongs to."
+                description="Identify the request, the submitter, and the account."
               >
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label="Reference Number" required>
@@ -141,7 +139,7 @@ export default function ReqPage() {
 
               <FormSection
                 title="Plant and Placement"
-                description="Use this section when the request includes swaps, installs, staging, or location notes."
+                description="Use this section for swaps, installs, staging, or location notes."
               >
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label="Number of Plants">
@@ -185,7 +183,7 @@ export default function ReqPage() {
             <div className="space-y-6">
               <FormSection
                 title="Execution Notes"
-                description="Capture site instructions that help the field team complete the request correctly the first time."
+                description="Capture site instructions the field team needs to execute the request."
               >
                 <div className="grid grid-cols-1 gap-4">
                   <Field label="Lighting">
@@ -209,7 +207,7 @@ export default function ReqPage() {
 
               <FormSection
                 title="Photo Attachment"
-                description="Upload a reference photo when it clarifies plant condition, site access, or staging context."
+                description="Upload a reference photo when it clarifies site or plant context."
               >
                 <input
                   type="file"
@@ -225,8 +223,8 @@ export default function ReqPage() {
                 </h4>
                 <ul className="mt-3 space-y-2 text-sm leading-6 text-gray-600">
                   <li>1. Confirm the account and work type.</li>
-                  <li>2. Add plant details only when they matter to execution.</li>
-                  <li>3. Include notes or a photo when field context matters.</li>
+                  <li>2. Add plant details only when they affect execution.</li>
+                  <li>3. Include notes or a photo when extra context matters.</li>
                 </ul>
               </div>
             </div>
@@ -240,7 +238,7 @@ export default function ReqPage() {
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-soft pt-4">
             <div className="text-sm text-gray-600">
-              Review the core account details before submitting. The app will route you back to the queue after a successful save.
+              Review the account details before submitting. After save, you will return to the queue.
             </div>
             <div className="flex items-center gap-3">
               <button

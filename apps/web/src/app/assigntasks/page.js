@@ -1,6 +1,8 @@
 "use client";
 
 import AppShell from "@/components/AppShell";
+import WorkspaceHeader from "@/components/WorkspaceHeader";
+import WorkspaceToolbar from "@/components/WorkspaceToolbar";
 import { fetchApi } from "@/lib/api/api";
 import { useEffect, useMemo, useState } from "react";
 
@@ -184,27 +186,18 @@ export default function AssignmentsPage() {
   return (
     <AppShell title="Assign Tasks">
       <section className="space-y-6 p-6">
-        <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-          <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="w-fit rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#1f3427]">
-                Scheduling Workspace
-              </div>
-              <h2 className="mt-4 text-2xl font-black tracking-tight text-[#1f3427]">
-                Assign Work Intentionally
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
-                Pair open requests with the right employee, capture a due date, and keep the active
-                assignment board easy to scan.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-border-soft bg-[#f8f4ea] px-4 py-4 text-sm text-gray-600">
-              <div><span className="font-semibold text-[#1f3427]">{employees.length}</span> employees loaded</div>
-              <div className="mt-1"><span className="font-semibold text-[#1f3427]">{tasks.length}</span> total tasks in scope</div>
-              <div className="mt-1"><span className="font-semibold text-[#1f3427]">{selectedCount}</span> selected for assignment</div>
-            </div>
-          </div>
+        <WorkspaceHeader
+          eyebrow="Scheduling Workspace"
+          title="Assign Work Intentionally"
+          description="Pair open requests with the right employee and due date."
+          stats={[
+            { label: "employees loaded", value: employees.length },
+            { label: "tasks in scope", value: tasks.length },
+            { label: "selected", value: selectedCount },
+          ]}
+        />
 
+        <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Employee</label>
@@ -230,9 +223,7 @@ export default function AssignmentsPage() {
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
               />
-              <p className="text-xs text-gray-500">
-                Stored on the work request so the calendar and task list can use it.
-              </p>
+              <p className="text-xs text-gray-500">Used by the queue and schedule board.</p>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -256,8 +247,9 @@ export default function AssignmentsPage() {
         </div>
 
         <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-          <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="inline-flex gap-1 rounded-full bg-[#f0ebde] p-1">
+          <WorkspaceToolbar
+            left={
+              <div className="inline-flex gap-1 rounded-full bg-white p-1 shadow-soft">
               {["unassigned", "assigned", "all"].map((key) => (
                 <button
                   key={key}
@@ -270,9 +262,10 @@ export default function AssignmentsPage() {
                   {key}
                 </button>
               ))}
-            </div>
-
-            <div className="flex items-center gap-2">
+              </div>
+            }
+            right={
+              <>
               <input
                 placeholder="Search tasks..."
                 className="w-full rounded-xl border border-border-soft p-2.5 md:w-72"
@@ -291,8 +284,9 @@ export default function AssignmentsPage() {
               >
                 Clear
               </button>
-            </div>
-          </div>
+              </>
+            }
+          />
 
           {loading ? (
             <div className="text-sm text-gray-500">Loading...</div>
