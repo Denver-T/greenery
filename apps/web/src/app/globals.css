@@ -30,8 +30,8 @@
   --color-muted: var(--muted);
 
   /* optional fonts (if you wire them in layout.js) */
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 
   /* card radius used in examples */
   --radius-card: 12px;

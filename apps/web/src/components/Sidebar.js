@@ -25,7 +25,7 @@ const baseSections = [
     items: [
       { href: "/dashboard", label: "Overview", description: "Track workload, coverage, and activity" },
       { href: "/employees", label: "Team", description: "Manage employees and staffing details" },
-      { href: "/inventory", label: "Inventory", description: "Monitor plant and stock analytics" },
+      { href: "/inventory", label: "Inventory", description: "Review tracked plants and plant-heavy work" },
     ],
   },
 ];
