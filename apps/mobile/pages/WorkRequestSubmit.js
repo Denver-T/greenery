@@ -139,8 +139,8 @@ export default function WorkRequestSubmit() {
       if (response?.ok) {
         Alert.alert("Request submitted", "The new work request has been saved.", [
           {
-            text: "Open queue",
-            onPress: () => navigation.navigate("WorkRequestView"),
+            text: "Back to dashboard",
+            onPress: () => navigation.navigate("Dashboard"),
           },
         ]);
       } else {

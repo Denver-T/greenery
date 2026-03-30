@@ -18,9 +18,8 @@ import { COLORS, RADII, SPACING } from "../theme";
 
 const PRIMARY_ROUTES = new Set([
   "Dashboard",
-  "WorkRequestView",
   "WeeklySchedule",
-  "HomePage",
+  "WorkRequestSubmit",
   "Settings",
 ]);
 

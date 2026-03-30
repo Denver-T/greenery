@@ -26,10 +26,10 @@ exports.authorize = (...allowedRoles) => {
       req.user.permissionLevel || req.user.role || ""
     );
     const userRank = getAccessRank(userLevel);
-    const minAllowedRank = allowedRoles.reduce((highest, role) => {
+    const minAllowedRank = allowedRoles.reduce((lowest, role) => {
       const rank = getAccessRank(role);
-      return rank > highest ? rank : highest;
-    }, 0);
+      return rank < lowest ? rank : lowest;
+    }, Infinity);
 
     // Authorization is hierarchical so higher-privilege users can access
     // lower-privilege routes without duplicating "superadmin" everywhere.

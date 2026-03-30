@@ -155,7 +155,7 @@ export default function WorkRequestDetails({ route, navigation }) {
           </View>
 
           <Pressable onPress={() => navigation.goBack()} style={styles.closeButton}>
-            <Text style={styles.closeButtonText}>Back to queue</Text>
+            <Text style={styles.closeButtonText}>Back</Text>
           </Pressable>
         </>
       ) : null}

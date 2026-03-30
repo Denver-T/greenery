@@ -4,7 +4,6 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   MaterialCommunityIcons,
   Feather,
-  MaterialIcons,
 } from '@expo/vector-icons';
 import { COLORS, RADII } from '../theme';
 
@@ -19,19 +18,19 @@ export default function NavBar() {
       icon: (color) => <MaterialCommunityIcons name="clipboard-check-outline" size={18} color={color} />,
     },
     {
-      label: 'Requests',
-      route: 'WorkRequestView',
-      icon: (color) => <MaterialIcons name="assignment" size={18} color={color} />,
-    },
-    {
       label: 'Schedule',
       route: 'WeeklySchedule',
       icon: (color) => <MaterialCommunityIcons name="calendar-multiselect" size={18} color={color} />,
     },
     {
-      label: 'Menu',
-      route: 'HomePage',
-      icon: (color) => <Feather name="menu" size={20} color={color} />,
+      label: 'New Request',
+      route: 'WorkRequestSubmit',
+      icon: (color) => <Feather name="plus-circle" size={18} color={color} />,
+    },
+    {
+      label: 'Settings',
+      route: 'Settings',
+      icon: (color) => <Feather name="settings" size={18} color={color} />,
     },
   ];
 

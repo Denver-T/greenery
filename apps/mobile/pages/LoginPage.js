@@ -42,7 +42,7 @@ export default function LoginPage() {
       await login(email.trim(), password);
       navigation.reset({
         index: 0,
-        routes: [{ name: "HomePage" }],
+        routes: [{ name: "Dashboard" }],
       });
     } catch (err) {
       const code = err?.code || "";

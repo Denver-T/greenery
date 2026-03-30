@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -11,6 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 
 import MobileScaffold from "../components/MobileScaffold";
 import { apiFetch } from "../util/api";
+import { updateTaskStatus } from "../util/workRequest";
 import { COLORS, RADII, SPACING } from "../theme";
 
 function sameDay(dateA, dateB) {
@@ -41,6 +43,13 @@ function formatDateTime(value) {
   });
 }
 
+function formatDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export default function Dashboard() {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
@@ -52,45 +61,42 @@ export default function Dashboard() {
     schedule: [],
   });
 
-  useEffect(() => {
-    let cancelled = false;
+  async function loadDashboard() {
+    try {
+      setLoading(true);
+      setError("");
 
-    async function loadDashboard() {
-      try {
-        setLoading(true);
-        setError("");
+      const [me, reqs, tasks, schedule] = await Promise.all([
+        apiFetch("/auth/me"),
+        apiFetch("/reqs"),
+        apiFetch("/auth/my-tasks"),
+        apiFetch("/schedule"),
+      ]);
 
-        const [me, reqs, tasks, schedule] = await Promise.all([
-          apiFetch("/auth/me"),
-          apiFetch("/reqs"),
-          apiFetch("/tasks?scope=assignment"),
-          apiFetch("/schedule"),
-        ]);
-
-        if (!cancelled) {
-          setPayload({
-            me,
-            reqs: Array.isArray(reqs) ? reqs : [],
-            tasks: Array.isArray(tasks) ? tasks : [],
-            schedule: Array.isArray(schedule) ? schedule : [],
-          });
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err?.message || "Failed to load technician overview.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
+      setPayload({
+        me,
+        reqs: Array.isArray(reqs) ? reqs : [],
+        tasks: Array.isArray(tasks) ? tasks : [],
+        schedule: Array.isArray(schedule) ? schedule : [],
+      });
+    } catch (err) {
+      setError(err?.message || "Failed to load technician overview.");
+    } finally {
+      setLoading(false);
     }
+  }
 
+  async function handleMarkComplete(taskId) {
+    try {
+      await updateTaskStatus(taskId, "completed");
+      await loadDashboard();
+    } catch (err) {
+      Alert.alert("Update failed", err?.message || "Could not mark task as complete.");
+    }
+  }
+
+  useEffect(() => {
     loadDashboard();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   const summary = useMemo(() => {
@@ -118,12 +124,17 @@ export default function Dashboard() {
       return diff >= 0 && diff <= 1000 * 60 * 60 * 24 * 2;
     });
 
+    const activeTasks = payload.tasks.filter(
+      (t) => t.status !== "completed" && t.status !== "cancelled"
+    );
+
     return {
       nextStop: todaysStops[0] || mySchedule[0] || null,
       todaysStops,
       activeReqs,
       mySubmittedReqs,
       dueSoonTasks,
+      activeTasks,
     };
   }, [payload]);
 
@@ -183,6 +194,32 @@ export default function Dashboard() {
           </View>
 
           <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>My assignments</Text>
+            {summary.activeTasks.length === 0 ? (
+              <Text style={styles.emptyText}>No tasks assigned to you right now.</Text>
+            ) : (
+              <View style={styles.stack}>
+                {summary.activeTasks.slice(0, 5).map((task) => (
+                  <View key={task.id} style={styles.assignmentCard}>
+                    <View style={styles.assignmentCopy}>
+                      <Text style={styles.planTitle}>{task.title}</Text>
+                      <Text style={styles.planMeta}>
+                        {task.account || "Internal"}{task.dueDate ? ` • Due ${formatDate(task.dueDate)}` : ""}
+                      </Text>
+                    </View>
+                    <Pressable
+                      style={styles.completeButton}
+                      onPress={() => handleMarkComplete(task.id)}
+                    >
+                      <MaterialCommunityIcons name="check-circle-outline" size={22} color={COLORS.moss} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.sectionCard}>
             <SectionHeader
               title="Today’s plan"
               actionLabel="Open schedule"
@@ -206,11 +243,7 @@ export default function Dashboard() {
           </View>
 
           <View style={styles.sectionCard}>
-            <SectionHeader
-              title="Requests you created"
-              actionLabel="Open queue"
-              onPress={() => navigation.navigate("WorkRequestView")}
-            />
+            <SectionHeader title="Requests you created" />
             {summary.activeReqs.length === 0 ? (
               <Text style={styles.emptyText}>You have no active submitted requests right now.</Text>
             ) : (
@@ -236,9 +269,6 @@ export default function Dashboard() {
             <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("WorkRequestSubmit")}>
               <Text style={styles.primaryButtonText}>Create request</Text>
             </Pressable>
-            <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate("HomePage")}>
-              <Text style={styles.secondaryButtonText}>More tools</Text>
-            </Pressable>
           </View>
         </>
       ) : null}
@@ -250,9 +280,11 @@ function SectionHeader({ title, actionLabel, onPress }) {
   return (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <Pressable onPress={onPress}>
-        <Text style={styles.sectionLink}>{actionLabel}</Text>
-      </Pressable>
+      {actionLabel ? (
+        <Pressable onPress={onPress}>
+          <Text style={styles.sectionLink}>{actionLabel}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -450,6 +482,22 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontSize: 14,
     lineHeight: 21,
+  },
+  assignmentCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    borderRadius: RADII.md,
+    backgroundColor: COLORS.parchment,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+  },
+  assignmentCopy: {
+    flex: 1,
+  },
+  completeButton: {
+    padding: 6,
   },
   actionStrip: {
     flexDirection: "row",
