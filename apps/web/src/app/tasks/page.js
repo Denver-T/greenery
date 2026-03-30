@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import WorkspaceHeader from "@/components/WorkspaceHeader";
 import WorkspaceToolbar from "@/components/WorkspaceToolbar";
@@ -92,6 +93,8 @@ function canFullyRestore(req) {
 }
 
 export default function TasksPage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [reqs, setReqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedReq, setSelectedReq] = useState(null);
@@ -254,6 +257,16 @@ export default function TasksPage() {
     setSelectedReq(null);
     setEditMode(false);
     setForm(emptyForm);
+    setOpenReqId(null);
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("open")) {
+        params.delete("open");
+        const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+        router.replace(nextUrl, { scroll: false });
+      }
+    }
   }
 
   return (

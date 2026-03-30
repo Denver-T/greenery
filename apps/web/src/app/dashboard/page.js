@@ -53,7 +53,7 @@ function Kpi({ label, value }) {
   return (
     <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
       <div className="text-sm font-medium text-muted">{label}</div>
-      <div className="mt-1 text-3xl font-black tracking-tight text-[#1f3427]">{value}</div>
+      <div className="theme-kpi mt-1 text-3xl font-black tracking-tight">{value}</div>
     </div>
   );
 }
@@ -63,14 +63,14 @@ function HBarList({ title, items, valueKey = "value", labelKey = "label" }) {
 
   return (
     <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-      <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
+      <h3 className="theme-title text-lg font-bold">{title}</h3>
       <div className="mt-4 space-y-3">
         {items.map((it, i) => {
           const val = it[valueKey];
           const pct = Math.round((val / max) * 100);
           return (
             <div key={`${it[labelKey]}-${i}`} className="grid grid-cols-12 items-center gap-3">
-              <div className="col-span-4 truncate text-sm text-foreground/80">{it[labelKey]}</div>
+              <div className="theme-copy col-span-4 truncate text-sm">{it[labelKey]}</div>
               <div className="col-span-6">
                 <div className="h-3 w-full rounded bg-surface-muted">
                   <div
@@ -80,7 +80,7 @@ function HBarList({ title, items, valueKey = "value", labelKey = "label" }) {
                   />
                 </div>
               </div>
-              <div className="col-span-2 text-right text-sm tabular-nums font-semibold text-[#1f3427]">
+              <div className="theme-title col-span-2 text-right text-sm tabular-nums font-semibold">
                 {val}
               </div>
             </div>
@@ -94,11 +94,11 @@ function HBarList({ title, items, valueKey = "value", labelKey = "label" }) {
 function ActionCard({ title, description, href, actionLabel }) {
   return (
     <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-      <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-gray-600">{description}</p>
+      <h3 className="theme-title text-lg font-bold">{title}</h3>
+      <p className="theme-copy mt-2 text-sm leading-6">{description}</p>
       <Link
         href={href}
-        className="mt-4 inline-flex rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f3427]"
+        className="theme-button mt-4 inline-flex rounded-xl px-4 py-2 text-sm font-semibold"
       >
         {actionLabel}
       </Link>
@@ -109,15 +109,15 @@ function ActionCard({ title, description, href, actionLabel }) {
 function FocusList({ title, items, empty }) {
   return (
     <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-      <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
+      <h3 className="theme-title text-lg font-bold">{title}</h3>
       {items.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-600">{empty}</p>
+        <p className="theme-copy mt-3 text-sm">{empty}</p>
       ) : (
         <div className="mt-4 space-y-3">
           {items.map((item) => (
-            <div key={`${item.title}-${item.meta}`} className="rounded-xl border border-border-soft bg-[#fffdf7] px-4 py-3">
-              <div className="font-semibold text-[#1f3427]">{item.title}</div>
-              <div className="mt-1 text-sm text-gray-600">{item.meta}</div>
+            <div key={`${item.title}-${item.meta}`} className="theme-subcard rounded-xl border px-4 py-3">
+              <div className="theme-title font-semibold">{item.title}</div>
+              <div className="theme-copy mt-1 text-sm">{item.meta}</div>
             </div>
           ))}
         </div>
@@ -129,18 +129,18 @@ function FocusList({ title, items, empty }) {
 function ScheduleList({ title, items, empty }) {
   return (
     <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-      <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
+      <h3 className="theme-title text-lg font-bold">{title}</h3>
       {items.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-600">{empty}</p>
+        <p className="theme-copy mt-3 text-sm">{empty}</p>
       ) : (
         <div className="mt-4 space-y-3">
           {items.map((item) => (
             <div
               key={`${item.label}-${item.value}`}
-              className="flex items-center justify-between rounded-xl border border-border-soft bg-[#fffdf7] px-4 py-3"
+              className="theme-subcard flex items-center justify-between rounded-xl border px-4 py-3"
             >
-              <div className="font-medium text-[#1f3427]">{item.label}</div>
-              <div className="text-sm font-semibold text-gray-600">{item.value}</div>
+              <div className="theme-title font-medium">{item.label}</div>
+              <div className="theme-copy text-sm font-semibold">{item.value}</div>
             </div>
           ))}
         </div>
@@ -253,7 +253,7 @@ export default function Page() {
 
   return (
     <AppShell title="Dashboard Analytics">
-      {loading ? <div className="p-6 text-gray-600">Loading analytics…</div> : null}
+      {loading ? <div className="theme-copy p-6">Loading analytics…</div> : null}
       {error ? (
         <div className="rounded-card border border-red-200 bg-red-50 p-4 text-red-700 shadow-soft">
           {error}
