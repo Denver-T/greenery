@@ -61,14 +61,13 @@ router.post(
 /**
  * GET /auth/my-tasks
  * Authenticated technicians, managers, and admins
- * Temporary implementation uses getTasks until a dedicated
- * getMyTasks controller is added.
+ * Returns only tasks assigned to the authenticated user.
  */
 router.get(
   "/my-tasks",
   verifyToken,
   authorize("technician", "manager", "admin"),
-  taskController.getTasks
+  taskController.getMyTasks
 );
 
 /**

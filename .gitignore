@@ -39,3 +39,7 @@ __MACOSX/
 # Runtime / uploads
 apps/api/uploads/
 !apps/api/uploads/.gitkeep
+
+# Claude Code config
+.claude/
+

@@ -51,10 +51,6 @@ export async function apiFetch(path, options = {}) {
           break;
         case 401:
           console.error("🔒 Unauthorized: Token missing or expired.");
-          // Global Action: Clear local storage and force redirect to login
-          if (typeof window !== "undefined") {
-            window.location.href = "/login";
-          }
           break;
         case 403:
           console.error(

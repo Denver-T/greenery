@@ -291,8 +291,31 @@ async function assignTask(req, res, next) {
   }
 }
 
+/**
+ * GET /auth/my-tasks
+ * Returns only tasks assigned to the authenticated user.
+ */
+async function getMyTasks(req, res, next) {
+  try {
+    const employeeId = req.user?.employeeId || null;
+
+    if (!employeeId) {
+      return res.status(200).json({ data: [] });
+    }
+
+    const tasks = await taskService.getTasks(null, employeeId);
+
+    return res.status(200).json({
+      data: tasks,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getTasks,
+  getMyTasks,
   createTask,
   getTaskById,
   updateTaskStatus,
