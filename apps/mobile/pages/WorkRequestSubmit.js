@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   },
   referenceLabel: {
     color: COLORS.textMuted,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.8,
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   },
   dateLabel: {
     color: COLORS.textMuted,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.8,

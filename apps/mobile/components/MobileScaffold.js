@@ -13,15 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
-import NavBar from "./NavBar";
-import { COLORS, RADII, SPACING } from "../theme";
-
-const PRIMARY_ROUTES = new Set([
-  "Dashboard",
-  "WeeklySchedule",
-  "WorkRequestSubmit",
-  "Settings",
-]);
+import { COLORS, FONTS, RADII, SPACING } from "../theme";
 
 export default function MobileScaffold({
   eyebrow,
@@ -35,12 +27,14 @@ export default function MobileScaffold({
 }) {
   const navigation = useNavigation();
   const route = useRoute();
-  const isPrimaryRoute = PRIMARY_ROUTES.has(route.name);
+  // Check the parent (root Stack) navigator for back capability.
+  // Inside tab screens, navigation.canGoBack() returns true for non-first tabs,
+  // but we only want the back button on drill-in screens pushed onto the root Stack.
+  const parentNav = navigation.getParent();
   const shouldShowBackButton =
     typeof showBackButton === "boolean"
       ? showBackButton
-      // Main destinations should feel tab-rooted, while drill-in screens expose an explicit way back.
-      : navigation.canGoBack() && !isPrimaryRoute;
+      : parentNav ? parentNav.canGoBack() : navigation.canGoBack();
 
   const content = (
     <View style={[styles.contentInner, contentContainerStyle]}>
@@ -91,7 +85,7 @@ export default function MobileScaffold({
 
             <View style={[styles.topBarSide, styles.topBarRight]}>
               {rightSlot ||
-                (route.name !== "Settings" ? (
+                (!shouldShowBackButton && route.name !== "Settings" ? (
                   <Pressable
                     onPress={() => navigation.navigate("Settings")}
                     accessibilityRole="button"
@@ -124,9 +118,6 @@ export default function MobileScaffold({
           )}
         </View>
 
-        <View style={styles.navWrap}>
-          <NavBar />
-        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -178,6 +169,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   topTitle: {
+    fontFamily: FONTS.bold,
     color: COLORS.textPrimary,
     fontSize: 15,
     fontWeight: "800",
@@ -250,13 +242,15 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   eyebrowText: {
+    fontFamily: FONTS.bold,
     color: COLORS.textPrimary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 1,
     textTransform: "uppercase",
   },
   heroTitle: {
+    fontFamily: FONTS.bold,
     marginTop: 12,
     color: COLORS.textOnBrand,
     fontSize: 22,
@@ -264,6 +258,7 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
   heroSubtitle: {
+    fontFamily: FONTS.regular,
     marginTop: 8,
     color: COLORS.textHeroSub,
     fontSize: 14,
@@ -275,14 +270,5 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: SPACING.sm,
-  },
-  navWrap: {
-    width: "100%",
-    maxWidth: 560,
-    alignSelf: "center",
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.xs,
-    paddingBottom: SPACING.sm,
-    backgroundColor: "transparent",
   },
 });

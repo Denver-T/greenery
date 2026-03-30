@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   heroEyebrow: {
     color: COLORS.textMuted,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 1,
     textTransform: "uppercase",
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   },
   statusChipText: {
     color: COLORS.textPrimary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
   },
   heroTitle: {
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   },
   requestRef: {
     color: COLORS.textMuted,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.8,
     textTransform: "uppercase",

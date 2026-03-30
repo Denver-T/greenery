@@ -52,7 +52,7 @@ export default function SettingsPage() {
   async function handleLogout() {
     try {
       await logout();
-      navigation.reset({
+      navigation.getParent().reset({
         index: 0,
         routes: [{ name: "Login" }],
       });
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   },
   accountEyebrow: {
     color: COLORS.moss,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 1,
     textTransform: "uppercase",
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   },
   comingSoonBadge: {
     color: COLORS.textMuted,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     backgroundColor: COLORS.surfaceMuted,
     paddingHorizontal: 8,

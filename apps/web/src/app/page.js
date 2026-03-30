@@ -209,8 +209,7 @@ const styles = {
       "linear-gradient(145deg, #1f3427 0%, #294733 42%, #5f7d4b 100%)",
     position: "relative",
     overflow: "hidden",
-    fontFamily:
-      'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
+    fontFamily: 'var(--font-sans)',
   },
   bgOverlay: {
     position: "absolute",

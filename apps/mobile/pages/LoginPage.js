@@ -42,7 +42,7 @@ export default function LoginPage() {
       await login(email.trim(), password);
       navigation.reset({
         index: 0,
-        routes: [{ name: "Dashboard" }],
+        routes: [{ name: "Main" }],
       });
     } catch (err) {
       const code = err?.code || "";
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   heroBadgeText: {
     color: COLORS.textPrimary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.8,
     textTransform: "uppercase",
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   },
   brandEyebrow: {
     color: COLORS.textHeroMuted,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1.1,
     textTransform: "uppercase",
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: COLORS.textPrimary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.8,
     textTransform: "uppercase",

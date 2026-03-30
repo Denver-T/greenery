@@ -41,6 +41,12 @@ export const COLORS = {
   gray100: "#E6EBDD",
 };
 
+export const FONTS = {
+  regular: "SpaceGrotesk_400Regular",
+  medium: "SpaceGrotesk_500Medium",
+  bold: "SpaceGrotesk_700Bold",
+};
+
 export const RADII = {
   sm: 10,
   md: 14,
