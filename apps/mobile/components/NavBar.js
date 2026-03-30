@@ -43,8 +43,10 @@ export default function NavBar() {
         return (
           <Pressable
             key={tab.route}
-            // Root navigation should switch context cleanly instead of stacking duplicate tab routes.
             onPress={() => navigation.navigate(tab.route)}
+            accessibilityRole="tab"
+            accessibilityLabel={tab.label}
+            accessibilityState={{ selected: active }}
             style={[styles.tabItem, active && styles.tabItemActive]}
           >
             {tab.icon(color)}
@@ -60,7 +62,7 @@ const styles = StyleSheet.create({
   tabBar: {
     width: '100%',
     minHeight: 68,
-    backgroundColor: 'rgba(255, 252, 246, 0.96)',
+    backgroundColor: COLORS.surfaceGlass,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',

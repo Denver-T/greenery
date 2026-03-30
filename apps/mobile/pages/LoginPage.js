@@ -175,7 +175,7 @@ export default function LoginPage() {
               accessibilityLabel="Sign In"
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={COLORS.textOnBrand} />
               ) : (
                 <Text style={styles.primaryText}>Sign In</Text>
               )}
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginBottom: 10,
     borderRadius: RADII.pill,
-    backgroundColor: "rgba(255, 252, 246, 0.9)",
+    backgroundColor: COLORS.surfaceHero,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: RADII.md,
-    backgroundColor: "rgba(255, 252, 246, 0.96)",
+    backgroundColor: COLORS.surfaceGlass,
     padding: 8,
     marginRight: 14,
   },
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   brandEyebrow: {
-    color: "rgba(247, 248, 243, 0.74)",
+    color: COLORS.textHeroMuted,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.1,
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   },
   brandSubtitle: {
     marginTop: 14,
-    color: "rgba(247, 248, 243, 0.86)",
+    color: COLORS.textHeroLabel,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 4,
   },
-  primaryText: { color: "#fff", fontSize: 17, fontWeight: "800" },
+  primaryText: { color: COLORS.textOnBrand, fontSize: 17, fontWeight: "800" },
   secondaryBtn: {
     marginTop: 12,
     height: 50,

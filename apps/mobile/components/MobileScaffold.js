@@ -114,6 +114,7 @@ export default function MobileScaffold({
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
             >
               {/* The shell owns the hero/header rhythm so individual screens only render their content blocks. */}
               {content}
@@ -183,9 +184,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   backButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: COLORS.parchment,
@@ -193,9 +194,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   actionButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: COLORS.parchment,
@@ -203,8 +204,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   topBarSpacer: {
-    width: 34,
-    height: 34,
+    width: 44,
+    height: 44,
   },
   brandIcon: {
     width: 34,
@@ -264,7 +265,7 @@ const styles = StyleSheet.create({
   },
   heroSubtitle: {
     marginTop: 8,
-    color: "rgba(247, 248, 243, 0.82)",
+    color: COLORS.textHeroSub,
     fontSize: 14,
     lineHeight: 20,
   },

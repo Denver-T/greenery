@@ -8,6 +8,7 @@ import {
   getReactNativePersistence,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
 } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -57,4 +58,8 @@ async function getBearerToken() {
   return user.getIdToken();
 }
 
-export { auth, login, register, logout, getBearerToken };
+async function resetPassword(email) {
+  await sendPasswordResetEmail(auth, email);
+}
+
+export { auth, login, register, logout, getBearerToken, resetPassword };

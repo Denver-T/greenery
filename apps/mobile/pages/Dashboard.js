@@ -210,6 +210,8 @@ export default function Dashboard() {
                     <Pressable
                       style={styles.completeButton}
                       onPress={() => handleMarkComplete(task.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Mark ${task.title} as complete`}
                     >
                       <MaterialCommunityIcons name="check-circle-outline" size={22} color={COLORS.moss} />
                     </Pressable>
@@ -253,6 +255,8 @@ export default function Dashboard() {
                     key={req.id}
                     onPress={() => navigation.navigate("WorkRequestDetails", { id: req.id })}
                     style={styles.requestCard}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View request ${req.referenceNumber}`}
                   >
                     <Text style={styles.requestRef}>{req.referenceNumber}</Text>
                     <Text style={styles.requestTitle}>{req.actionRequired}</Text>
@@ -266,7 +270,7 @@ export default function Dashboard() {
           </View>
 
           <View style={styles.actionStrip}>
-            <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("WorkRequestSubmit")}>
+            <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("WorkRequestSubmit")} accessibilityRole="button" accessibilityLabel="Create new request">
               <Text style={styles.primaryButtonText}>Create request</Text>
             </Pressable>
           </View>
@@ -281,7 +285,7 @@ function SectionHeader({ title, actionLabel, onPress }) {
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {actionLabel ? (
-        <Pressable onPress={onPress}>
+        <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={actionLabel}>
           <Text style={styles.sectionLink}>{actionLabel}</Text>
         </Pressable>
       ) : null}
@@ -307,7 +311,7 @@ const styles = StyleSheet.create({
     borderRadius: RADII.lg,
     backgroundColor: COLORS.dangerSoft,
     borderWidth: 1,
-    borderColor: "rgba(181, 70, 60, 0.2)",
+    borderColor: COLORS.dangerBorder,
     padding: SPACING.lg,
   },
   errorTitle: {
