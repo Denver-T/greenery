@@ -161,7 +161,7 @@ async function create(req, res, next) {
     });
     return res.status(201).json({ data: created });
   } catch (err) {
-    if (err.message === "Name is required") {
+    if (err.message === "Name is required" || err.message.includes("characters or less") || err.message === "Phone must be in the format xxx-xxx-xxxx") {
       return res.status(400).json({ error: err.message });
     }
 
@@ -237,7 +237,7 @@ async function update(req, res, next) {
 
     return res.json({ data: updated });
   } catch (err) {
-    if (err.message === "Name is required") {
+    if (err.message === "Name is required" || err.message.includes("characters or less") || err.message === "Phone must be in the format xxx-xxx-xxxx") {
       return res.status(400).json({ error: err.message });
     }
 
@@ -334,3 +334,4 @@ module.exports = {
   remove,
   getMe,
 };
+

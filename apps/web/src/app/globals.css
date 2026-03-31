@@ -1,50 +1,60 @@
-/* 1) Tailwind v4 core */
 @import "tailwindcss";
 
-/* 2) Color variables for light/dark */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f4f1e8;
   --foreground: #223126;
   --surface: #fffdf7;
   --surface-muted: #f0ebde;
   --border-soft: #d5ddc8;
+  --border-strong: #bcc8b1;
   --brand: #5f7d4b;
   --brand-700: #294733;
   --accent: #c98b45;
   --muted: #617060;
 }
 
-/* 3) Tailwind v4 @theme: define design tokens you want as Tailwind colors/fonts */
+.dark {
+  --background: #181a1f;
+  --foreground: #ece8de;
+  --surface: #23262d;
+  --surface-muted: #2d3139;
+  --border-soft: #3b4049;
+  --border-strong: #4a5160;
+  --brand: #8ea77b;
+  --brand-700: #d7c8a2;
+  --accent: #d79b53;
+  --muted: #a6acb6;
+}
+
 @theme inline {
-  /* map CSS custom props into Tailwind color tokens */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-
-  /* project brand greens (from your mock) */
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-border-soft: var(--border-soft);
+  --color-border-strong: var(--border-strong);
   --color-brand: var(--brand);
   --color-brand-700: var(--brand-700);
   --color-accent: var(--accent);
   --color-muted: var(--muted);
-
-  /* optional fonts (if you wire them in layout.js) */
   --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-
-  /* card radius used in examples */
   --radius-card: 12px;
 }
 
-/* 4) Global defaults */
 html {
   scroll-behavior: smooth;
   color-scheme: light;
 }
 
+html.dark {
+  color-scheme: dark;
+}
+
 ::selection {
-  background: #a3e635; /* lime-400 */
+  background: #a3e635;
   color: #000;
 }
 
@@ -55,68 +65,235 @@ body {
   background-image:
     radial-gradient(circle at top left, rgba(201, 139, 69, 0.1), transparent 30%),
     radial-gradient(circle at 85% 15%, rgba(95, 125, 75, 0.16), transparent 28%);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* 5) High-visibility keyboard focus */
+.dark body {
+  background-image:
+    radial-gradient(circle at top left, rgba(215, 155, 83, 0.09), transparent 24%),
+    radial-gradient(circle at 85% 15%, rgba(142, 167, 123, 0.1), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.01), rgba(0, 0, 0, 0.03));
+}
+
 :focus-visible {
-  outline: 2px solid #86efac; /* green-300 */
+  outline: 2px solid #86efac;
   outline-offset: 2px;
 }
 
-/* Smooth interactions on links and buttons */
-a, button {
-  transition: all .15s ease;
+a,
+button {
+  transition: all 0.15s ease;
 }
 
-/* 6) Tailwind v4 custom utilities used by components */
+:is(input, textarea, select) {
+  color: #111827;
+  border-color: var(--border-strong);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+:is(input, textarea)::placeholder {
+  color: #9ca3af;
+}
+
+:is(input, textarea, select):disabled,
+:is(input, textarea, select)[readonly] {
+  color: #6b7280;
+}
+
+.dark :is(input, textarea, select) {
+  color: #ece8de;
+  background-color: #2a2d35;
+  border-color: #414752;
+}
+
+.dark :is(input, textarea)::placeholder {
+  color: #8d95a3;
+}
+
+.dark :is(input, textarea, select):disabled,
+.dark :is(input, textarea, select)[readonly] {
+  color: #c7ccd4;
+  background-color: #343842;
+}
+
+.dark [class~="bg-white"] {
+  background-color: #2a2d35 !important;
+}
+
+.dark [class~="bg-white/90"] {
+  background-color: rgba(42, 45, 53, 0.92) !important;
+}
+
+.dark [class~="bg-[#fffdf7]"] {
+  background-color: #252932 !important;
+}
+
+.dark [class~="bg-[#f8f4ea]"] {
+  background-color: #2d3139 !important;
+}
+
+.dark [class~="bg-[#f0ebde]"] {
+  background-color: #3b322f !important;
+}
+
+.dark [class~="bg-gray-50"] {
+  background-color: #2f333b !important;
+}
+
+.dark [class~="bg-gray-100"] {
+  background-color: #343842 !important;
+}
+
+.dark [class~="bg-gray-200"] {
+  background-color: #3d4350 !important;
+}
+
+.dark [class~="text-[#1f3427]"] {
+  color: #f1ece3 !important;
+}
+
+.dark [class~="text-gray-900"],
+.dark [class~="text-gray-800"],
+.dark [class~="text-gray-700"] {
+  color: #e3e7ee !important;
+}
+
+.dark [class~="text-gray-600"],
+.dark [class~="text-gray-500"] {
+  color: #bcc2cb !important;
+}
+
+.dark [class~="border-[#d5ddc8]"],
+.dark [class~="border-[#ddd3bf]"],
+.dark [class~="border-[#e3dac6]"] {
+  border-color: #434955 !important;
+}
+
+.dark input::file-selector-button {
+  background: #6f8fc7 !important;
+  color: #f7f9fc !important;
+}
+
+.theme-title {
+  color: #1f3427;
+}
+
+.theme-copy {
+  color: #4b5563;
+}
+
+.theme-kpi {
+  color: var(--brand-700);
+}
+
+.theme-subcard {
+  background: #fffdf7;
+  border-color: var(--border-strong);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.72) inset,
+    0 10px 20px rgba(38, 49, 36, 0.05);
+}
+
+.theme-panel {
+  background: #fffdf7;
+  border-color: var(--border-strong);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.75) inset,
+    0 12px 24px rgba(38, 49, 36, 0.06);
+}
+
+.theme-panel-muted {
+  background: #f8f4ea;
+  border-color: var(--border-strong);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.68) inset,
+    0 10px 18px rgba(38, 49, 36, 0.05);
+}
+
+.theme-tag {
+  background: #f0ebde;
+  color: #1f3427;
+}
+
+.theme-button {
+  background: var(--brand-700);
+  color: #ffffff;
+}
+
+.theme-button:hover {
+  filter: brightness(1.06);
+}
+
+.dark .theme-title {
+  color: #f1ece3;
+}
+
+.dark .theme-copy {
+  color: #bcc2cb;
+}
+
+.dark .theme-kpi {
+  color: #9fb9dd;
+}
+
+.dark .theme-subcard {
+  background: #31353f;
+  border-color: #454b57;
+  box-shadow: none;
+}
+
+.dark .theme-panel {
+  background: #252932;
+  border-color: #3a404a;
+  box-shadow: none;
+}
+
+.dark .theme-panel-muted {
+  background: #2d3139;
+  border-color: #404652;
+  box-shadow: none;
+}
+
+.dark .theme-tag {
+  background: #3b322f;
+  color: #efd4af;
+}
+
+.dark .theme-button {
+  background: #6f8fc7;
+  color: #f7f9fc;
+}
+
+.dark .theme-button:hover {
+  background: #82a1d8;
+}
+
 @utility shadow-soft {
   box-shadow:
-    0 2px 8px rgba(18, 33, 23, .06),
-    0 14px 28px rgba(18, 33, 23, .08);
+    0 2px 8px rgba(18, 33, 23, 0.06),
+    0 14px 28px rgba(18, 33, 23, 0.08);
 }
 
 @utility rounded-card {
   border-radius: var(--radius-card);
 }
 
-/* Subtle, reusable shadow for nav items */
 @utility shadow-elevated {
   box-shadow:
-    0 2px 6px rgba(18, 33, 23, .08),
-    0 10px 20px rgba(18, 33, 23, .10);
+    0 2px 6px rgba(18, 33, 23, 0.08),
+    0 10px 20px rgba(18, 33, 23, 0.1);
 }
 
-/* A bit stronger when hovered/active */
 @utility shadow-elevated-lg {
   box-shadow:
-    0 6px 14px rgba(18, 33, 23, .10),
-    0 18px 30px rgba(18, 33, 23, .14);
+    0 6px 14px rgba(18, 33, 23, 0.1),
+    0 18px 30px rgba(18, 33, 23, 0.14);
 }
 
-/* === Form control defaults ===
-   Make actual text dark, and keep placeholders lighter.
-   Works for light & dark themes because the inputs are on white cards. */
-:is(input, textarea, select) {
-  color: #111827;            /* gray-900 */
-}
-
-/* Placeholder should be visually distinct (lighter) */
-:is(input, textarea)::placeholder {
-  color: #9ca3af;            /* gray-400 */
-}
-
-/* Improve disabled/read-only contrast a touch */
-:is(input, textarea, select):disabled,
-:is(input, textarea, select)[readonly] {
-  color: #6b7280;            /* gray-500 */
-}
-
-
-/* Tailwind v4: simple custom utility for fields */
 @utility field {
-  color: #111827;            /* text-gray-900 */
+  color: #111827;
 }
+
 @utility field-placeholder {
-  /* Use together with "placeholder:field-placeholder" if you want */
-  color: #9ca3af;            /* text-gray-400 */
+  color: #9ca3af;
 }

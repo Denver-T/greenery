@@ -11,6 +11,8 @@ const API_ROLE_MAP = {
 };
 
 const VALID_STATUSES = new Set(["Active", "Inactive"]);
+const EMPLOYEE_TEXT_LIMIT = 25;
+const PHONE_REGEX = /^\d{3}-\d{3}-\d{4}$/;
 
 const BASE_SELECT = `
   SELECT
@@ -34,16 +36,47 @@ function normalizeRequiredName(value) {
     throw new Error("Name is required");
   }
 
+  if (name.length > EMPLOYEE_TEXT_LIMIT) {
+    throw new Error(`Name must be ${EMPLOYEE_TEXT_LIMIT} characters or less`);
+  }
+
   return name;
 }
 
-function normalizeOptionalString(value) {
+function normalizeOptionalString(value, maxLength = null) {
   if (value === undefined || value === null) {
     return null;
   }
 
   const trimmed = String(value).trim();
-  return trimmed || null;
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (maxLength && trimmed.length > maxLength) {
+    throw new Error(`Value must be ${maxLength} characters or less`);
+  }
+
+  return trimmed;
+}
+
+function normalizeEmail(value) {
+  return normalizeOptionalString(value, EMPLOYEE_TEXT_LIMIT);
+}
+
+function normalizePhone(value) {
+  const phone = normalizeOptionalString(value, 12);
+
+  if (!phone) {
+    return null;
+  }
+
+  if (!PHONE_REGEX.test(phone)) {
+    throw new Error("Phone must be in the format xxx-xxx-xxxx");
+  }
+
+  return phone;
 }
 
 function normalizeStatus(value, defaultStatus = "Active") {
@@ -68,8 +101,8 @@ function normalizeEmployeeInput(body = {}) {
   return {
     name: normalizeRequiredName(body.name),
     role,
-    email: normalizeOptionalString(body.email),
-    phone: normalizeOptionalString(body.phone),
+    email: normalizeEmail(body.email),
+    phone: normalizePhone(body.phone),
     status: normalizeStatus(body.status),
     permissionLevel: normalizePermissionLevelInput(body.permissionLevel, role),
   };
@@ -170,3 +203,6 @@ module.exports = {
   deleteEmployee,
   mapEmployeeToAccount,
 };
+
+
+

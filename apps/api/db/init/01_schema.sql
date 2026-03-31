@@ -28,6 +28,8 @@ CREATE TABLE plants (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   location VARCHAR(150) NULL,
+  image_url VARCHAR(500) NULL,
+  cost_per_unit DECIMAL(10,2) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -81,6 +83,10 @@ CREATE TABLE schedule_events (
   end_time DATETIME NOT NULL,
   employee_id INT NULL,
   work_req_id INT NULL,
+  event_type VARCHAR(20) NOT NULL DEFAULT 'request',
+  audience_level VARCHAR(20) NOT NULL DEFAULT 'technician',
+  details VARCHAR(500) NULL,
+  created_by_email VARCHAR(255) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_sched_employee
     FOREIGN KEY (employee_id) REFERENCES employees(id)

@@ -132,6 +132,29 @@ function handleUpload(req, res, next) {
   });
 }
 
+function getTodayDateOnlyString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+async function getAuthenticatedEmployeeName(req) {
+  const email = typeof req.user?.email === "string" ? req.user.email.trim().toLowerCase() : null;
+
+  if (!email) {
+    return null;
+  }
+
+  const [rows] = await db.query(
+    `SELECT name FROM employees WHERE LOWER(email) = LOWER(?) LIMIT 1`,
+    [email]
+  );
+
+  return rows[0]?.name || null;
+}
+
 function buildReqPayload(body = {}, file = null, existing = null) {
   const referenceNumber = normalizeString(
     body.referenceNumber ?? existing?.referenceNumber,
@@ -217,7 +240,15 @@ router.post(
   handleUpload,
   async (req, res, next) => {
     try {
-      const payload = buildReqPayload(req.body, req.file);
+      const authenticatedTechName = await getAuthenticatedEmployeeName(req);
+      const payload = buildReqPayload(
+        {
+          ...req.body,
+          techName: authenticatedTechName || req.body?.techName,
+          requestDate: getTodayDateOnlyString(),
+        },
+        req.file
+      );
       if (payload.error) {
         return res.status(400).json({ error: payload.error });
       }
