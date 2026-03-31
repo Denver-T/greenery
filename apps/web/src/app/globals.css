@@ -29,6 +29,17 @@
   --color-accent: var(--accent);
   --color-muted: var(--muted);
 
+  /* surface variants for hardcoded hex replacement */
+  --color-surface-warm: #f8f4ea;
+  --color-surface-warm-alt: #faf8f2;
+  --color-badge-green: #e6f3ea;
+  --color-border-dashed: #d5ddc8;
+
+  /* brand variants for emerald replacement */
+  --color-brand-300: #a3c290;
+  --color-brand-600: #6b8b57;
+  --color-brand-800: #3d5a30;
+
   /* optional fonts (if you wire them in layout.js) */
   --font-sans: "Space Grotesk", "Segoe UI", "Helvetica Neue", sans-serif;
   --font-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
@@ -97,26 +108,23 @@ a, button {
    Make actual text dark, and keep placeholders lighter.
    Works for light & dark themes because the inputs are on white cards. */
 :is(input, textarea, select) {
-  color: #111827;            /* gray-900 */
+  color: var(--foreground);
 }
 
-/* Placeholder should be visually distinct (lighter) */
 :is(input, textarea)::placeholder {
-  color: #9ca3af;            /* gray-400 */
+  color: var(--muted);
 }
 
-/* Improve disabled/read-only contrast a touch */
 :is(input, textarea, select):disabled,
 :is(input, textarea, select)[readonly] {
-  color: #6b7280;            /* gray-500 */
+  color: var(--muted);
 }
 
 
 /* Tailwind v4: simple custom utility for fields */
 @utility field {
-  color: #111827;            /* text-gray-900 */
+  color: var(--foreground);
 }
 @utility field-placeholder {
-  /* Use together with "placeholder:field-placeholder" if you want */
-  color: #9ca3af;            /* text-gray-400 */
+  color: var(--muted);
 }

@@ -11,7 +11,7 @@ export default function UserChip({ name }) {
       className="mt-5 grid grid-cols-[44px_1fr] items-center gap-3 rounded-[18px] border border-white/10 bg-white/10 px-3 py-3 transition hover:bg-white/14"
       aria-label="Open profile"
     >
-      <div className="grid h-11 w-11 place-items-center rounded-full bg-[#f4f1e8] text-[#294733] font-black">
+      <div className="grid h-11 w-11 place-items-center rounded-full bg-background text-foreground font-black">
         {initial}
       </div>
       <div className="leading-tight">

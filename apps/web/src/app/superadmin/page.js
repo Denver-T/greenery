@@ -123,10 +123,10 @@ export default function SuperAdminPage() {
         <div className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div>
-              <div className="w-fit rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#1f3427]">
+              <div className="w-fit rounded-full bg-surface-muted px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-foreground">
                 Governance Workspace
               </div>
-              <h1 className="mt-4 text-3xl font-black tracking-tight text-[#1f3427]">
+              <h1 className="mt-4 text-3xl font-black tracking-tight text-foreground">
                 Super Admin Control
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-600">
@@ -134,11 +134,11 @@ export default function SuperAdminPage() {
                 access changes inside one auditable workspace.
               </p>
             </div>
-            <div className="rounded-2xl border border-border-soft bg-[#f8f4ea] px-5 py-4 text-sm text-gray-600">
+            <div className="rounded-2xl border border-border-soft bg-surface-warm px-5 py-4 text-sm text-gray-600">
               <div className="text-xs font-bold uppercase tracking-[0.16em] text-gray-500">
                 Current Authority
               </div>
-              <div className="mt-2 text-lg font-extrabold text-[#1f3427]">
+              <div className="mt-2 text-lg font-extrabold text-foreground">
                 {currentUser?.permissionLevel || currentUser?.role || "Unknown"}
               </div>
               <div className="mt-1 text-xs text-gray-500">
@@ -173,12 +173,12 @@ export default function SuperAdminPage() {
                     <div className="text-xs font-bold uppercase tracking-[0.16em] text-gray-500">
                       Admin Promotions
                     </div>
-                    <h2 className="mt-2 text-2xl font-black tracking-tight text-[#1f3427]">
+                    <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground">
                       Add new admins to the platform
                     </h2>
                   </div>
                   <button
-                    className="rounded-xl border border-border-soft bg-white px-4 py-2 text-sm font-bold text-[#1f3427]"
+                    className="rounded-xl border border-border-soft bg-white px-4 py-2 text-sm font-bold text-foreground"
                     onClick={refresh}
                     disabled={busy}
                   >
@@ -224,7 +224,7 @@ export default function SuperAdminPage() {
                   </label>
                 </div>
 
-                <div className="mt-5 rounded-2xl border border-border-soft bg-[#f8f4ea] px-4 py-4 text-sm leading-6 text-gray-600">
+                <div className="mt-5 rounded-2xl border border-border-soft bg-surface-warm px-4 py-4 text-sm leading-6 text-gray-600">
                   Promotions are written through the backend governance route and automatically
                   logged to the platform activity stream.
                 </div>
@@ -244,23 +244,23 @@ export default function SuperAdminPage() {
                 <div className="text-xs font-bold uppercase tracking-[0.16em] text-gray-500">
                   Current Admin Coverage
                 </div>
-                <h2 className="mt-2 text-2xl font-black tracking-tight text-[#1f3427]">
+                <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground">
                   Active privileged accounts
                 </h2>
                 <div className="mt-5 grid gap-3">
                   {activeAdmins.map((employee) => (
                     <div
                       key={employee.id}
-                      className="rounded-2xl border border-border-soft bg-[#fffdf7] px-4 py-4 shadow-soft"
+                      className="rounded-2xl border border-border-soft bg-surface px-4 py-4 shadow-soft"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <div className="text-lg font-extrabold text-[#1f3427]">
+                          <div className="text-lg font-extrabold text-foreground">
                             {employee.name}
                           </div>
                           <div className="mt-1 text-sm text-gray-600">{employee.email || "No email"}</div>
                         </div>
-                        <div className="rounded-full bg-[#1f3427] px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-white">
+                        <div className="rounded-full bg-foreground px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-white">
                           {employee.permissionLevel}
                         </div>
                       </div>
@@ -268,7 +268,7 @@ export default function SuperAdminPage() {
                   ))}
 
                   {activeAdmins.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-border-soft bg-[#fffdf7] px-4 py-6 text-sm text-gray-600">
+                    <div className="rounded-2xl border border-dashed border-border-soft bg-surface px-4 py-6 text-sm text-gray-600">
                       No administrator-level employees found yet.
                     </div>
                   ) : null}
@@ -282,56 +282,58 @@ export default function SuperAdminPage() {
                   <div className="text-xs font-bold uppercase tracking-[0.16em] text-gray-500">
                     Activity Log
                   </div>
-                  <h2 className="mt-2 text-2xl font-black tracking-tight text-[#1f3427]">
+                  <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground">
                     Privileged activity history
                   </h2>
                 </div>
-                <div className="rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-[#1f3427]">
+                <div className="rounded-full bg-surface-muted px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-foreground">
                   {logs.length} recent events
                 </div>
               </div>
 
               <div className="mt-5 overflow-hidden rounded-2xl border border-border-soft">
-                <div className="grid grid-cols-[1.2fr_1fr_1fr_1.4fr] gap-4 border-b border-border-soft bg-[#f8f4ea] px-4 py-3 text-xs font-bold uppercase tracking-[0.14em] text-gray-600">
-                  <div>Action</div>
-                  <div>Actor</div>
-                  <div>Target</div>
-                  <div>When</div>
-                </div>
-                <div className="divide-y divide-border-soft bg-white">
-                  {logs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="grid grid-cols-[1.2fr_1fr_1fr_1.4fr] gap-4 px-4 py-4 text-sm text-gray-700"
-                    >
-                      <div>
-                        <div className="font-bold text-[#1f3427]">{log.action}</div>
-                        {log.metadata ? (
-                          <div className="mt-1 text-xs text-gray-500">
-                            {JSON.stringify(log.metadata)}
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border-soft bg-surface-warm text-xs font-bold uppercase tracking-[0.14em] text-foreground/60">
+                      <th scope="col" className="px-4 py-3 text-left">Action</th>
+                      <th scope="col" className="px-4 py-3 text-left">Actor</th>
+                      <th scope="col" className="px-4 py-3 text-left">Target</th>
+                      <th scope="col" className="px-4 py-3 text-left">When</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-soft bg-white">
+                    {logs.map((log) => (
+                      <tr key={log.id} className="text-gray-700">
+                        <td className="px-4 py-4">
+                          <div className="font-bold text-foreground">{log.action}</div>
+                          {log.metadata ? (
+                            <div className="mt-1 text-xs text-gray-500">
+                              {JSON.stringify(log.metadata)}
+                            </div>
+                          ) : null}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="font-semibold">{log.actor_email || "System"}</div>
+                          <div className="text-xs text-gray-500">
+                            {log.actor_permission_level || "Unknown"}
                           </div>
-                        ) : null}
-                      </div>
-                      <div>
-                        <div className="font-semibold">{log.actor_email || "System"}</div>
-                        <div className="text-xs text-gray-500">
-                          {log.actor_permission_level || "Unknown"}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-semibold">{log.target_type}</div>
-                        <div className="text-xs text-gray-500">ID: {log.target_id ?? "-"}</div>
-                      </div>
-                      <div className="text-sm text-gray-600">{formatTimestamp(log.created_at)}</div>
-                    </div>
-                  ))}
-
-                  {logs.length === 0 ? (
-                    <div className="px-4 py-6 text-sm text-gray-600">
-                      No activity has been logged yet.
-                    </div>
-                  ) : null}
-                </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="font-semibold">{log.target_type}</div>
+                          <div className="text-xs text-gray-500">ID: {log.target_id ?? "-"}</div>
+                        </td>
+                        <td className="px-4 py-4 text-gray-600">{formatTimestamp(log.created_at)}</td>
+                      </tr>
+                    ))}
+                    {logs.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-6 text-gray-600">
+                          No activity has been logged yet.
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
               </div>
             </section>
           </>

@@ -3,7 +3,7 @@ import TopBar from "./TopBar";
 
 export default function AppShell({ title, children }) {
   return (
-    <div className="grid min-h-screen grid-cols-[300px_1fr] bg-background text-foreground">
+    <div className="grid min-h-screen grid-cols-1 md:grid-cols-[300px_1fr] bg-background text-foreground">
       <Sidebar />
       <div className="grid grid-rows-[76px_1fr] bg-transparent">
         <TopBar title={title} />

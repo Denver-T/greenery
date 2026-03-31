@@ -81,7 +81,7 @@ export default function Sidebar() {
   return (
     <aside
       aria-label="Primary navigation"
-      className="border-r border-white/10 bg-[linear-gradient(180deg,#294733_0%,#1f3427_100%)] p-5 text-white shadow-soft"
+      className="hidden md:flex md:flex-col border-r border-white/10 bg-[linear-gradient(180deg,#294733_0%,#1f3427_100%)] p-5 text-white shadow-soft"
     >
       <div className="rounded-[22px] border border-white/10 bg-white/6 p-4 backdrop-blur">
         <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">
@@ -98,7 +98,7 @@ export default function Sidebar() {
       <nav className="mt-5 space-y-5">
         {sections.map((section) => (
           <div key={section.title}>
-            <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
+            <div className="mb-2 px-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">
               {section.title}
             </div>
             <div className="grid gap-2">

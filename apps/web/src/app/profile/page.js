@@ -11,7 +11,7 @@ function ProfilePreview({ displayName, email, photoURL }) {
     <div className="rounded-[28px] border border-border-soft bg-[linear-gradient(145deg,#294733_0%,#1f3427_100%)] px-7 py-7 text-white shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="flex min-w-0 flex-1 items-center gap-5">
-          <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-[24px] border border-white/12 bg-white/90 text-3xl font-black text-[#1f3427]">
+          <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-[24px] border border-white/12 bg-white/90 text-3xl font-black text-foreground">
             {photoURL ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={photoURL} alt="Profile" className="h-full w-full object-cover" />
@@ -44,9 +44,9 @@ function ProfilePreview({ displayName, email, photoURL }) {
 
 function StatCard({ label, value, hint }) {
   return (
-    <div className="flex min-h-[188px] flex-col rounded-2xl border border-border-soft bg-[#fffdf7] p-5 shadow-soft">
+    <div className="flex min-h-[188px] flex-col rounded-2xl border border-border-soft bg-surface p-5 shadow-soft">
       <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">{label}</div>
-      <div className="mt-4 break-words text-[2rem] font-black tracking-tight leading-tight text-[#1f3427]">
+      <div className="mt-4 break-words text-[2rem] font-black tracking-tight leading-tight text-foreground">
         {value}
       </div>
       <div className="mt-3 text-sm leading-6 text-gray-600">{hint}</div>
@@ -161,10 +161,10 @@ export default function ProfilePage() {
             className="rounded-card border border-border-soft bg-surface p-7 shadow-soft"
           >
             <div className="mb-6">
-              <div className="w-fit rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#1f3427]">
+              <div className="w-fit rounded-full bg-surface-muted px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-foreground">
                 Account Settings
               </div>
-              <h3 className="mt-4 text-2xl font-black tracking-tight text-[#1f3427]">
+              <h3 className="mt-4 text-2xl font-black tracking-tight text-foreground">
                 Update Your Profile
               </h3>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
@@ -184,7 +184,7 @@ export default function ProfilePage() {
 
               <FormField label="Email Address" hint="Managed by authentication and currently read-only.">
                 <input
-                  className="rounded-xl border border-border-soft bg-[#f8f4ea] px-3 py-2.5 text-gray-600 outline-none"
+                  className="rounded-xl border border-border-soft bg-surface-warm px-3 py-2.5 text-gray-600 outline-none"
                   value={email}
                   readOnly
                 />
@@ -220,7 +220,7 @@ export default function ProfilePage() {
 
           <div className="space-y-5">
             <div className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
-              <h3 className="text-2xl font-black tracking-tight text-[#1f3427]">
+              <h3 className="text-2xl font-black tracking-tight text-foreground">
                 Account Actions
               </h3>
               <p className="mt-2 text-sm leading-6 text-gray-600">
@@ -231,7 +231,7 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => router.push("/dashboard")}
-                  className="w-full rounded-xl border border-border-soft bg-[#fffdf7] px-4 py-3 text-left font-semibold text-[#1f3427]"
+                  className="w-full rounded-xl border border-border-soft bg-surface px-4 py-3 text-left font-semibold text-foreground"
                 >
                   Return to operations dashboard
                 </button>
@@ -251,7 +251,7 @@ export default function ProfilePage() {
               </div>
             ) : null}
             {ok ? (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+              <div className="rounded-xl border border-brand-300 bg-badge-green px-4 py-3 text-sm font-medium text-brand-700">
                 {ok}
               </div>
             ) : null}

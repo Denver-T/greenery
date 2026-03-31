@@ -17,6 +17,7 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -182,11 +183,8 @@ export default function EmployeesPage() {
     }
   }
 
-  async function deleteEmployee(id) {
-    if (!confirm("Delete this employee?")) {
-      return;
-    }
-
+  async function performDelete(id) {
+    setDeleteTarget(null);
     setError("");
     setBusy(true);
     try {
@@ -213,27 +211,27 @@ export default function EmployeesPage() {
         <div className="mb-6 rounded-card border border-border-soft bg-surface p-6 shadow-soft">
           <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="w-fit rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#1f3427]">
+              <div className="w-fit rounded-full bg-surface-muted px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-foreground">
                 Team Workspace
               </div>
-              <div className="mt-4 text-2xl font-black tracking-tight text-[#1f3427]">
+              <div className="mt-4 text-2xl font-black tracking-tight text-foreground">
                 Create New Employee
               </div>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
                 Add staff members, set roles, and control who can access operational workflows.
               </p>
             </div>
-            <div className="rounded-2xl border border-border-soft bg-[#f8f4ea] px-4 py-4 text-sm text-gray-600">
+            <div className="rounded-2xl border border-border-soft bg-surface-warm px-4 py-4 text-sm text-gray-600">
               <div>
-                <span className="font-semibold text-[#1f3427]">{employees.length}</span> total employees
+                <span className="font-semibold text-foreground">{employees.length}</span> total employees
               </div>
               <div className="mt-1">
-                <span className="font-semibold text-[#1f3427]">
+                <span className="font-semibold text-foreground">
                   {employees.filter((employee) => String(employee.status || "Active").toLowerCase() === "active").length}
                 </span>{" "}
                 active right now
               </div>
-              <div className="mt-3 rounded-xl border border-border-soft bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[#1f3427]">
+              <div className="mt-3 rounded-xl border border-border-soft bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
                 Access level: {currentUser?.permissionLevel || currentUser?.role || "Unknown"}
               </div>
             </div>
@@ -353,7 +351,7 @@ export default function EmployeesPage() {
         </div>
 
         <div className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
-          <div className="mb-4 text-2xl font-black tracking-tight text-[#1f3427]">
+          <div className="mb-4 text-2xl font-black tracking-tight text-foreground">
             Team Directory
           </div>
           <p className="mb-5 text-sm leading-6 text-gray-600">
@@ -369,14 +367,14 @@ export default function EmployeesPage() {
               {employees.map((emp) => (
                 <div
                   key={emp.id}
-                  className="rounded-2xl border border-border-soft bg-[#fffdf7] p-4 shadow-soft"
+                  className="rounded-2xl border border-border-soft bg-surface p-4 shadow-soft"
                 >
                   <div className="mb-2 flex items-center gap-3">
-                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#f0ebde] text-xl font-black text-[#1f3427]">
+                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-surface-muted text-xl font-black text-foreground">
                       {emp.name?.[0]?.toUpperCase() || "U"}
                     </div>
                     <div>
-                      <div className="text-lg font-extrabold text-[#1f3427]">
+                      <div className="text-lg font-extrabold text-foreground">
                         {emp.name}
                       </div>
                       <div className="text-sm font-bold text-gray-600">
@@ -417,11 +415,27 @@ export default function EmployeesPage() {
                     <button
                       className="flex-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 font-extrabold text-red-700 disabled:opacity-60"
                       disabled={busy}
-                      onClick={() => deleteEmployee(emp.id)}
+                      onClick={() => setDeleteTarget(emp.id)}
                     >
                       Delete
                     </button>
                   </div>
+                  {deleteTarget === emp.id && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => performDelete(emp.id)}
+                        className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white"
+                      >
+                        Confirm delete
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(null)}
+                        className="rounded-lg bg-surface-muted px-3 py-1.5 text-sm font-semibold text-foreground"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -434,10 +448,10 @@ export default function EmployeesPage() {
             onClick={() => setEditing(null)}
           >
             <div
-              className="w-full max-w-2xl rounded-2xl border border-border-soft bg-[#fffdf7] p-6 shadow-2xl"
+              className="w-full max-w-2xl rounded-2xl border border-border-soft bg-surface p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="mb-3 text-xl font-extrabold text-[#1f3427]">
+              <div className="mb-3 text-xl font-extrabold text-foreground">
                 Edit Employee
               </div>
               <p className="mb-4 text-sm text-gray-600">

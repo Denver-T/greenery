@@ -53,7 +53,7 @@ function Kpi({ label, value }) {
   return (
     <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
       <div className="text-sm font-medium text-muted">{label}</div>
-      <div className="mt-1 text-3xl font-black tracking-tight text-[#1f3427]">{value}</div>
+      <div className="mt-1 text-3xl font-black tracking-tight text-foreground">{value}</div>
     </div>
   );
 }
@@ -63,7 +63,7 @@ function HBarList({ title, items, valueKey = "value", labelKey = "label" }) {
 
   return (
     <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-      <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
+      <h3 className="text-lg font-bold text-foreground">{title}</h3>
       <div className="mt-4 space-y-3">
         {items.map((it, i) => {
           const val = it[valueKey];
@@ -80,7 +80,7 @@ function HBarList({ title, items, valueKey = "value", labelKey = "label" }) {
                   />
                 </div>
               </div>
-              <div className="col-span-2 text-right text-sm tabular-nums font-semibold text-[#1f3427]">
+              <div className="col-span-2 text-right text-sm tabular-nums font-semibold text-foreground">
                 {val}
               </div>
             </div>
@@ -94,11 +94,11 @@ function HBarList({ title, items, valueKey = "value", labelKey = "label" }) {
 function ActionCard({ title, description, href, actionLabel }) {
   return (
     <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-      <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
+      <h3 className="text-lg font-bold text-foreground">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-gray-600">{description}</p>
       <Link
         href={href}
-        className="mt-4 inline-flex rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f3427]"
+        className="mt-4 inline-flex rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-foreground"
       >
         {actionLabel}
       </Link>
@@ -109,14 +109,14 @@ function ActionCard({ title, description, href, actionLabel }) {
 function FocusList({ title, items, empty }) {
   return (
     <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-      <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
+      <h3 className="text-lg font-bold text-foreground">{title}</h3>
       {items.length === 0 ? (
         <p className="mt-3 text-sm text-gray-600">{empty}</p>
       ) : (
         <div className="mt-4 space-y-3">
           {items.map((item) => (
-            <div key={`${item.title}-${item.meta}`} className="rounded-xl border border-border-soft bg-[#fffdf7] px-4 py-3">
-              <div className="font-semibold text-[#1f3427]">{item.title}</div>
+            <div key={`${item.title}-${item.meta}`} className="rounded-xl border border-border-soft bg-surface px-4 py-3">
+              <div className="font-semibold text-foreground">{item.title}</div>
               <div className="mt-1 text-sm text-gray-600">{item.meta}</div>
             </div>
           ))}
@@ -129,7 +129,7 @@ function FocusList({ title, items, empty }) {
 function ScheduleList({ title, items, empty }) {
   return (
     <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-      <h3 className="text-lg font-bold text-[#1f3427]">{title}</h3>
+      <h3 className="text-lg font-bold text-foreground">{title}</h3>
       {items.length === 0 ? (
         <p className="mt-3 text-sm text-gray-600">{empty}</p>
       ) : (
@@ -137,9 +137,9 @@ function ScheduleList({ title, items, empty }) {
           {items.map((item) => (
             <div
               key={`${item.label}-${item.value}`}
-              className="flex items-center justify-between rounded-xl border border-border-soft bg-[#fffdf7] px-4 py-3"
+              className="flex items-center justify-between rounded-xl border border-border-soft bg-surface px-4 py-3"
             >
-              <div className="font-medium text-[#1f3427]">{item.label}</div>
+              <div className="font-medium text-foreground">{item.label}</div>
               <div className="text-sm font-semibold text-gray-600">{item.value}</div>
             </div>
           ))}

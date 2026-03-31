@@ -196,15 +196,15 @@ export default function Page() {
                 <button
                   aria-label="Previous month"
                   onClick={goPrev}
-                  className="rounded-full px-3 py-2 text-sm font-semibold text-[#1f3427] hover:bg-[#f0ebde]"
+                  className="rounded-full px-3 py-2 text-sm font-semibold text-foreground hover:bg-surface-muted"
                 >
                   ←
                 </button>
-                <div className="px-3 text-sm font-semibold text-[#1f3427]">{monthLabel(y, m)}</div>
+                <div className="px-3 text-sm font-semibold text-foreground">{monthLabel(y, m)}</div>
                 <button
                   aria-label="Next month"
                   onClick={goNext}
-                  className="rounded-full px-3 py-2 text-sm font-semibold text-[#1f3427] hover:bg-[#f0ebde]"
+                  className="rounded-full px-3 py-2 text-sm font-semibold text-foreground hover:bg-surface-muted"
                 >
                   →
                 </button>
@@ -215,7 +215,7 @@ export default function Page() {
           right={
             <button
               onClick={goToday}
-              className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+              className="rounded-xl bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800"
             >
               Jump to today
             </button>
@@ -241,8 +241,8 @@ export default function Page() {
                     key={cell.key}
                     onClick={() => setSelectedDayKey(cell.key)}
                     className={[
-                      "relative aspect-square rounded-md p-2 text-left outline-none ring-emerald-400 transition",
-                      cell.inMonth ? "bg-[#f8f4ea] hover:bg-[#f0ebde]" : "bg-[#faf8f2] text-gray-600",
+                      "relative aspect-square rounded-md p-2 text-left outline-none ring-brand/40 transition",
+                      cell.inMonth ? "bg-surface-warm hover:bg-surface-muted" : "bg-surface-warm-alt text-gray-600",
                       isSelected ? "ring-2" : "",
                     ].join(" ")}
                   >
@@ -251,7 +251,7 @@ export default function Page() {
                         {cell.date.getDate()}
                       </span>
                       {isToday ? (
-                        <span className="rounded-full bg-emerald-600 px-1.5 text-[10px] font-medium text-white">
+                        <span className="rounded-full bg-brand-600 px-1.5 text-[10px] font-medium text-white">
                           Today
                         </span>
                       ) : null}
@@ -283,7 +283,7 @@ export default function Page() {
 
           <div className="space-y-6">
             <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-              <h2 className="text-lg font-black text-[#1f3427]">
+              <h2 className="text-lg font-black text-foreground">
                 Daily agenda · {selectedWeekday}
               </h2>
               <p className="mt-1 text-sm text-gray-600">Grouped by assignee.</p>
@@ -293,9 +293,9 @@ export default function Page() {
               ) : (
                 <div className="mt-4 space-y-4">
                   {selectedGroups.map((group) => (
-                    <div key={group.employeeName} className="rounded-xl border border-border-soft bg-[#fffdf7] p-4">
+                    <div key={group.employeeName} className="rounded-xl border border-border-soft bg-surface p-4">
                       <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-sm font-black uppercase tracking-[0.14em] text-[#1f3427]">
+                        <h3 className="text-sm font-black uppercase tracking-[0.14em] text-foreground">
                           {group.employeeName}
                         </h3>
                         <span className="text-sm font-medium text-gray-600">
@@ -306,7 +306,7 @@ export default function Page() {
                       <div className="mt-3 space-y-3">
                         {group.entries.map((entry) => (
                           <div key={entry.id} className="rounded-xl border border-border-soft bg-white px-4 py-3">
-                            <div className="font-semibold text-[#1f3427]">{entry.title}</div>
+                            <div className="font-semibold text-foreground">{entry.title}</div>
                             <div className="mt-1 text-sm text-gray-600">
                               {entry.startLabel} - {entry.endLabel}
                               {entry.account ? ` • ${entry.account}` : ""}
@@ -315,7 +315,7 @@ export default function Page() {
                               {entry.workReqId ? (
                                 <button
                                   onClick={() => router.push(`/tasks?open=${entry.workReqId}`)}
-                                  className="rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white hover:bg-[#1f3427]"
+                                  className="rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white hover:bg-foreground"
                                 >
                                   Open request
                                 </button>
@@ -333,7 +333,7 @@ export default function Page() {
             </section>
 
             <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-              <h3 className="text-lg font-bold text-[#1f3427]">Today’s coverage</h3>
+              <h3 className="text-lg font-bold text-foreground">Today’s coverage</h3>
               {todaysCoverage.length === 0 ? (
                 <p className="mt-3 text-sm text-gray-600">No technicians are scheduled today.</p>
               ) : (
@@ -341,9 +341,9 @@ export default function Page() {
                   {todaysCoverage.map((item) => (
                     <div
                       key={item.label}
-                      className="flex items-center justify-between rounded-xl border border-border-soft bg-[#fffdf7] px-4 py-3"
+                      className="flex items-center justify-between rounded-xl border border-border-soft bg-surface px-4 py-3"
                     >
-                      <div className="font-medium text-[#1f3427]">{item.label}</div>
+                      <div className="font-medium text-foreground">{item.label}</div>
                       <div className="text-sm font-semibold text-gray-600">
                         {item.value} stop{item.value === 1 ? "" : "s"}
                       </div>

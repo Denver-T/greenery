@@ -23,7 +23,7 @@ function Kpi({ label, value }) {
   return (
     <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
       <div className="text-sm font-medium text-muted">{label}</div>
-      <div className="mt-1 text-3xl font-black tracking-tight text-[#1f3427]">{value}</div>
+      <div className="mt-1 text-3xl font-black tracking-tight text-foreground">{value}</div>
     </div>
   );
 }
@@ -99,7 +99,7 @@ export default function InventoryPage() {
         <WorkspaceToolbar
           left={
             <>
-              <span className="rounded-full bg-white px-3 py-2 text-sm font-semibold text-[#1f3427] shadow-soft">
+              <span className="rounded-full bg-white px-3 py-2 text-sm font-semibold text-foreground shadow-soft">
                 Limited release
               </span>
               <span className="text-sm text-gray-600">
@@ -110,7 +110,7 @@ export default function InventoryPage() {
           right={
             <button
               onClick={loadInventorySurface}
-              className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+              className="rounded-xl bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800"
             >
               Refresh
             </button>
@@ -136,10 +136,10 @@ export default function InventoryPage() {
           <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-black text-[#1f3427]">Tracked plants</h2>
+                <h2 className="text-lg font-black text-foreground">Tracked plants</h2>
                 <p className="mt-1 text-sm text-gray-600">Current live rows from the plants table.</p>
               </div>
-              <span className="rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-[#1f3427]">
+              <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-foreground">
                 Read only
               </span>
             </div>
@@ -176,7 +176,7 @@ export default function InventoryPage() {
 
           <div className="space-y-6">
             <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-              <h3 className="text-lg font-bold text-[#1f3427]">Plant load by location</h3>
+              <h3 className="text-lg font-bold text-foreground">Plant load by location</h3>
 
               {loading ? (
                 <p className="mt-4 text-sm text-gray-600">Loading locations…</p>
@@ -187,9 +187,9 @@ export default function InventoryPage() {
                   {locationLoad.map((item) => (
                     <div
                       key={item.label}
-                      className="flex items-center justify-between rounded-xl border border-border-soft bg-[#fffdf7] px-4 py-3"
+                      className="flex items-center justify-between rounded-xl border border-border-soft bg-surface px-4 py-3"
                     >
-                      <div className="font-medium text-[#1f3427]">{item.label}</div>
+                      <div className="font-medium text-foreground">{item.label}</div>
                       <div className="text-sm font-semibold text-gray-600">
                         {item.value} plant{item.value === 1 ? "" : "s"}
                       </div>
@@ -200,7 +200,7 @@ export default function InventoryPage() {
             </section>
 
             <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-              <h3 className="text-lg font-bold text-[#1f3427]">Plant-heavy requests</h3>
+              <h3 className="text-lg font-bold text-foreground">Plant-heavy requests</h3>
               {loading ? (
                 <p className="mt-4 text-sm text-gray-600">Loading requests…</p>
               ) : plantReqs.length === 0 ? (
@@ -210,9 +210,9 @@ export default function InventoryPage() {
                   {plantReqs.slice(0, 5).map((req) => (
                     <div
                       key={req.id}
-                      className="rounded-xl border border-border-soft bg-[#fffdf7] px-4 py-3"
+                      className="rounded-xl border border-border-soft bg-surface px-4 py-3"
                     >
-                      <div className="font-semibold text-[#1f3427]">
+                      <div className="font-semibold text-foreground">
                         {req.actionRequired || req.referenceNumber || "Plant request"}
                       </div>
                       <div className="mt-1 text-sm text-gray-600">

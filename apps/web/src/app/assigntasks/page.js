@@ -235,7 +235,7 @@ export default function AssignmentsPage() {
                 disabled={!canAssign}
                 className={clsx(
                   "mt-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-white",
-                  canAssign ? "bg-emerald-700 hover:bg-emerald-800" : "bg-emerald-300"
+                  canAssign ? "bg-brand-700 hover:bg-brand-800" : "bg-brand-300"
                 )}
               >
                 Assign {selectedCount > 0 ? `(${selectedCount})` : ""}
@@ -249,14 +249,16 @@ export default function AssignmentsPage() {
         <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
           <WorkspaceToolbar
             left={
-              <div className="inline-flex gap-1 rounded-full bg-white p-1 shadow-soft">
+              <div className="inline-flex gap-1 rounded-full bg-white p-1 shadow-soft" role="tablist">
               {["unassigned", "assigned", "all"].map((key) => (
                 <button
                   key={key}
                   onClick={() => setFilter(key)}
+                  role="tab"
+                  aria-selected={filter === key}
                   className={clsx(
                     "rounded-full px-4 py-2 text-sm font-semibold capitalize",
-                    filter === key ? "bg-white text-[#1f3427] shadow-soft" : "text-gray-700"
+                    filter === key ? "bg-white text-foreground shadow-soft" : "text-gray-700"
                   )}
                 >
                   {key}
@@ -268,6 +270,7 @@ export default function AssignmentsPage() {
               <>
               <input
                 placeholder="Search tasks..."
+                aria-label="Search tasks"
                 className="w-full rounded-xl border border-border-soft p-2.5 md:w-72"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -299,7 +302,7 @@ export default function AssignmentsPage() {
                 const disabled = !!task.assignedTo && Number(task.assignedTo) !== Number(selectedEmployeeId || 0);
 
                 return (
-                  <li key={task.id} className="rounded-2xl border border-border-soft bg-[#fffdf7] p-4">
+                  <li key={task.id} className="rounded-2xl border border-border-soft bg-surface p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-2">
                         <input
@@ -310,18 +313,18 @@ export default function AssignmentsPage() {
                           onChange={() => toggleSelect(task.id)}
                         />
                         <div>
-                          <div className="font-semibold text-[#1f3427]">{task.title}</div>
+                          <div className="font-semibold text-foreground">{task.title}</div>
                           <div className="text-sm text-gray-600">
                             {[task.account, task.location].filter(Boolean).join(" - ") || "No account or location"}
                           </div>
 
                           {task.assignedTo ? (
-                            <div className="mt-2 w-fit rounded-full bg-[#e6f3ea] px-3 py-1 text-xs font-semibold text-emerald-800">
+                            <div className="mt-2 w-fit rounded-full bg-badge-green px-3 py-1 text-xs font-semibold text-brand-800">
                               Assigned to {employees.find((employee) => Number(employee.id) === Number(task.assignedTo))?.name || task.assignedTo}
                               {task.date ? ` - due ${task.date}` : ""}
                             </div>
                           ) : (
-                            <div className="mt-2 w-fit rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-semibold text-[#1f3427]">Unassigned</div>
+                            <div className="mt-2 w-fit rounded-full bg-surface-muted px-3 py-1 text-xs font-semibold text-foreground">Unassigned</div>
                           )}
                         </div>
                       </div>
@@ -344,12 +347,12 @@ export default function AssignmentsPage() {
         </div>
 
         <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-          <h2 className="mb-3 text-lg font-black text-[#1f3427]">Current Assignments</h2>
+          <h2 className="mb-3 text-lg font-black text-foreground">Current Assignments</h2>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             {groupedByEmployee.map(({ employee, tasks: employeeTasks }) => (
-              <div key={employee.id} className="rounded-2xl border border-border-soft bg-[#fffdf7] p-4">
-                <div className="mb-2 font-semibold text-[#1f3427]">
+              <div key={employee.id} className="rounded-2xl border border-border-soft bg-surface p-4">
+                <div className="mb-2 font-semibold text-foreground">
                   {employee.name} {employee.role ? `- ${employee.role}` : ""}
                 </div>
 
