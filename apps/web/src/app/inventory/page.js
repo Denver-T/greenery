@@ -323,6 +323,19 @@ export default function InventoryPage() {
     }
   }
 
+  useEffect(() => {
+    if (!selectedPlant && !editingPlant && !showCreateModal) return;
+    function handleEsc(e) {
+      if (e.key === "Escape") {
+        if (showCreateModal) setShowCreateModal(false);
+        else if (editingPlant) setEditingPlant(null);
+        else if (selectedPlant) setSelectedPlant(null);
+      }
+    }
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [selectedPlant, editingPlant, showCreateModal]);
+
   return (
     <AppShell title="Inventory">
       <section className="space-y-6 p-6">
@@ -541,6 +554,9 @@ function InventoryModal({ plant, mode, form, formErrors, busy, onChange, onClose
   return (
     <div className="fixed inset-0 z-70 grid place-items-center bg-black/45 p-4" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="inventory-modal-title"
         className="w-full max-w-4xl overflow-hidden rounded-4xl border border-border-soft bg-surface shadow-elevated-lg"
         onClick={(event) => event.stopPropagation()}
       >
@@ -556,7 +572,7 @@ function InventoryModal({ plant, mode, form, formErrors, busy, onChange, onClose
               <div className="w-fit rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] backdrop-blur">
                 Inventory Item
               </div>
-              <h2 className="mt-3 text-3xl font-black tracking-tight">
+              <h2 id="inventory-modal-title" className="mt-3 text-3xl font-black tracking-tight">
                 {isEdit ? form.name || "Plant name" : plant?.name || "Unnamed plant"}
               </h2>
               <p className="mt-2 max-w-md text-sm text-white/85">
@@ -738,13 +754,16 @@ function AddInventoryModal({ form, formErrors, busy, onChange, onClose, onSave }
   return (
     <div className="fixed inset-0 z-70 grid place-items-center bg-black/45 p-4" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-inventory-modal-title"
         className="w-full max-w-xl rounded-[30px] border border-border-soft bg-surface p-6 shadow-elevated-lg"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="theme-tag w-fit rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.16em]">
           Inventory
         </div>
-        <h3 className="theme-title mt-4 text-3xl font-black tracking-tight">Add New Plant Stock</h3>
+        <h3 id="add-inventory-modal-title" className="theme-title mt-4 text-3xl font-black tracking-tight">Add New Plant Stock</h3>
         <p className="theme-copy mt-2 text-sm leading-6">
           Add a plant type, optional image, optional cost, and how many units are currently on hand.
         </p>

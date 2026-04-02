@@ -444,6 +444,15 @@ export default function Page() {
     }
   }
 
+  useEffect(() => {
+    if (!eventModalOpen) return;
+    function handleEsc(e) {
+      if (e.key === "Escape") closeEventModal();
+    }
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [eventModalOpen]);
+
   return (
     <AppShell title="View Calendar">
       <section className="space-y-6 p-6">
@@ -635,6 +644,9 @@ export default function Page() {
         {eventModalOpen ? (
           <div className="fixed inset-0 z-[70] grid place-items-center bg-black/50 p-6" onClick={closeEventModal}>
             <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="event-modal-title"
               className="theme-panel w-full max-w-2xl rounded-3xl border border-border-soft p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
@@ -643,7 +655,7 @@ export default function Page() {
                   <div className="theme-tag inline-flex rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em]">
                     Custom event
                   </div>
-                  <h3 className="theme-title mt-3 text-2xl font-black">
+                  <h3 id="event-modal-title" className="theme-title mt-3 text-2xl font-black">
                     {eventForm.id ? "Edit calendar event" : "Add calendar event"}
                   </h3>
                   <p className="theme-copy mt-2 text-sm">

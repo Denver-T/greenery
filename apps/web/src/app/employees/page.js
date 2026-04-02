@@ -97,7 +97,10 @@ function EmployeeDetailModal({
   return (
     <div className="fixed inset-0 z-70 grid place-items-center bg-black/40 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-2xl rounded-[30px] border border-[#d9d1bf] bg-[#fbf7ed] p-5 shadow-[0_30px_80px_rgba(31,52,39,0.28)]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="employee-modal-title"
+        className="w-full max-w-2xl rounded-[30px] border border-border-soft bg-surface p-5 shadow-elevated-lg"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="theme-panel rounded-[28px] border px-5 py-5 shadow-soft">
@@ -106,7 +109,7 @@ function EmployeeDetailModal({
               {(editing ? form.name : employee?.name)?.[0]?.toUpperCase() || "U"}
             </div>
             <div className="flex-1">
-              <div className="theme-title text-3xl font-black tracking-tight">
+              <div id="employee-modal-title" className="theme-title text-3xl font-black tracking-tight">
                 {editing ? form.name || "Employee" : employee?.name || "Employee"}
               </div>
               <div className="theme-copy mt-1 text-xl font-bold">
@@ -414,6 +417,19 @@ export default function EmployeesPage() {
     }
   }
 
+  useEffect(() => {
+    if (!selectedEmployee) return;
+    function handleEsc(e) {
+      if (e.key === "Escape") {
+        setSelectedEmployee(null);
+        setModalMode("view");
+        setFormErrors({});
+      }
+    }
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [selectedEmployee]);
+
   return (
     <AppShell title="Manage Employees">
       <div className="space-y-6 p-6">
@@ -452,18 +468,18 @@ export default function EmployeesPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid items-start gap-4 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="theme-panel rounded-[26px] border p-5 shadow-soft">
               <div className="theme-title text-lg font-black">Create New Employee</div>
               <p className="theme-copy mt-1 text-sm">
                 Add staff members, roles, and access levels from one friendly panel.
               </p>
 
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                <label className="grid gap-1.5">
+              <div className="mt-5 grid gap-x-3 gap-y-4 md:grid-cols-2">
+                <label className="grid min-w-0 gap-1.5">
                   <span className="theme-title text-sm font-semibold">Name</span>
                   <input
-                    className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
+                    className={`min-w-0 rounded-2xl border bg-white px-4 py-3 text-sm ${
                       formErrors.name ? "border-red-400" : "border-border-soft"
                     }`}
                     value={form.name}
@@ -474,10 +490,10 @@ export default function EmployeesPage() {
                   {formErrors.name ? <span className="text-xs text-red-600">{formErrors.name}</span> : null}
                 </label>
 
-                <label className="grid gap-1.5">
+                <label className="grid min-w-0 gap-1.5">
                   <span className="theme-title text-sm font-semibold">Role</span>
                   <select
-                    className="rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
+                    className="min-w-0 rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
                     value={form.role}
                     onChange={(event) => updateCreateField("role", event.target.value)}
                   >
@@ -487,10 +503,10 @@ export default function EmployeesPage() {
                   </select>
                 </label>
 
-                <label className="grid gap-1.5">
+                <label className="grid min-w-0 gap-1.5">
                   <span className="theme-title text-sm font-semibold">Email</span>
                   <input
-                    className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
+                    className={`min-w-0 rounded-2xl border bg-white px-4 py-3 text-sm ${
                       formErrors.email ? "border-red-400" : "border-border-soft"
                     }`}
                     value={form.email}
@@ -501,10 +517,10 @@ export default function EmployeesPage() {
                   {formErrors.email ? <span className="text-xs text-red-600">{formErrors.email}</span> : null}
                 </label>
 
-                <label className="grid gap-1.5">
+                <label className="grid min-w-0 gap-1.5">
                   <span className="theme-title text-sm font-semibold">Phone</span>
                   <input
-                    className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
+                    className={`min-w-0 rounded-2xl border bg-white px-4 py-3 text-sm ${
                       formErrors.phone ? "border-red-400" : "border-border-soft"
                     }`}
                     value={form.phone}
@@ -516,10 +532,10 @@ export default function EmployeesPage() {
                   {formErrors.phone ? <span className="text-xs text-red-600">{formErrors.phone}</span> : null}
                 </label>
 
-                <label className="grid gap-1.5">
+                <label className="grid min-w-0 gap-1.5">
                   <span className="theme-title text-sm font-semibold">Status</span>
                   <select
-                    className="rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
+                    className="min-w-0 rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
                     value={form.status}
                     onChange={(event) => updateCreateField("status", event.target.value)}
                   >
@@ -528,10 +544,10 @@ export default function EmployeesPage() {
                   </select>
                 </label>
 
-                <label className="grid gap-1.5">
+                <label className="grid min-w-0 gap-1.5">
                   <span className="theme-title text-sm font-semibold">Permission Level</span>
                   <select
-                    className="rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
+                    className="min-w-0 rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
                     value={form.permissionLevel}
                     onChange={(event) => updateCreateField("permissionLevel", event.target.value)}
                   >

@@ -270,13 +270,16 @@ export default function TasksPage() {
   }
 
   useEffect(() => {
-    if (!selectedReq) return;
+    if (!selectedReq && !deleteCandidate) return;
     function handleEsc(e) {
-      if (e.key === "Escape") closeModal();
+      if (e.key === "Escape") {
+        if (deleteCandidate) setDeleteCandidate(null);
+        else closeModal();
+      }
     }
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
-  }, [selectedReq]);
+  }, [selectedReq, deleteCandidate]);
 
   return (
     <AppShell title="View Tasks">
@@ -455,11 +458,14 @@ export default function TasksPage() {
         {selectedReq && (
           <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-6" onClick={closeModal}>
             <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="request-modal-title"
               className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-border-soft bg-surface p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-4 flex items-center justify-between gap-3">
-                <h3 className="text-xl font-extrabold text-foreground">Work Request Details</h3>
+                <h3 id="request-modal-title" className="text-xl font-extrabold text-foreground">Work Request Details</h3>
                 <div className="flex gap-2">
                   {editMode ? (
                     <>
@@ -586,13 +592,16 @@ export default function TasksPage() {
             onClick={() => setDeleteCandidate(null)}
           >
             <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-confirm-title"
               className="w-full max-w-lg rounded-2xl border border-border-dashed bg-surface p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-red-700 w-fit">
                 Confirm Deletion
               </div>
-              <h3 className="mt-4 text-2xl font-black tracking-tight text-foreground">
+              <h3 id="delete-confirm-title" className="mt-4 text-2xl font-black tracking-tight text-foreground">
                 Delete this work request?
               </h3>
               <p className="mt-3 text-sm leading-6 text-gray-600">

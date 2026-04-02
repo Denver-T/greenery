@@ -501,7 +501,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   completeButton: {
-    padding: 6,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
   },
   actionStrip: {
     flexDirection: "row",
