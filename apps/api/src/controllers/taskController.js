@@ -9,6 +9,16 @@ const { isNonEmptyString, toPositiveInt } = require("../utils/validators");
 
 const VALID_STATUSES = ["assigned", "in_progress", "completed", "cancelled"];
 
+function toDateOnlyString(value) {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function getMaxAllowedDueDate() {
+  const max = new Date();
+  max.setFullYear(max.getFullYear() + 1);
+  return toDateOnlyString(max);
+}
+
 /**
  * Normalize optional string input.
  *
@@ -159,6 +169,22 @@ function validateAndNormalizeAssignPayload(body) {
     if (typeof rawDueDate !== "string" || Number.isNaN(new Date(rawDueDate).getTime())) {
       throw httpError(400, "Invalid due_date", "VALIDATION_ERROR", [
         { field: "due_date", issue: "must be a valid date string" },
+      ]);
+    }
+
+    const normalizedDueDate = toDateOnlyString(rawDueDate);
+    const today = toDateOnlyString(new Date());
+    const maxDueDate = getMaxAllowedDueDate();
+
+    if (normalizedDueDate < today) {
+      throw httpError(400, "Invalid due_date", "VALIDATION_ERROR", [
+        { field: "due_date", issue: "cannot be in the past" },
+      ]);
+    }
+
+    if (normalizedDueDate > maxDueDate) {
+      throw httpError(400, "Invalid due_date", "VALIDATION_ERROR", [
+        { field: "due_date", issue: "cannot be more than one year out" },
       ]);
     }
   }
@@ -321,3 +347,6 @@ module.exports = {
   updateTaskStatus,
   assignTask,
 };
+
+
+

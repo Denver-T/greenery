@@ -18,7 +18,7 @@ export default function WorkspaceHeader({
           ) : null}
           <h2 className="mt-4 text-2xl font-black tracking-tight text-foreground">{title}</h2>
           {description ? (
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">{description}</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 dark:text-[#bcc2cb]">{description}</p>
           ) : null}
         </div>
 
@@ -27,7 +27,7 @@ export default function WorkspaceHeader({
             {actions ? (
               actions
             ) : (
-              <div className="space-y-1 text-sm text-gray-600">
+              <div className="space-y-1 text-sm text-gray-600 dark:text-[#bcc2cb]">
                 {stats.map((item) => (
                   <div key={item.label}>
                     <span className="font-semibold text-foreground">{item.value}</span> {item.label}

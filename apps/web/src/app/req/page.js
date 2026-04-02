@@ -2,11 +2,30 @@
 
 import AppShell from "@/components/AppShell";
 import { fetchApi } from "@/lib/api/api";
-import { useMemo, useState } from "react";
+import { getTodayDateInputValue, sanitizeObjectStrings } from "@/lib/inputSafety";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+
+const REQ_LIMITS = {
+  referenceNumber: 100,
+  techName: 120,
+  account: 150,
+  accountContact: 150,
+  accountAddress: 255,
+  actionRequired: 255,
+  plantWanted: 150,
+  plantReplaced: 150,
+  planterTypeSize: 100,
+  planterColour: 100,
+  stagingMaterial: 150,
+  method: 100,
+  location: 150,
+  notes: 2000,
+};
 
 export default function ReqPage() {
   const router = useRouter();
+  const accountAddressRef = useRef(null);
 
   const generatedRef = useMemo(() => {
     const d = new Date();
@@ -22,8 +41,87 @@ export default function ReqPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [currentEmployeeName, setCurrentEmployeeName] = useState("");
+  const [loadingEmployee, setLoadingEmployee] = useState(true);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayDateInputValue();
+  const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      try {
+        const me = await fetchApi("/auth/me", { cache: "no-store" });
+        if (active) {
+          setCurrentEmployeeName(me?.name || "");
+        }
+      } catch (err) {
+        if (active) {
+          setError(err?.message || "Failed to load the signed-in employee.");
+        }
+      } finally {
+        if (active) {
+          setLoadingEmployee(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mapsApiKey || !accountAddressRef.current || typeof window === "undefined") {
+      return undefined;
+    }
+
+    let autocomplete = null;
+    let listener = null;
+
+    function attachAutocomplete() {
+      if (!window.google?.maps?.places || !accountAddressRef.current) {
+        return;
+      }
+
+      autocomplete = new window.google.maps.places.Autocomplete(accountAddressRef.current, {
+        fields: ["formatted_address"],
+        types: ["address"],
+      });
+
+      listener = autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (place?.formatted_address && accountAddressRef.current) {
+          accountAddressRef.current.value = place.formatted_address;
+        }
+      });
+    }
+
+    if (window.google?.maps?.places) {
+      attachAutocomplete();
+    } else {
+      const existingScript = document.getElementById("google-maps-places-script");
+
+      if (existingScript) {
+        existingScript.addEventListener("load", attachAutocomplete, { once: true });
+      } else {
+        const script = document.createElement("script");
+        script.id = "google-maps-places-script";
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(mapsApiKey)}&libraries=places`;
+        script.async = true;
+        script.defer = true;
+        script.addEventListener("load", attachAutocomplete, { once: true });
+        document.head.appendChild(script);
+      }
+    }
+
+    return () => {
+      if (listener) {
+        window.google?.maps?.event?.removeListener(listener);
+      }
+    };
+  }, [mapsApiKey]);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -32,6 +130,56 @@ export default function ReqPage() {
 
     try {
       const fd = new FormData(e.currentTarget);
+      if (!currentEmployeeName) {
+        throw new Error("Your employee account could not be resolved. Please sign in again.");
+      }
+
+      const cleaned = sanitizeObjectStrings(
+        {
+          referenceNumber: fd.get("referenceNumber"),
+          techName: currentEmployeeName,
+          account: fd.get("account"),
+          accountContact: fd.get("accountContact"),
+          accountAddress: fd.get("accountAddress"),
+          actionRequired: fd.get("actionRequired"),
+          plantWanted: fd.get("plantWanted"),
+          plantReplaced: fd.get("plantReplaced"),
+          planterTypeSize: fd.get("planterTypeSize"),
+          planterColour: fd.get("planterColour"),
+          stagingMaterial: fd.get("stagingMaterial"),
+          method: fd.get("method"),
+          location: fd.get("location"),
+          notes: fd.get("notes"),
+        },
+        {
+          referenceNumber: { maxLength: REQ_LIMITS.referenceNumber },
+          techName: { maxLength: REQ_LIMITS.techName },
+          account: { maxLength: REQ_LIMITS.account },
+          accountContact: { maxLength: REQ_LIMITS.accountContact },
+          accountAddress: { maxLength: REQ_LIMITS.accountAddress },
+          actionRequired: { maxLength: REQ_LIMITS.actionRequired },
+          plantWanted: { maxLength: REQ_LIMITS.plantWanted },
+          plantReplaced: { maxLength: REQ_LIMITS.plantReplaced },
+          planterTypeSize: { maxLength: REQ_LIMITS.planterTypeSize },
+          planterColour: { maxLength: REQ_LIMITS.planterColour },
+          stagingMaterial: { maxLength: REQ_LIMITS.stagingMaterial },
+          method: { maxLength: REQ_LIMITS.method },
+          location: { maxLength: REQ_LIMITS.location },
+          notes: { maxLength: REQ_LIMITS.notes, preserveNewlines: true },
+        }
+      );
+
+      if (!cleaned.account) {
+        throw new Error("Account is required.");
+      }
+
+      if (!cleaned.actionRequired) {
+        throw new Error("Action Required is required.");
+      }
+
+      Object.entries(cleaned).forEach(([key, value]) => fd.set(key, value));
+      fd.set("techName", currentEmployeeName);
+
       await fetchApi("/reqs", {
         method: "POST",
         body: fd,
@@ -56,7 +204,7 @@ export default function ReqPage() {
             <h2 className="mt-4 text-2xl font-black tracking-tight text-foreground">
               Create Work Request
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
+            <p className="theme-copy mt-2 max-w-2xl text-sm leading-6">
               Capture the core request details first, then add plant and staging information if needed.
             </p>
           </div>
@@ -104,10 +252,14 @@ export default function ReqPage() {
                       className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
                       required
                     />
+                    <span className="theme-copy mt-1 text-xs">
+                      Pulled from the signed-in employee account.
+                    </span>
                   </Field>
                   <Field label="Account" required>
                     <input
                       name="account"
+                      maxLength={REQ_LIMITS.account}
                       placeholder="Inter Pipeline"
                       className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
                       required
@@ -116,20 +268,27 @@ export default function ReqPage() {
                   <Field label="Account Contact">
                     <input
                       name="accountContact"
+                      maxLength={REQ_LIMITS.accountContact}
                       placeholder="Georgia Blevins"
                       className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
                     />
                   </Field>
                   <Field label="Account Address">
                     <input
+                      ref={accountAddressRef}
                       name="accountAddress"
+                      maxLength={REQ_LIMITS.accountAddress}
                       placeholder="123 Sesame St."
                       className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
                     />
+                    <span className="theme-copy mt-1 text-xs">
+                      Browser autofill works now. Google Places autocomplete will turn on when `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set.
+                    </span>
                   </Field>
-                  <Field label="Action Required" className="md:col-span-2">
+                  <Field label="Action Required" required className="md:col-span-2">
                     <input
                       name="actionRequired"
+                      maxLength={REQ_LIMITS.actionRequired}
                       placeholder="Soil top up"
                       className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
                     />
@@ -221,7 +380,7 @@ export default function ReqPage() {
                 <h4 className="text-sm font-black uppercase tracking-[0.16em] text-foreground">
                   Submission Flow
                 </h4>
-                <ul className="mt-3 space-y-2 text-sm leading-6 text-gray-600">
+                <ul className="theme-copy mt-3 space-y-2 text-sm leading-6">
                   <li>1. Confirm the account and work type.</li>
                   <li>2. Add plant details only when they affect execution.</li>
                   <li>3. Include notes or a photo when extra context matters.</li>
@@ -237,7 +396,7 @@ export default function ReqPage() {
           ) : null}
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-soft pt-4">
-            <div className="text-sm text-gray-600">
+            <div className="theme-copy text-sm">
               Review the account details before submitting. After save, you will return to the queue.
             </div>
             <div className="flex items-center gap-3">
@@ -276,7 +435,7 @@ function FormSection({ title, description, children }) {
 function Field({ label, required = false, className = "", children }) {
   return (
     <label className={`flex flex-col ${className}`}>
-      <span className="mb-1 text-sm font-medium text-gray-700">
+      <span className="theme-title mb-1 text-sm font-medium">
         {label}
         {required ? <span className="text-red-600"> *</span> : null}
       </span>

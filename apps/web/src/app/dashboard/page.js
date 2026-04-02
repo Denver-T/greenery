@@ -70,7 +70,7 @@ function HBarList({ title, items, valueKey = "value", labelKey = "label" }) {
           const pct = Math.round((val / max) * 100);
           return (
             <div key={`${it[labelKey]}-${i}`} className="grid grid-cols-12 items-center gap-3">
-              <div className="col-span-4 truncate text-sm text-foreground/80">{it[labelKey]}</div>
+              <div className="theme-copy col-span-4 truncate text-sm">{it[labelKey]}</div>
               <div className="col-span-6">
                 <div className="h-3 w-full rounded bg-surface-muted">
                   <div
@@ -111,7 +111,7 @@ function FocusList({ title, items, empty }) {
     <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
       <h3 className="text-lg font-bold text-foreground">{title}</h3>
       {items.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-600">{empty}</p>
+        <p className="theme-copy mt-3 text-sm">{empty}</p>
       ) : (
         <div className="mt-4 space-y-3">
           {items.map((item) => (
@@ -131,7 +131,7 @@ function ScheduleList({ title, items, empty }) {
     <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
       <h3 className="text-lg font-bold text-foreground">{title}</h3>
       {items.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-600">{empty}</p>
+        <p className="theme-copy mt-3 text-sm">{empty}</p>
       ) : (
         <div className="mt-4 space-y-3">
           {items.map((item) => (
@@ -253,7 +253,7 @@ export default function Page() {
 
   return (
     <AppShell title="Dashboard Analytics">
-      {loading ? <div className="p-6 text-gray-600">Loading analytics…</div> : null}
+      {loading ? <div className="theme-copy p-6">Loading analytics…</div> : null}
       {error ? (
         <div className="rounded-card border border-red-200 bg-red-50 p-4 text-red-700 shadow-soft">
           {error}

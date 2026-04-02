@@ -1,9 +1,13 @@
- "use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
+
+import { auth } from "@/app/lib/firebaseClient";
+import { onAuthStateChanged } from "firebase/auth";
+import { fetchApi } from "@/lib/api/api";
+
 import NavItem from "./NavItem";
 import UserChip from "./UserChip";
-import { fetchApi } from "@/lib/api/api";
 
 const baseSections = [
   {
@@ -30,8 +34,21 @@ const baseSections = [
   },
 ];
 
+function normalizeLevel(user) {
+  return user?.permissionLevel || user?.role || "Technician";
+}
+
 export default function Sidebar() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [authUser, setAuthUser] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user || null);
+    });
+
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,9 +81,7 @@ export default function Sidebar() {
     }));
 
     if (currentUser?.permissionLevel === "SuperAdmin") {
-      const operationsSection = resolvedSections.find(
-        (section) => section.title === "Operations"
-      );
+      const operationsSection = resolvedSections.find((section) => section.title === "Operations");
 
       operationsSection?.items.push({
         href: "/superadmin",
@@ -78,12 +93,20 @@ export default function Sidebar() {
     return resolvedSections;
   }, [currentUser]);
 
+  const chipName =
+    currentUser?.name ||
+    authUser?.displayName ||
+    authUser?.email?.split("@")[0] ||
+    "Greenery Team";
+  const chipLevel = normalizeLevel(currentUser);
+  const chipPhoto = authUser?.photoURL || "";
+
   return (
     <aside
       aria-label="Primary navigation"
       className="hidden md:flex md:flex-col border-r border-white/10 bg-[linear-gradient(180deg,#294733_0%,#1f3427_100%)] p-5 text-white shadow-soft"
     >
-      <div className="rounded-[22px] border border-white/10 bg-white/6 p-4 backdrop-blur">
+      <div className="rounded-[22px] border border-white/10 bg-white/6 p-4 backdrop-blur dark:bg-white/4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">
           Greenery Ops
         </p>
@@ -94,7 +117,9 @@ export default function Sidebar() {
           Field work, staffing, and schedule visibility in one place.
         </p>
       </div>
-      <UserChip name="Greenery Team" />
+
+      <UserChip name={chipName} level={chipLevel} photoURL={chipPhoto} />
+
       <nav className="mt-5 space-y-5">
         {sections.map((section) => (
           <div key={section.title}>
@@ -102,8 +127,8 @@ export default function Sidebar() {
               {section.title}
             </div>
             <div className="grid gap-2">
-              {section.items.map((it) => (
-                <NavItem key={it.href} {...it} />
+              {section.items.map((item) => (
+                <NavItem key={item.href} {...item} />
               ))}
             </div>
           </div>
