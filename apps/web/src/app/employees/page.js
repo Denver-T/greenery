@@ -95,7 +95,7 @@ function EmployeeDetailModal({
   );
 
   return (
-    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-70 grid place-items-center bg-black/40 p-4" onClick={onClose}>
       <div
         className="w-full max-w-2xl rounded-[30px] border border-[#d9d1bf] bg-[#fbf7ed] p-5 shadow-[0_30px_80px_rgba(31,52,39,0.28)]"
         onClick={(event) => event.stopPropagation()}

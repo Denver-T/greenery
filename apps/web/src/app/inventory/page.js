@@ -539,19 +539,19 @@ function InventoryModal({ plant, mode, form, formErrors, busy, onChange, onClose
   };
 
   return (
-    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/45 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-70 grid place-items-center bg-black/45 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-4xl overflow-hidden rounded-[32px] border border-border-soft bg-surface shadow-elevated-lg"
+        className="w-full max-w-4xl overflow-hidden rounded-4xl border border-border-soft bg-surface shadow-elevated-lg"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="grid max-h-[92vh] gap-0 overflow-y-auto md:grid-cols-[1.15fr_0.85fr]">
-          <div className="relative min-h-[280px] bg-surface-muted">
+          <div className="relative min-h-70 bg-surface-muted">
             <img
               src={getPlantImage(previewPlant)}
               alt={isEdit ? form.name || "Plant preview" : plant?.name || "Plant"}
               className="h-full w-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#102218]/75 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-[#102218]/75 via-transparent to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
               <div className="w-fit rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] backdrop-blur">
                 Inventory Item
@@ -680,7 +680,7 @@ function InventoryModal({ plant, mode, form, formErrors, busy, onChange, onClose
                   </div>
                 </div>
 
-                <div className="rounded-[24px] border border-border-soft bg-surface-muted p-4">
+                <div className="rounded-3xl border border-border-soft bg-surface-muted p-4">
                   <div className="text-sm font-semibold text-foreground">Quick note</div>
                   <p className="mt-2 text-sm leading-6 text-muted">
                     Use edit mode to update stock quantity, cost, or replace the image with a direct upload.
@@ -736,7 +736,7 @@ function AddInventoryModal({ form, formErrors, busy, onChange, onClose, onSave }
   };
 
   return (
-    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/45 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-70 grid place-items-center bg-black/45 p-4" onClick={onClose}>
       <div
         className="w-full max-w-xl rounded-[30px] border border-border-soft bg-surface p-6 shadow-elevated-lg"
         onClick={(event) => event.stopPropagation()}
@@ -825,7 +825,7 @@ function AddInventoryModal({ form, formErrors, busy, onChange, onClose, onSave }
             <span className="text-xs text-muted">Use this if you do not have an image URL.</span>
           </label>
 
-          <div className="overflow-hidden rounded-[24px] border border-border-soft bg-surface-muted">
+          <div className="overflow-hidden rounded-3xl border border-border-soft bg-surface-muted">
             <img
               src={getPlantImage(previewPlant)}
               alt={form.name || "Plant preview"}
