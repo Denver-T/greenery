@@ -10,6 +10,7 @@
 const plantService = require("../services/plantService");
 const { httpError } = require("../utils/httpError");
 const { toPositiveInt } = require("../utils/validators");
+const { parsePagination, paginatedResponse } = require("../utils/pagination");
 
 function normalizeOptionalString(value, maxLength) {
   if (value === undefined || value === null) {
@@ -45,7 +46,7 @@ function normalizePlantPayload(body = {}) {
   const rawQuantity = body.quantity;
   const parsedQuantity =
     rawQuantity === undefined || rawQuantity === null || rawQuantity === ""
-      ? 1
+      ? undefined
       : Number.parseInt(rawQuantity, 10);
   const costPerUnit = normalizeCostPerUnit(body.costPerUnit ?? body.cost_per_unit);
 
@@ -54,7 +55,7 @@ function normalizePlantPayload(body = {}) {
   }
 
   if (
-    rawQuantity !== undefined &&
+    parsedQuantity !== undefined &&
     (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0 || parsedQuantity > 500)
   ) {
     errors.push({ field: "quantity", issue: "must be an integer between 1 and 500" });
@@ -93,6 +94,11 @@ function resolveUploadedImagePath(req) {
 
 exports.getPlants = async (req, res, next) => {
   try {
+    const pagination = parsePagination(req.query);
+    if (pagination) {
+      const { rows, totalCount } = await plantService.getPlantsPaginated(pagination.pageSize, pagination.offset);
+      return res.status(200).json(paginatedResponse(rows, totalCount, pagination.page, pagination.pageSize));
+    }
     const plants = await plantService.getPlants();
     res.status(200).json({ data: plants });
   } catch (err) {
@@ -132,6 +138,7 @@ exports.createPlant = async (req, res, next) => {
 
     const created = await plantService.createPlant({
       ...normalized,
+      quantity: normalized.quantity ?? 1,
       imageUrl: resolveUploadedImagePath(req) || normalized.imageUrl,
     });
     res.status(201).json({ data: created });

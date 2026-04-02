@@ -43,6 +43,7 @@ function plantGroupRow(overrides = {}) {
     cost_per_unit: "12.50",
     quantity: 3,
     created_at: new Date("2025-01-01"),
+    updated_at: new Date("2025-01-01"),
     ...overrides,
   };
 }

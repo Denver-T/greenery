@@ -3,6 +3,7 @@
 
 const employeesService = require("../services/employeesService");
 const { httpError } = require("../utils/httpError");
+const { parsePagination, paginatedResponse } = require("../utils/pagination");
 const {
   getAccessRank,
   isHighPrivilegePermission,
@@ -92,8 +93,12 @@ function assertEmployeeWriteAllowed(
 
 async function getAll(req, res, next) {
   try {
-    // Read endpoints intentionally return the DB-shaped employee rows
-    // because the current web/mobile clients consume those fields directly.
+    const pagination = parsePagination(req.query);
+    if (pagination) {
+      const { rows, totalCount } = await employeesService.listEmployeesPaginated(pagination.pageSize, pagination.offset);
+      return res.json(paginatedResponse(rows, totalCount, pagination.page, pagination.pageSize));
+    }
+    // No pagination params → return all (backward compatible)
     const rows = await employeesService.listEmployees();
     res.json({ data: rows });
   } catch (err) {

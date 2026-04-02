@@ -55,7 +55,7 @@ describe("getEmployeeById", () => {
 });
 
 describe("getEmployeeByEmail", () => {
-  it("performs a case-insensitive lookup", async () => {
+  it("performs a case-insensitive lookup via collation", async () => {
     const emp = employee({ email: "user@example.com" });
     db.query.mockResolvedValue(selectResult([emp]));
 
@@ -63,8 +63,8 @@ describe("getEmployeeByEmail", () => {
 
     expect(result).toEqual(emp);
     expect(db.query).toHaveBeenCalledWith(
-      expect.stringContaining("LOWER(email) = LOWER(?)"),
-      ["USER@EXAMPLE.COM"]
+      expect.stringContaining("WHERE email = ?"),
+      ["USER@EXAMPLE.COM"],
     );
   });
 

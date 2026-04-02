@@ -84,55 +84,6 @@ function validateCustomEventPayload(body, { partial = false } = {}) {
   };
 }
 
-async function ensureScheduleColumns() {
-  const [columns] = await db.query(
-    `
-      SELECT COLUMN_NAME
-      FROM INFORMATION_SCHEMA.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'schedule_events'
-    `
-  );
-
-  const existing = new Set(columns.map((column) => column.COLUMN_NAME));
-
-  if (!existing.has("event_type")) {
-    await db.query(
-      `
-        ALTER TABLE schedule_events
-        ADD COLUMN event_type VARCHAR(20) NOT NULL DEFAULT 'request' AFTER work_req_id
-      `
-    );
-  }
-
-  if (!existing.has("audience_level")) {
-    await db.query(
-      `
-        ALTER TABLE schedule_events
-        ADD COLUMN audience_level VARCHAR(20) NOT NULL DEFAULT 'technician' AFTER event_type
-      `
-    );
-  }
-
-  if (!existing.has("details")) {
-    await db.query(
-      `
-        ALTER TABLE schedule_events
-        ADD COLUMN details VARCHAR(500) NULL AFTER audience_level
-      `
-    );
-  }
-
-  if (!existing.has("created_by_email")) {
-    await db.query(
-      `
-        ALTER TABLE schedule_events
-        ADD COLUMN created_by_email VARCHAR(255) NULL AFTER details
-      `
-    );
-  }
-}
-
 async function getScheduleEventById(id) {
   const [rows] = await db.query(
     `
@@ -165,8 +116,6 @@ router.get(
   authorize("technician", "manager", "admin"),
   async (req, res, next) => {
     try {
-      await ensureScheduleColumns();
-
       const userRank = getAccessRank(req.user?.permissionLevel || req.user?.role || "technician");
       const [rows] = await db.query(
         `
@@ -209,8 +158,6 @@ router.post(
   authorize("admin"),
   async (req, res, next) => {
     try {
-      await ensureScheduleColumns();
-
       const validation = validateCustomEventPayload(req.body);
       if (validation.error) {
         return res.status(400).json({ error: validation.error });
@@ -251,8 +198,6 @@ router.put(
   authorize("admin"),
   async (req, res, next) => {
     try {
-      await ensureScheduleColumns();
-
       const existing = await getScheduleEventById(req.params.id);
       if (!existing) {
         return res.status(404).json({ error: "Schedule event not found." });
@@ -300,8 +245,6 @@ router.delete(
   authorize("admin"),
   async (req, res, next) => {
     try {
-      await ensureScheduleColumns();
-
       const existing = await getScheduleEventById(req.params.id);
       if (!existing) {
         return res.status(404).json({ error: "Schedule event not found." });
