@@ -9,18 +9,25 @@ let pool;
 function getPool() {
   if (!pool) {
     // Lazily create the pool once so startup does not fail before the first DB-backed request.
-    pool = mysql
-      .createPool({
-        host: process.env.DB_HOST,
-        port: Number(process.env.DB_PORT || 3306),
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0,
-      })
-      .promise();
+    const rawPool = mysql.createPool({
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT || 3306),
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 100,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 30000,
+      connectTimeout: 10000,
+    });
+
+    rawPool.on("error", (err) => {
+      console.error("MySQL pool error:", err);
+    });
+
+    pool = rawPool.promise();
   }
   return pool;
 }
@@ -32,8 +39,13 @@ async function query(sql, params = []) {
   return p.query(sql, params);
 }
 
+async function getConnection() {
+  return getPool().getConnection();
+}
+
 module.exports = {
   query,
   // Exported for rare cases where direct pool access is useful.
   getPool,
+  getConnection,
 };

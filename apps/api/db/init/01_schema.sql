@@ -23,6 +23,8 @@ CREATE TABLE employees (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+CREATE INDEX idx_employees_email ON employees (email);
+
 -- Plants
 CREATE TABLE plants (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -30,7 +32,9 @@ CREATE TABLE plants (
   location VARCHAR(150) NULL,
   image_url VARCHAR(500) NULL,
   cost_per_unit DECIMAL(10,2) NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  quantity INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Work_reqs
@@ -75,6 +79,9 @@ CREATE TABLE IF NOT EXISTS work_reqs (
     ON DELETE SET NULL
 );
 
+CREATE INDEX idx_workreqs_assigned_status_updated ON work_reqs (assignedTo, status, updated_at DESC);
+CREATE INDEX idx_workreqs_refnum ON work_reqs (referenceNumber);
+
 -- Schedule / Calendar
 CREATE TABLE schedule_events (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -88,6 +95,7 @@ CREATE TABLE schedule_events (
   details VARCHAR(500) NULL,
   created_by_email VARCHAR(255) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_sched_employee
     FOREIGN KEY (employee_id) REFERENCES employees(id)
     ON DELETE SET NULL,
@@ -96,6 +104,9 @@ CREATE TABLE schedule_events (
     ON DELETE SET NULL
 );
 
+CREATE INDEX idx_schedule_employee ON schedule_events (employee_id);
+CREATE INDEX idx_schedule_start ON schedule_events (start_time);
+
 -- Notifications
 CREATE TABLE notifications (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -103,6 +114,7 @@ CREATE TABLE notifications (
   message VARCHAR(255) NOT NULL,
   is_read BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_notif_employee
     FOREIGN KEY (employee_id) REFERENCES employees(id)
     ON DELETE SET NULL
@@ -123,3 +135,7 @@ CREATE TABLE activity_logs (
     FOREIGN KEY (actor_employee_id) REFERENCES employees(id)
     ON DELETE SET NULL
 );
+
+CREATE INDEX idx_actlogs_target ON activity_logs (target_type, target_id, created_at DESC);
+CREATE INDEX idx_actlogs_created ON activity_logs (created_at DESC);
+CREATE INDEX idx_actlogs_actor ON activity_logs (actor_employee_id, created_at DESC);

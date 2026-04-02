@@ -1,67 +1,73 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import {
-  MaterialCommunityIcons,
-  Feather,
-  MaterialIcons,
-} from '@expo/vector-icons';
-import { COLORS, RADII } from '../theme';
+import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { COLORS, RADII, FONTS } from '../theme';
 
-export default function NavBar() {
-  const navigation = useNavigation();
-  const route = useRoute();
+const TAB_ICONS = {
+  Dashboard: (color) => <MaterialCommunityIcons name="clipboard-check-outline" size={18} color={color} />,
+  WeeklySchedule: (color) => <MaterialCommunityIcons name="calendar-multiselect" size={18} color={color} />,
+  WorkRequestSubmit: (color) => <Feather name="plus-circle" size={18} color={color} />,
+  Settings: (color) => <Feather name="settings" size={18} color={color} />,
+};
 
-  const tabs = [
-    {
-      label: 'Today',
-      route: 'Dashboard',
-      icon: (color) => <MaterialCommunityIcons name="clipboard-check-outline" size={18} color={color} />,
-    },
-    {
-      label: 'Requests',
-      route: 'WorkRequestView',
-      icon: (color) => <MaterialIcons name="assignment" size={18} color={color} />,
-    },
-    {
-      label: 'Schedule',
-      route: 'WeeklySchedule',
-      icon: (color) => <MaterialCommunityIcons name="calendar-multiselect" size={18} color={color} />,
-    },
-    {
-      label: 'Menu',
-      route: 'HomePage',
-      icon: (color) => <Feather name="menu" size={20} color={color} />,
-    },
-  ];
+const TAB_LABELS = {
+  Dashboard: 'Today',
+  WeeklySchedule: 'Schedule',
+  WorkRequestSubmit: 'New Request',
+  Settings: 'Settings',
+};
 
+export default function TabBar({ state, navigation }) {
   return (
-    <View style={styles.tabBar}>
-      {tabs.map((tab) => {
-        const active = route.name === tab.route;
-        const color = active ? COLORS.textOnBrand : COLORS.textMuted;
+    <View style={styles.wrapper}>
+      <View style={styles.tabBar}>
+        {state.routes.map((route, index) => {
+          const active = state.index === index;
+          const color = active ? COLORS.textOnBrand : COLORS.textMuted;
+          const label = TAB_LABELS[route.name] || route.name;
+          const icon = TAB_ICONS[route.name];
 
-        return (
-          <Pressable
-            key={tab.route}
-            // Root navigation should switch context cleanly instead of stacking duplicate tab routes.
-            onPress={() => navigation.navigate(tab.route)}
-            style={[styles.tabItem, active && styles.tabItemActive]}
-          >
-            {tab.icon(color)}
-            <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
-          </Pressable>
-        );
-      })}
+          return (
+            <Pressable
+              key={route.key}
+              onPress={() => {
+                const event = navigation.emit({
+                  type: 'tabPress',
+                  target: route.key,
+                  canPreventDefault: true,
+                });
+                if (!active && !event.defaultPrevented) {
+                  navigation.navigate(route.name);
+                }
+              }}
+              accessibilityRole="tab"
+              accessibilityLabel={label}
+              accessibilityState={{ selected: active }}
+              style={[styles.tabItem, active && styles.tabItemActive]}
+            >
+              {icon ? icon(color) : null}
+              <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    paddingTop: 6,
+    backgroundColor: 'transparent',
+  },
   tabBar: {
     width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
     minHeight: 68,
-    backgroundColor: 'rgba(255, 252, 246, 0.96)',
+    backgroundColor: COLORS.surfaceGlass,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -78,10 +84,11 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     minWidth: 68,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: RADII.md,
   },
   tabItemActive: {
@@ -90,13 +97,13 @@ const styles = StyleSheet.create({
     borderColor: COLORS.forestDeep,
   },
   tabText: {
+    fontFamily: FONTS.medium,
     color: COLORS.textMuted,
-    fontSize: 10,
+    fontSize: 13,
     marginTop: 3,
-    fontWeight: '700',
   },
   tabTextActive: {
+    fontFamily: FONTS.bold,
     color: COLORS.textOnBrand,
-    fontWeight: '800',
   },
 });

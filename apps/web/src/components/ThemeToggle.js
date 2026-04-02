@@ -1,8 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "greenery-theme";
+
+function getSnapshot() {
+  if (typeof window === "undefined") {
+    return "light";
+  }
+
+  return window.localStorage.getItem(STORAGE_KEY) === "dark" ? "dark" : "light";
+}
+
+function getServerSnapshot() {
+  return "light";
+}
+
+function subscribe(callback) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
 
 function applyTheme(theme) {
   if (typeof document === "undefined") {
@@ -15,23 +32,15 @@ function applyTheme(theme) {
 }
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState("light");
-
-  useEffect(() => {
-    const savedTheme =
-      typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-    const resolvedTheme = savedTheme === "dark" ? "dark" : "light";
-    setTheme(resolvedTheme);
-    applyTheme(resolvedTheme);
-  }, []);
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
-    applyTheme(nextTheme);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(STORAGE_KEY, nextTheme);
     }
+    applyTheme(nextTheme);
+    window.dispatchEvent(new StorageEvent("storage", { key: STORAGE_KEY }));
   }
 
   return (

@@ -16,8 +16,10 @@ web-build/
 
 # Build output
 dist/
+build/
 coverage/
 .turbo/
+*.tsbuildinfo
 
 # Env files
 .env
@@ -29,6 +31,7 @@ coverage/
 .DS_Store
 **/.DS_Store
 __MACOSX/
+Thumbs.db
 
 # Editor / IDE
 .idea/
@@ -39,3 +42,10 @@ __MACOSX/
 # Runtime / uploads
 apps/api/uploads/
 !apps/api/uploads/.gitkeep
+
+# Claude Code config
+.claude/
+
+# Agent artifacts
+.agents/
+

@@ -14,3 +14,11 @@ export const getWorkRequestById = async (id) => {
 export const createWorkRequest = async (formData) => {
   return await apiFetch("/reqs", { method: "POST", body: formData });
 };
+
+// update task status (e.g. mark complete)
+export const updateTaskStatus = async (id, status) => {
+  return await apiFetch(`/tasks/${id}/status`, {
+    method: "PATCH",
+    body: { status },
+  });
+};

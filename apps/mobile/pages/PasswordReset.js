@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 
+import { resetPassword } from "../util/firebase";
 import { COLORS, RADII, SPACING } from "../theme";
 
 const LOGO = require("../assets/logo.png");
@@ -37,10 +38,23 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
+      await resetPassword(email.trim());
       Alert.alert(
-        "Reset flow not connected yet",
-        "The final password reset backend flow still needs to be wired. For now, use the authenticated admin flow or Firebase console support."
+        "Reset email sent",
+        "Check your inbox for a password reset link.",
+        [{ text: "Back to login", onPress: () => navigation.navigate("Login") }]
       );
+    } catch (err) {
+      const code = err?.code || "";
+      let message = "Something went wrong. Please try again.";
+
+      if (code === "auth/invalid-email") {
+        message = "Please enter a valid email address.";
+      } else if (code === "auth/too-many-requests") {
+        message = "Too many attempts. Please try again later.";
+      }
+
+      Alert.alert("Reset failed", message);
     } finally {
       setLoading(false);
     }
@@ -165,7 +179,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: COLORS.textPrimary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.8,
     textTransform: "uppercase",

@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { fetchApi } from "@/lib/api/api";
 
-const EMPLOYEE_TEXT_LIMIT = 25;
+const EMPLOYEE_NAME_LIMIT = 30;
+const EMPLOYEE_EMAIL_LIMIT = 45;
 const EMPLOYEE_DEFAULT_FORM = {
   name: "",
   role: "Technician",
@@ -49,8 +50,8 @@ function validateEmployeeData(data) {
 
   if (!data.name || !data.name.trim()) {
     errors.name = "Name is required";
-  } else if (data.name.trim().length > EMPLOYEE_TEXT_LIMIT) {
-    errors.name = `Name must be ${EMPLOYEE_TEXT_LIMIT} characters or less`;
+  } else if (data.name.trim().length > EMPLOYEE_NAME_LIMIT) {
+    errors.name = `Name must be ${EMPLOYEE_NAME_LIMIT} characters or less`;
   }
 
   if (data.email && data.email.trim()) {
@@ -58,8 +59,8 @@ function validateEmployeeData(data) {
       /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     if (!emailRegex.test(data.email.trim())) {
       errors.email = "Please enter a valid email address";
-    } else if (data.email.trim().length > EMPLOYEE_TEXT_LIMIT) {
-      errors.email = `Email must be ${EMPLOYEE_TEXT_LIMIT} characters or less`;
+    } else if (data.email.trim().length > EMPLOYEE_EMAIL_LIMIT) {
+      errors.email = `Email must be ${EMPLOYEE_EMAIL_LIMIT} characters or less`;
     }
   }
 
@@ -94,7 +95,7 @@ function EmployeeDetailModal({
   );
 
   return (
-    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-70 grid place-items-center bg-black/40 p-4" onClick={onClose}>
       <div
         className="w-full max-w-2xl rounded-[30px] border border-[#d9d1bf] bg-[#fbf7ed] p-5 shadow-[0_30px_80px_rgba(31,52,39,0.28)]"
         onClick={(event) => event.stopPropagation()}
@@ -121,8 +122,8 @@ function EmployeeDetailModal({
                 <span className="theme-title text-sm font-semibold">Name</span>
                 <input
                   value={form.name}
-                  maxLength={EMPLOYEE_TEXT_LIMIT}
-                  onChange={(event) => onChange("name", event.target.value.slice(0, EMPLOYEE_TEXT_LIMIT))}
+                  maxLength={EMPLOYEE_NAME_LIMIT}
+                  onChange={(event) => onChange("name", event.target.value.slice(0, EMPLOYEE_NAME_LIMIT))}
                   className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
                     errors.name ? "border-red-400" : "border-border-soft"
                   }`}
@@ -147,8 +148,8 @@ function EmployeeDetailModal({
                 <span className="theme-title text-sm font-semibold">Email</span>
                 <input
                   value={form.email}
-                  maxLength={EMPLOYEE_TEXT_LIMIT}
-                  onChange={(event) => onChange("email", event.target.value.slice(0, EMPLOYEE_TEXT_LIMIT))}
+                  maxLength={EMPLOYEE_EMAIL_LIMIT}
+                  onChange={(event) => onChange("email", event.target.value.slice(0, EMPLOYEE_EMAIL_LIMIT))}
                   className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
                     errors.email ? "border-red-400" : "border-border-soft"
                   }`}
@@ -466,8 +467,8 @@ export default function EmployeesPage() {
                       formErrors.name ? "border-red-400" : "border-border-soft"
                     }`}
                     value={form.name}
-                    maxLength={EMPLOYEE_TEXT_LIMIT}
-                    onChange={(event) => updateCreateField("name", event.target.value.slice(0, EMPLOYEE_TEXT_LIMIT))}
+                    maxLength={EMPLOYEE_NAME_LIMIT}
+                    onChange={(event) => updateCreateField("name", event.target.value.slice(0, EMPLOYEE_NAME_LIMIT))}
                     placeholder="Matthew Belsham"
                   />
                   {formErrors.name ? <span className="text-xs text-red-600">{formErrors.name}</span> : null}
@@ -493,8 +494,8 @@ export default function EmployeesPage() {
                       formErrors.email ? "border-red-400" : "border-border-soft"
                     }`}
                     value={form.email}
-                    maxLength={EMPLOYEE_TEXT_LIMIT}
-                    onChange={(event) => updateCreateField("email", event.target.value.slice(0, EMPLOYEE_TEXT_LIMIT))}
+                    maxLength={EMPLOYEE_EMAIL_LIMIT}
+                    onChange={(event) => updateCreateField("email", event.target.value.slice(0, EMPLOYEE_EMAIL_LIMIT))}
                     placeholder="name@greenery.ca"
                   />
                   {formErrors.email ? <span className="text-xs text-red-600">{formErrors.email}</span> : null}

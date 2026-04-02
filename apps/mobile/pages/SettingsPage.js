@@ -15,11 +15,13 @@ const SETTINGS_GROUPS = [
         icon: "bell-outline",
         label: "Notifications",
         description: "Review alert behavior and keep field updates predictable.",
+        comingSoon: true,
       },
       {
         icon: "shield-check-outline",
         label: "Privacy & security",
         description: "See how the technician workspace handles account access.",
+        comingSoon: true,
       },
     ],
   },
@@ -31,12 +33,14 @@ const SETTINGS_GROUPS = [
         label: "Get help",
         description: "Reach the team if a schedule, request, or login issue blocks your day.",
         feather: true,
+        comingSoon: true,
       },
       {
         icon: "file-text",
         label: "App guidelines",
         description: "Review the expected mobile workflow and field logging standards.",
         feather: true,
+        comingSoon: true,
       },
     ],
   },
@@ -48,7 +52,7 @@ export default function SettingsPage() {
   async function handleLogout() {
     try {
       await logout();
-      navigation.reset({
+      navigation.getParent().reset({
         index: 0,
         routes: [{ name: "Login" }],
       });
@@ -58,7 +62,7 @@ export default function SettingsPage() {
   }
 
   function handlePlaceholder(label) {
-    Alert.alert(label, "This settings area is ready for the final connected option, but the current build keeps it informational for now.");
+    Alert.alert("Coming soon", `${label} will be available in a future update.`);
   }
 
   return (
@@ -84,6 +88,8 @@ export default function SettingsPage() {
                 key={item.label}
                 onPress={() => handlePlaceholder(item.label)}
                 style={styles.itemRow}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
               >
                 <View style={styles.itemIconWrap}>
                   {item.feather ? (
@@ -96,14 +102,18 @@ export default function SettingsPage() {
                   <Text style={styles.itemLabel}>{item.label}</Text>
                   <Text style={styles.itemDescription}>{item.description}</Text>
                 </View>
-                <Feather name="chevron-right" size={18} color={COLORS.moss} />
+                {item.comingSoon ? (
+                  <Text style={styles.comingSoonBadge}>Soon</Text>
+                ) : (
+                  <Feather name="chevron-right" size={18} color={COLORS.moss} />
+                )}
               </Pressable>
             ))}
           </View>
         </View>
       ))}
 
-      <Pressable onPress={handleLogout} style={styles.logoutButton}>
+      <Pressable onPress={handleLogout} style={styles.logoutButton} accessibilityRole="button" accessibilityLabel="Sign out">
         <Feather name="log-out" size={18} color={COLORS.textOnBrand} />
         <Text style={styles.logoutText}>Sign out</Text>
       </Pressable>
@@ -126,7 +136,7 @@ const styles = StyleSheet.create({
   },
   accountEyebrow: {
     color: COLORS.moss,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 1,
     textTransform: "uppercase",
@@ -193,6 +203,16 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontSize: 13,
     lineHeight: 19,
+  },
+  comingSoonBadge: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+    backgroundColor: COLORS.surfaceMuted,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: RADII.sm,
+    overflow: "hidden",
   },
   logoutButton: {
     marginTop: SPACING.md,

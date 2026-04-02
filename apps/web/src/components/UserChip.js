@@ -11,7 +11,7 @@ export default function UserChip({ name, level, photoURL }) {
       className="mt-5 grid grid-cols-[52px_1fr] items-center gap-3 rounded-[20px] border border-white/10 bg-white/10 px-3 py-3 transition hover:bg-white/14 dark:bg-white/6 dark:hover:bg-white/10"
       aria-label="Open profile"
     >
-      <div className="grid h-13 w-13 place-items-center overflow-hidden rounded-full bg-[#f4f1e8] font-black text-[#294733] dark:bg-[linear-gradient(180deg,#d8c9a4_0%,#b59d72_100%)] dark:text-[#1c1f25]">
+      <div className="grid h-13 w-13 place-items-center overflow-hidden rounded-full bg-background font-black text-foreground dark:bg-[linear-gradient(180deg,#d8c9a4_0%,#b59d72_100%)] dark:text-[#1c1f25]">
         {photoURL ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photoURL} alt={name || "Profile"} className="h-full w-full object-cover" />

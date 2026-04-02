@@ -269,6 +269,15 @@ export default function TasksPage() {
     }
   }
 
+  useEffect(() => {
+    if (!selectedReq) return;
+    function handleEsc(e) {
+      if (e.key === "Escape") closeModal();
+    }
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [selectedReq]);
+
   return (
     <AppShell title="View Tasks">
       <div className="p-6">
@@ -292,12 +301,14 @@ export default function TasksPage() {
           <WorkspaceToolbar
             left={
               <>
-                <div className="rounded-full bg-white p-1 shadow-soft">
+                <div className="rounded-full bg-white p-1 shadow-soft" role="tablist">
                 <button
                   onClick={() => setActiveTab("queue")}
+                  role="tab"
+                  aria-selected={activeTab === "queue"}
                   className={`rounded-full px-4 py-2 text-sm font-semibold ${
                     activeTab === "queue"
-                      ? "bg-white text-[#1f3427] shadow-soft"
+                      ? "bg-white text-foreground shadow-soft"
                       : "text-gray-600"
                   }`}
                 >
@@ -305,9 +316,11 @@ export default function TasksPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab("recent")}
+                  role="tab"
+                  aria-selected={activeTab === "recent"}
                   className={`rounded-full px-4 py-2 text-sm font-semibold ${
                     activeTab === "recent"
-                      ? "bg-white text-[#1f3427] shadow-soft"
+                      ? "bg-white text-foreground shadow-soft"
                       : "text-gray-600"
                   }`}
                 >
@@ -325,7 +338,7 @@ export default function TasksPage() {
               <>
               <button
                 onClick={loadReqs}
-                className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+                className="rounded-xl bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800"
               >
                 Refresh
               </button>
@@ -368,7 +381,7 @@ export default function TasksPage() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => openReqDetails(req.id)}
-                            className="rounded-lg bg-emerald-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-800"
+                            className="rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-800"
                           >
                             View
                           </button>
@@ -390,7 +403,7 @@ export default function TasksPage() {
 
           {activeTab === "recent" ? (
             recentlyDeleted.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-[#d5ddc8] bg-[#fffdf7] px-5 py-8 text-sm text-gray-600">
+              <div className="rounded-xl border border-dashed border-border-dashed bg-surface px-5 py-8 text-sm text-gray-600">
                 Nothing has been deleted recently.
               </div>
             ) : (
@@ -398,11 +411,11 @@ export default function TasksPage() {
                 {recentlyDeleted.map((req) => (
                   <div
                     key={`${req.id}-${req.deletedAt}`}
-                    className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#d5ddc8] bg-[#fffdf7] px-5 py-4"
+                    className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border-dashed bg-surface px-5 py-4"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-[#f0ebde] px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#1f3427]">
+                        <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-bold uppercase tracking-wide text-foreground">
                           #{req.referenceNumber || "Deleted"}
                         </span>
                         <span className="text-sm font-semibold text-gray-800">
@@ -442,11 +455,11 @@ export default function TasksPage() {
         {selectedReq && (
           <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-6" onClick={closeModal}>
             <div
-              className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-border-soft bg-[#fffdf7] p-6 shadow-2xl"
+              className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-border-soft bg-surface p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-4 flex items-center justify-between gap-3">
-                <h3 className="text-xl font-extrabold text-[#1f3427]">Work Request Details</h3>
+                <h3 className="text-xl font-extrabold text-foreground">Work Request Details</h3>
                 <div className="flex gap-2">
                   {editMode ? (
                     <>
@@ -462,7 +475,7 @@ export default function TasksPage() {
                       <button
                         onClick={saveReq}
                         disabled={saving}
-                        className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:opacity-60"
+                        className="rounded-xl bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-60"
                       >
                         {saving ? "Saving..." : "Save"}
                       </button>
@@ -543,7 +556,7 @@ export default function TasksPage() {
 
                   <div className="mt-4">
                     <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
-                    <div className="rounded-xl border border-border-soft bg-[#f8f4ea] px-4 py-3 text-sm text-gray-800">
+                    <div className="rounded-xl border border-border-soft bg-surface-warm px-4 py-3 text-sm text-gray-800">
                       {selectedReq.notes || "No notes provided."}
                     </div>
                   </div>
@@ -573,13 +586,13 @@ export default function TasksPage() {
             onClick={() => setDeleteCandidate(null)}
           >
             <div
-              className="w-full max-w-lg rounded-2xl border border-[#d5ddc8] bg-[#fffdf7] p-6 shadow-2xl"
+              className="w-full max-w-lg rounded-2xl border border-border-dashed bg-surface p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-red-700 w-fit">
                 Confirm Deletion
               </div>
-              <h3 className="mt-4 text-2xl font-black tracking-tight text-[#1f3427]">
+              <h3 className="mt-4 text-2xl font-black tracking-tight text-foreground">
                 Delete this work request?
               </h3>
               <p className="mt-3 text-sm leading-6 text-gray-600">
@@ -620,7 +633,7 @@ export default function TasksPage() {
 
 function Info({ label, value }) {
   return (
-    <div className="rounded-xl border border-border-soft bg-[#f8f4ea] px-4 py-3">
+    <div className="rounded-xl border border-border-soft bg-surface-warm px-4 py-3">
       <div className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-500">{label}</div>
       <div className="text-sm font-medium text-gray-800">{value || "-"}</div>
     </div>

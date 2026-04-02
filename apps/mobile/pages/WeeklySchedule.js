@@ -107,12 +107,18 @@ export default function WeeklySchedule() {
         <Pressable
           onPress={() => setShowMineOnly(true)}
           style={[styles.toggleChip, showMineOnly && styles.toggleChipActive]}
+          accessibilityRole="button"
+          accessibilityLabel="Show my schedule"
+          accessibilityState={{ selected: showMineOnly }}
         >
           <Text style={[styles.toggleText, showMineOnly && styles.toggleTextActive]}>My schedule</Text>
         </Pressable>
         <Pressable
           onPress={() => setShowMineOnly(false)}
           style={[styles.toggleChip, !showMineOnly && styles.toggleChipActive]}
+          accessibilityRole="button"
+          accessibilityLabel="Show all events"
+          accessibilityState={{ selected: !showMineOnly }}
         >
           <Text style={[styles.toggleText, !showMineOnly && styles.toggleTextActive]}>All events</Text>
         </Pressable>

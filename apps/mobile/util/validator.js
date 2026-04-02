@@ -1,4 +1,4 @@
-export const validateReferenceNumnber = (req) => {
+export const validateReferenceNumber = (req) => {
   if (!req || req.trim() === "") {
     return false;
   }
@@ -101,7 +101,7 @@ export const validateLocation = (text) => {
 };
 
 export const validateWorkRequest = (requestForm) => {
-  if (!validateReferenceNumnber(requestForm.referenceNumber)) {
+  if (!validateReferenceNumber(requestForm.referenceNumber)) {
     return { result: false, message: "Please input valid referenceNumber!" };
   }
   if (!validateTechName(requestForm.techName)) {

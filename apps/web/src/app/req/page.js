@@ -198,10 +198,10 @@ export default function ReqPage() {
       <section className="mb-6 rounded-card border border-border-soft bg-surface p-6 shadow-soft">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="theme-tag w-fit rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.18em]">
+            <div className="w-fit rounded-full bg-surface-muted px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-foreground">
               Request Intake
             </div>
-            <h2 className="theme-title mt-4 text-2xl font-black tracking-tight">
+            <h2 className="mt-4 text-2xl font-black tracking-tight text-foreground">
               Create Work Request
             </h2>
             <p className="theme-copy mt-2 max-w-2xl text-sm leading-6">
@@ -209,12 +209,12 @@ export default function ReqPage() {
             </p>
           </div>
 
-          <div className="theme-panel-muted min-w-[220px] rounded-2xl border px-4 py-4">
-            <div className="theme-copy text-xs font-bold uppercase tracking-[0.18em]">
+          <div className="min-w-[220px] rounded-2xl border border-border-soft bg-surface-warm px-4 py-4">
+            <div className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">
               Generated Reference
             </div>
-            <div className="theme-title mt-2 text-lg font-black">{generatedRef}</div>
-            <div className="theme-copy mt-1 text-sm">Request date {today}</div>
+            <div className="mt-2 text-lg font-black text-foreground">{generatedRef}</div>
+            <div className="mt-1 text-sm text-gray-600">Request date {today}</div>
           </div>
         </div>
       </section>
@@ -232,25 +232,24 @@ export default function ReqPage() {
                     <input
                       name="referenceNumber"
                       defaultValue={generatedRef}
-                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
                       required
                     />
                   </Field>
                   <Field label="Date" required>
-                    <input type="hidden" name="requestDate" value={today} />
-                    <div className="theme-panel-muted rounded-xl border px-3 py-2.5 theme-title">
-                      {today}
-                    </div>
-                    <span className="theme-copy mt-1 text-xs">
-                      Requests are always stamped with the current day.
-                    </span>
+                    <input
+                      type="date"
+                      name="requestDate"
+                      defaultValue={today}
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
+                      required
+                    />
                   </Field>
                   <Field label="Tech Name" required>
                     <input
                       name="techName"
-                      value={currentEmployeeName}
-                      readOnly
-                      className="theme-panel-muted theme-title rounded-xl border px-3 py-2.5 outline-none"
+                      placeholder="Magnus"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
                       required
                     />
                     <span className="theme-copy mt-1 text-xs">
@@ -262,7 +261,7 @@ export default function ReqPage() {
                       name="account"
                       maxLength={REQ_LIMITS.account}
                       placeholder="Inter Pipeline"
-                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
                       required
                     />
                   </Field>
@@ -271,7 +270,7 @@ export default function ReqPage() {
                       name="accountContact"
                       maxLength={REQ_LIMITS.accountContact}
                       placeholder="Georgia Blevins"
-                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
                     />
                   </Field>
                   <Field label="Account Address">
@@ -280,8 +279,7 @@ export default function ReqPage() {
                       name="accountAddress"
                       maxLength={REQ_LIMITS.accountAddress}
                       placeholder="123 Sesame St."
-                      autoComplete="street-address"
-                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
                     />
                     <span className="theme-copy mt-1 text-xs">
                       Browser autofill works now. Google Places autocomplete will turn on when `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set.
@@ -292,8 +290,7 @@ export default function ReqPage() {
                       name="actionRequired"
                       maxLength={REQ_LIMITS.actionRequired}
                       placeholder="Soil top up"
-                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400"
-                      required
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
                     />
                   </Field>
                 </div>
@@ -305,16 +302,16 @@ export default function ReqPage() {
               >
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label="Number of Plants">
-                    <input type="number" min="0" name="numberOfPlants" placeholder="4" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                    <input type="number" min="0" name="numberOfPlants" placeholder="4" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
                   </Field>
                   <Field label="Plant Wanted">
-                    <input name="plantWanted" maxLength={REQ_LIMITS.plantWanted} placeholder="Aglaonema" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                    <input name="plantWanted" placeholder="Aglaonema" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
                   </Field>
                   <Field label="Plant Replaced">
-                    <input name="plantReplaced" maxLength={REQ_LIMITS.plantReplaced} placeholder="Aglaonema" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                    <input name="plantReplaced" placeholder="Aglaonema" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
                   </Field>
                   <Field label="Plant Size">
-                    <select name="plantSize" defaultValue="3 Gal" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400">
+                    <select name="plantSize" defaultValue="3 Gal" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40">
                       <option>1 Gal</option>
                       <option>2 Gal</option>
                       <option>3 Gal</option>
@@ -322,7 +319,7 @@ export default function ReqPage() {
                     </select>
                   </Field>
                   <Field label="Plant Height">
-                    <select name="plantHeight" defaultValue="Shorter than 2 feet" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400">
+                    <select name="plantHeight" defaultValue="Shorter than 2 feet" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40">
                       <option>Shorter than 2 feet</option>
                       <option>2-4 feet</option>
                       <option>4-6 feet</option>
@@ -330,13 +327,13 @@ export default function ReqPage() {
                     </select>
                   </Field>
                   <Field label="Planter Type and Size">
-                    <input name="planterTypeSize" maxLength={REQ_LIMITS.planterTypeSize} placeholder="Lechuza 40" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                    <input name="planterTypeSize" placeholder="Lechuza 40" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
                   </Field>
                   <Field label="Planter Colour">
-                    <input name="planterColour" maxLength={REQ_LIMITS.planterColour} placeholder="White" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                    <input name="planterColour" placeholder="White" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
                   </Field>
                   <Field label="Staging Material" className="md:col-span-2">
-                    <input name="stagingMaterial" maxLength={REQ_LIMITS.stagingMaterial} placeholder="Grey Spanish Moss" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                    <input name="stagingMaterial" placeholder="Grey Spanish Moss" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
                   </Field>
                 </div>
               </FormSection>
@@ -349,20 +346,20 @@ export default function ReqPage() {
               >
                 <div className="grid grid-cols-1 gap-4">
                   <Field label="Lighting">
-                    <select name="lighting" defaultValue="Medium" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400">
+                    <select name="lighting" defaultValue="Medium" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40">
                       <option>Low</option>
                       <option>Medium</option>
                       <option>High</option>
                     </select>
                   </Field>
                   <Field label="Method">
-                    <input name="method" maxLength={REQ_LIMITS.method} placeholder="Use spade to insert soil" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                    <input name="method" placeholder="Use spade to insert soil" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
                   </Field>
                   <Field label="Location">
-                    <input name="location" maxLength={REQ_LIMITS.location} placeholder="Lobby" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                    <input name="location" placeholder="Lobby" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
                   </Field>
                   <Field label="Notes">
-                    <textarea name="notes" rows={4} maxLength={REQ_LIMITS.notes} placeholder="Bring key to get into building" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-emerald-400 placeholder:text-gray-400" />
+                    <textarea name="notes" rows={4} placeholder="Bring key to get into building" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
                   </Field>
                 </div>
               </FormSection>
@@ -375,12 +372,12 @@ export default function ReqPage() {
                   type="file"
                   name="picture"
                   accept="image/*"
-                  className="rounded-xl border border-border-soft bg-white text-gray-900 file:mr-4 file:rounded-xl file:border-0 file:bg-emerald-700 file:px-4 file:py-2.5 file:font-semibold file:text-white hover:file:bg-emerald-800"
+                  className="rounded-xl border border-border-soft bg-white text-gray-900 file:mr-4 file:rounded-xl file:border-0 file:bg-brand-700 file:px-4 file:py-2.5 file:font-semibold file:text-white hover:file:bg-brand-800"
                 />
               </FormSection>
 
-              <div className="theme-panel-muted rounded-2xl border p-5">
-                <h4 className="theme-title text-sm font-black uppercase tracking-[0.16em]">
+              <div className="rounded-2xl border border-border-soft bg-surface-warm p-5">
+                <h4 className="text-sm font-black uppercase tracking-[0.16em] text-foreground">
                   Submission Flow
                 </h4>
                 <ul className="theme-copy mt-3 space-y-2 text-sm leading-6">
@@ -412,8 +409,8 @@ export default function ReqPage() {
               </button>
               <button
                 type="submit"
-                disabled={submitting || loadingEmployee || !currentEmployeeName}
-                className="inline-flex items-center rounded-xl bg-emerald-700 px-5 py-2.5 font-semibold text-white shadow hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={submitting}
+                className="inline-flex items-center rounded-xl bg-brand-700 px-5 py-2.5 font-semibold text-white shadow hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Submitting..." : "Submit REQ"}
               </button>
@@ -427,9 +424,9 @@ export default function ReqPage() {
 
 function FormSection({ title, description, children }) {
   return (
-    <div className="theme-panel rounded-2xl border p-5">
-      <h3 className="theme-title text-lg font-black tracking-tight">{title}</h3>
-      <p className="theme-copy mt-1 text-sm leading-6">{description}</p>
+    <div className="rounded-2xl border border-border-soft bg-surface p-5">
+      <h3 className="text-lg font-black tracking-tight text-foreground">{title}</h3>
+      <p className="mt-1 text-sm leading-6 text-gray-600">{description}</p>
       <div className="mt-4">{children}</div>
     </div>
   );

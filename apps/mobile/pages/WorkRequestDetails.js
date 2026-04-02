@@ -155,7 +155,7 @@ export default function WorkRequestDetails({ route, navigation }) {
           </View>
 
           <Pressable onPress={() => navigation.goBack()} style={styles.closeButton}>
-            <Text style={styles.closeButtonText}>Back to queue</Text>
+            <Text style={styles.closeButtonText}>Back</Text>
           </Pressable>
         </>
       ) : null}
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   },
   heroStatusText: {
     color: COLORS.textPrimary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.8,
     textTransform: "uppercase",
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     color: COLORS.textMuted,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.8,

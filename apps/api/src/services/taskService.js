@@ -182,10 +182,25 @@ async function ensureEmployeeExists(employeeId) {
  * GET all tasks
  * Backed by work_reqs rows that are already in the task lifecycle.
  */
-async function getTasks(scope = null) {
+async function getTasks(scope = null, employeeId = null) {
   // `assignment` scope intentionally includes unassigned work requests so
   // managers can assign them through the existing `/tasks` UI.
   const includeUnassigned = scope === "assignment";
+  const statusClause = includeUnassigned
+    ? "status IN ('unassigned', 'assigned', 'in_progress', 'completed', 'cancelled')"
+    : "status IN ('assigned', 'in_progress', 'completed', 'cancelled')";
+
+  // scope and employeeId are independent filters.
+  // scope controls which statuses are included; employeeId limits to one employee's rows.
+  // Unassigned rows have assignedTo = NULL, so the employeeId clause naturally excludes them.
+  const conditions = [statusClause];
+  const params = [];
+
+  if (employeeId) {
+    conditions.push("assignedTo = ?");
+    params.push(employeeId);
+  }
+
   const sql = `
     SELECT
       id,
@@ -201,15 +216,11 @@ async function getTasks(scope = null) {
       created_at,
       updated_at
     FROM ${WORK_REQS_TABLE}
-    WHERE ${
-      includeUnassigned
-        ? "status IN ('unassigned', 'assigned', 'in_progress', 'completed', 'cancelled')"
-        : "status IN ('assigned', 'in_progress', 'completed', 'cancelled')"
-    }
+    WHERE ${conditions.join(" AND ")}
     ORDER BY updated_at DESC, id DESC
   `;
 
-  const [rows] = await db.query(sql);
+  const [rows] = await db.query(sql, params);
   return rows.map(mapWorkReqToTask);
 }
 
@@ -422,8 +433,44 @@ async function assignTask(id, assignment) {
   return getTaskById(taskId);
 }
 
+async function getTasksPaginated(scope = null, employeeId = null, limit, offset) {
+  const includeUnassigned = scope === "assignment";
+  const statusClause = includeUnassigned
+    ? "status IN ('unassigned', 'assigned', 'in_progress', 'completed', 'cancelled')"
+    : "status IN ('assigned', 'in_progress', 'completed', 'cancelled')";
+  const conditions = [statusClause];
+  const params = [];
+
+  if (employeeId) {
+    conditions.push("assignedTo = ?");
+    params.push(employeeId);
+  }
+
+  const whereClause = conditions.join(" AND ");
+
+  const [countResult] = await db.query(
+    `SELECT COUNT(*) as total FROM ${WORK_REQS_TABLE} WHERE ${whereClause}`,
+    params,
+  );
+  const totalCount = countResult[0].total;
+
+  const [rows] = await db.query(
+    `SELECT
+      id, referenceNumber, requestDate, actionRequired, account, location,
+      status, assignedTo, notes, dueDate, created_at, updated_at
+    FROM ${WORK_REQS_TABLE}
+    WHERE ${whereClause}
+    ORDER BY updated_at DESC, id DESC
+    LIMIT ? OFFSET ?`,
+    [...params, limit, offset],
+  );
+
+  return { rows: rows.map(mapWorkReqToTask), totalCount };
+}
+
 module.exports = {
   getTasks,
+  getTasksPaginated,
   getTaskById,
   createTask,
   updateTaskStatus,

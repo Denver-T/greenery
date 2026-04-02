@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import {
   Alert,
   Image,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -39,6 +38,7 @@ function Field({ label, value, onChangeText, placeholder, multiline = false }) {
         onChangeText={onChangeText}
         multiline={multiline}
         numberOfLines={multiline ? 4 : 1}
+        accessibilityLabel={label}
       />
     </View>
   );
@@ -139,8 +139,8 @@ export default function WorkRequestSubmit() {
       if (response?.ok) {
         Alert.alert("Request submitted", "The new work request has been saved.", [
           {
-            text: "Open queue",
-            onPress: () => navigation.navigate("WorkRequestView"),
+            text: "Back to dashboard",
+            onPress: () => navigation.navigate("Dashboard"),
           },
         ]);
       } else {
@@ -183,7 +183,6 @@ export default function WorkRequestSubmit() {
       title="Log field work"
       subtitle="Capture the details needed to hand off the request clearly."
     >
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Request basics</Text>
 
@@ -192,7 +191,7 @@ export default function WorkRequestSubmit() {
             <Text style={styles.referenceValue}>{referenceNumber}</Text>
           </View>
 
-          <Pressable style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+          <Pressable style={styles.dateButton} onPress={() => setShowDatePicker(true)} accessibilityRole="button" accessibilityLabel={`Request date: ${requestDateLabel}`}>
             <Text style={styles.dateLabel}>Request date</Text>
             <Text style={styles.dateValue}>{requestDateLabel}</Text>
           </Pressable>
@@ -247,7 +246,7 @@ export default function WorkRequestSubmit() {
           <Text style={styles.sectionTitle}>Notes and photo</Text>
           <Field label="Notes" value={notes} onChangeText={setNotes} placeholder="Extra detail for the next technician or manager" multiline />
 
-          <Pressable style={styles.photoButton} onPress={handlePhotoUpload}>
+          <Pressable style={styles.photoButton} onPress={handlePhotoUpload} accessibilityRole="button" accessibilityLabel={photoUri ? "Replace photo" : "Attach photo"}>
             <MaterialCommunityIcons name="camera-plus-outline" size={18} color={COLORS.forestDeep} />
             <Text style={styles.photoButtonText}>{photoUri ? "Replace photo" : "Attach photo"}</Text>
           </Pressable>
@@ -256,14 +255,13 @@ export default function WorkRequestSubmit() {
         </View>
 
         <View style={styles.actionRow}>
-          <Pressable style={styles.secondaryButton} onPress={() => navigation.goBack()}>
+          <Pressable style={styles.secondaryButton} onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Cancel">
             <Text style={styles.secondaryButtonText}>Cancel</Text>
           </Pressable>
-          <Pressable style={styles.primaryButton} onPress={handleSubmit} disabled={submitting}>
+          <Pressable style={styles.primaryButton} onPress={handleSubmit} disabled={submitting} accessibilityRole="button" accessibilityLabel={submitting ? "Submitting request" : "Submit request"}>
             <Text style={styles.primaryButtonText}>{submitting ? "Submitting..." : "Submit request"}</Text>
           </Pressable>
         </View>
-      </KeyboardAvoidingView>
     </MobileScaffold>
   );
 }
@@ -292,7 +290,7 @@ const styles = StyleSheet.create({
   },
   referenceLabel: {
     color: COLORS.textMuted,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.8,
@@ -313,7 +311,7 @@ const styles = StyleSheet.create({
   },
   dateLabel: {
     color: COLORS.textMuted,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.8,

@@ -11,6 +11,7 @@ const db = require("../db");
 const { verifyToken } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/authorize");
 const { writeLimiter } = require("../middleware/rateLimiters");
+const { parsePagination, paginatedResponse } = require("../utils/pagination");
 
 const router = express.Router();
 
@@ -148,7 +149,7 @@ async function getAuthenticatedEmployeeName(req) {
   }
 
   const [rows] = await db.query(
-    `SELECT name FROM employees WHERE LOWER(email) = LOWER(?) LIMIT 1`,
+    `SELECT name FROM employees WHERE email = ? LIMIT 1`,
     [email]
   );
 
@@ -330,30 +331,37 @@ router.get(
   authorize("technician", "manager", "admin"),
   async (req, res, next) => {
     try {
+      const pagination = parsePagination(req.query);
+      if (pagination) {
+        const [countResult] = await db.query(
+          `SELECT COUNT(*) as total FROM work_reqs WHERE referenceNumber LIKE 'REQ-%'`,
+        );
+        const [rows] = await db.query(
+          `SELECT
+            id, referenceNumber, requestDate, techName, account, actionRequired,
+            location, picturePath, assignedTo, dueDate, status, created_at
+          FROM work_reqs
+          WHERE referenceNumber LIKE 'REQ-%'
+          ORDER BY id DESC
+          LIMIT ? OFFSET ?`,
+          [pagination.pageSize, pagination.offset],
+        );
+        return res.json(paginatedResponse(rows, countResult[0].total, pagination.page, pagination.pageSize));
+      }
+
       const [rows] = await db.query(
         `SELECT
-          id,
-          referenceNumber,
-          requestDate,
-          techName,
-          account,
-          actionRequired,
-          location,
-          picturePath,
-          assignedTo,
-          dueDate,
-          status,
-          created_at
+          id, referenceNumber, requestDate, techName, account, actionRequired,
+          location, picturePath, assignedTo, dueDate, status, created_at
         FROM work_reqs
         WHERE referenceNumber LIKE 'REQ-%'
-        ORDER BY id DESC`
+        ORDER BY id DESC`,
       );
-
       return res.json({ data: rows });
     } catch (err) {
       return next(err);
     }
-  }
+  },
 );
 
 /**

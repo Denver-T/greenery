@@ -6,6 +6,7 @@
 const taskService = require("../services/taskService");
 const { httpError } = require("../utils/httpError");
 const { isNonEmptyString, toPositiveInt } = require("../utils/validators");
+const { parsePagination, paginatedResponse } = require("../utils/pagination");
 
 const VALID_STATUSES = ["assigned", "in_progress", "completed", "cancelled"];
 
@@ -200,13 +201,14 @@ function validateAndNormalizeAssignPayload(body) {
  */
 async function getTasks(req, res, next) {
   try {
-    // `scope=assignment` is used by the web assignment UI to include unassigned work requests.
     const scope = typeof req.query?.scope === "string" ? req.query.scope.trim() : null;
+    const pagination = parsePagination(req.query);
+    if (pagination) {
+      const { rows, totalCount } = await taskService.getTasksPaginated(scope, null, pagination.pageSize, pagination.offset);
+      return res.status(200).json(paginatedResponse(rows, totalCount, pagination.page, pagination.pageSize));
+    }
     const tasks = await taskService.getTasks(scope);
-
-    return res.status(200).json({
-      data: tasks,
-    });
+    return res.status(200).json({ data: tasks });
   } catch (err) {
     return next(err);
   }
@@ -317,8 +319,31 @@ async function assignTask(req, res, next) {
   }
 }
 
+/**
+ * GET /auth/my-tasks
+ * Returns only tasks assigned to the authenticated user.
+ */
+async function getMyTasks(req, res, next) {
+  try {
+    const employeeId = req.user?.employeeId || null;
+
+    if (!employeeId) {
+      return res.status(200).json({ data: [] });
+    }
+
+    const tasks = await taskService.getTasks(null, employeeId);
+
+    return res.status(200).json({
+      data: tasks,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getTasks,
+  getMyTasks,
   createTask,
   getTaskById,
   updateTaskStatus,

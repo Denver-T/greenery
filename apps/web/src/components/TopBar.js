@@ -9,7 +9,7 @@ export default function TopBar({ title }) {
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
           Greenery Operations
         </p>
-        <h1 className="mt-1 text-[24px] font-black tracking-tight text-[#1f3427] dark:text-[#f1ece3]">
+        <h1 className="mt-1 text-[24px] font-black tracking-tight text-foreground">
           {title ?? "Page Title"}
         </h1>
       </div>

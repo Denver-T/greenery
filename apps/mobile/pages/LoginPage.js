@@ -42,7 +42,7 @@ export default function LoginPage() {
       await login(email.trim(), password);
       navigation.reset({
         index: 0,
-        routes: [{ name: "HomePage" }],
+        routes: [{ name: "Main" }],
       });
     } catch (err) {
       const code = err?.code || "";
@@ -175,7 +175,7 @@ export default function LoginPage() {
               accessibilityLabel="Sign In"
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={COLORS.textOnBrand} />
               ) : (
                 <Text style={styles.primaryText}>Sign In</Text>
               )}
@@ -232,13 +232,13 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginBottom: 10,
     borderRadius: RADII.pill,
-    backgroundColor: "rgba(255, 252, 246, 0.9)",
+    backgroundColor: COLORS.surfaceHero,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   heroBadgeText: {
     color: COLORS.textPrimary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.8,
     textTransform: "uppercase",
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: RADII.md,
-    backgroundColor: "rgba(255, 252, 246, 0.96)",
+    backgroundColor: COLORS.surfaceGlass,
     padding: 8,
     marginRight: 14,
   },
@@ -276,8 +276,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   brandEyebrow: {
-    color: "rgba(247, 248, 243, 0.74)",
-    fontSize: 11,
+    color: COLORS.textHeroMuted,
+    fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1.1,
     textTransform: "uppercase",
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   },
   brandSubtitle: {
     marginTop: 14,
-    color: "rgba(247, 248, 243, 0.86)",
+    color: COLORS.textHeroLabel,
     fontSize: 14,
     lineHeight: 21,
   },
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: COLORS.textPrimary,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.8,
     textTransform: "uppercase",
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 4,
   },
-  primaryText: { color: "#fff", fontSize: 17, fontWeight: "800" },
+  primaryText: { color: COLORS.textOnBrand, fontSize: 17, fontWeight: "800" },
   secondaryBtn: {
     marginTop: 12,
     height: 50,

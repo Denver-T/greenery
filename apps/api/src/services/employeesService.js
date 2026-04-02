@@ -131,6 +131,16 @@ async function listEmployees() {
   return rows;
 }
 
+async function listEmployeesPaginated(limit, offset) {
+  const [countResult] = await db.query(`SELECT COUNT(*) as total FROM employees`);
+  const totalCount = countResult[0].total;
+  const [rows] = await db.query(
+    `${BASE_SELECT} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`,
+    [limit, offset],
+  );
+  return { rows, totalCount };
+}
+
 async function getEmployeeById(id) {
   const [rows] = await db.query(`${BASE_SELECT} WHERE id = ? LIMIT 1`, [id]);
   return rows[0] || null;
@@ -138,7 +148,7 @@ async function getEmployeeById(id) {
 
 async function getEmployeeByEmail(email) {
   const [rows] = await db.query(
-    `${BASE_SELECT} WHERE LOWER(email) = LOWER(?) LIMIT 1`,
+    `${BASE_SELECT} WHERE email = ? LIMIT 1`,
     [email],
   );
   return rows[0] || null;
@@ -196,6 +206,7 @@ async function deleteEmployee(id) {
 
 module.exports = {
   listEmployees,
+  listEmployeesPaginated,
   getEmployeeById,
   getEmployeeByEmail,
   createEmployee,

@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [resetSent, setResetSent] = useState(false);
 
   function translateFirebaseError(code) {
     switch (code) {
@@ -97,10 +98,11 @@ export default function LoginPage() {
       return;
     }
     setError("");
+    setResetSent(false);
     setLoading(true);
     try {
       await sendPasswordResetEmail(auth, email);
-      alert("If that email exists, a reset link has been sent.");
+      setResetSent(true);
     } catch (err) {
       setError(translateFirebaseError(err?.code));
     } finally {
@@ -167,6 +169,7 @@ export default function LoginPage() {
           </div>
 
           {error ? <div style={styles.error}>{error}</div> : null}
+          {resetSent ? <p style={{ color: "var(--brand-700)", marginTop: 8, fontSize: 14 }}>If that email exists, a reset link has been sent.</p> : null}
 
           <button
             disabled={loading}
@@ -209,8 +212,7 @@ const styles = {
       "linear-gradient(145deg, #1f3427 0%, #294733 42%, #5f7d4b 100%)",
     position: "relative",
     overflow: "hidden",
-    fontFamily:
-      'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
+    fontFamily: 'var(--font-sans)',
   },
   bgOverlay: {
     position: "absolute",

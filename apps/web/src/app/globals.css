@@ -39,7 +39,20 @@
   --color-brand-700: var(--brand-700);
   --color-accent: var(--accent);
   --color-muted: var(--muted);
-  --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /* surface variants for hardcoded hex replacement */
+  --color-surface-warm: #f8f4ea;
+  --color-surface-warm-alt: #faf8f2;
+  --color-badge-green: #e6f3ea;
+  --color-border-dashed: #d5ddc8;
+
+  /* brand variants for emerald replacement */
+  --color-brand-300: #a3c290;
+  --color-brand-600: #6b8b57;
+  --color-brand-800: #3d5a30;
+
+  /* optional fonts (if you wire them in layout.js) */
+  --font-sans: "Space Grotesk", "Segoe UI", "Helvetica Neue", sans-serif;
   --font-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --radius-card: 12px;
 }
@@ -86,18 +99,18 @@ button {
 }
 
 :is(input, textarea, select) {
-  color: #111827;
+  color: var(--foreground);
   border-color: var(--border-strong);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 
 :is(input, textarea)::placeholder {
-  color: #9ca3af;
+  color: var(--muted);
 }
 
 :is(input, textarea, select):disabled,
 :is(input, textarea, select)[readonly] {
-  color: #6b7280;
+  color: var(--muted);
 }
 
 .dark :is(input, textarea, select) {
@@ -175,11 +188,11 @@ button {
 }
 
 .theme-title {
-  color: #1f3427;
+  color: var(--brand-700);
 }
 
 .theme-copy {
-  color: #4b5563;
+  color: var(--muted);
 }
 
 .theme-kpi {
@@ -187,7 +200,7 @@ button {
 }
 
 .theme-subcard {
-  background: #fffdf7;
+  background: var(--surface);
   border-color: var(--border-strong);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.72) inset,
@@ -195,7 +208,7 @@ button {
 }
 
 .theme-panel {
-  background: #fffdf7;
+  background: var(--surface);
   border-color: var(--border-strong);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.75) inset,
@@ -203,7 +216,7 @@ button {
 }
 
 .theme-panel-muted {
-  background: #f8f4ea;
+  background: var(--surface-muted);
   border-color: var(--border-strong);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.68) inset,
@@ -211,8 +224,8 @@ button {
 }
 
 .theme-tag {
-  background: #f0ebde;
-  color: #1f3427;
+  background: var(--surface-muted);
+  color: var(--brand-700);
 }
 
 .theme-button {
@@ -291,9 +304,18 @@ button {
 }
 
 @utility field {
-  color: #111827;
+  color: var(--foreground);
 }
 
 @utility field-placeholder {
-  color: #9ca3af;
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
