@@ -32,7 +32,7 @@ async function ensurePlantSchema() {
   plantSchemaEnsured = true;
 }
 
-function buildGroupWhereClause(group) {
+function buildGroupWhereClause() {
   return `
     WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
       AND ((image_url IS NULL AND ? IS NULL) OR image_url = ?)

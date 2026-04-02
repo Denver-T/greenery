@@ -14,8 +14,24 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={`${spaceGrotesk.className} antialiased`}>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${spaceGrotesk.className} antialiased`}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var theme = localStorage.getItem("greenery-theme");
+                  var isDark = theme === "dark";
+                  document.documentElement.classList.toggle("dark", isDark);
+                  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

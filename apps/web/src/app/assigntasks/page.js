@@ -338,46 +338,66 @@ export default function AssignmentsPage() {
                 onClick={assignTasks}
                 disabled={!canAssign}
                 className={clsx(
-                  "mt-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-white",
-                  canAssign ? "bg-brand-700 hover:bg-brand-800" : "bg-brand-300"
+                  "w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white transition",
+                  canAssign ? "bg-emerald-600 hover:bg-emerald-500" : "bg-emerald-300"
                 )}
               >
                 {submitting ? "Assigning..." : `Assign ${selectedCount > 0 ? `(${selectedCount})` : ""}`}
               </button>
 
-              <div className="text-xs text-gray-600">{message}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-          <WorkspaceToolbar
-            left={
-              <div className="inline-flex gap-1 rounded-full bg-white p-1 shadow-soft" role="tablist">
-              {["unassigned", "assigned", "all"].map((key) => (
-                <button
-                  key={key}
-                  onClick={() => setFilter(key)}
-                  role="tab"
-                  aria-selected={filter === key}
-                  className={clsx(
-                    "rounded-full px-4 py-2 text-sm font-semibold capitalize",
-                    filter === key ? "bg-white text-foreground shadow-soft" : "text-gray-700"
-                  )}
-                >
-                  {key}
-                </button>
-              ))}
+              <div className={clsx("text-sm", dueDateError ? "text-red-500" : "theme-copy")}>
+                {dueDateError || message || "Pick an employee, choose requests, and send them to the schedule."}
               </div>
-            }
-            right={
-              <>
-              <input
-                placeholder="Search tasks..."
-                aria-label="Search tasks"
-                className="w-full rounded-xl border border-border-soft p-2.5 md:w-72"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+            </div>
+          </section>
+
+          <section className="space-y-6">
+            <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
+              <WorkspaceToolbar
+                left={
+                  <div className="inline-flex flex-wrap gap-1 rounded-full theme-panel-muted p-1 shadow-soft">
+                    {["unassigned", "assigned", "all"].map((key) => (
+                      <button
+                        key={key}
+                        onClick={() => setFilter(key)}
+                        className={clsx(
+                          "rounded-full px-4 py-2 text-sm font-semibold capitalize transition",
+                          filter === key ? "bg-white theme-title shadow-soft" : "theme-copy"
+                        )}
+                      >
+                        {key}
+                      </button>
+                    ))}
+                  </div>
+                }
+                right={
+                  <>
+                    <div className="theme-panel-muted rounded-full px-4 py-2 text-sm font-semibold theme-title">
+                      {filteredTasks.length} in view
+                    </div>
+                    <div className="theme-panel-muted rounded-full px-4 py-2 text-sm font-semibold theme-title">
+                      {unassignedVisibleCount} ready
+                    </div>
+                    <input
+                      placeholder="Search tasks..."
+                      className="w-full rounded-xl border border-border-soft bg-white p-2.5 theme-copy shadow-soft md:w-72"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <button
+                      onClick={selectAllOnPage}
+                      className="theme-panel-muted rounded-xl px-3 py-2 text-sm font-semibold theme-title transition hover:opacity-90"
+                    >
+                      Select all
+                    </button>
+                    <button
+                      onClick={clearAll}
+                      className="theme-panel-muted rounded-xl px-3 py-2 text-sm font-semibold theme-title transition hover:opacity-90"
+                    >
+                      Clear
+                    </button>
+                  </>
+                }
               />
 
               {loading ? (
@@ -394,77 +414,68 @@ export default function AssignmentsPage() {
                     const assignedEmployeeName =
                       employees.find((employee) => Number(employee.id) === Number(task.assignedTo))?.name || task.assignedTo;
 
-                return (
-                  <li key={task.id} className="rounded-2xl border border-border-soft bg-surface p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-2">
-                        <input
-                          type="checkbox"
-                          className="mt-1"
-                          checked={checked}
-                          disabled={disabled}
-                          onChange={() => toggleSelect(task.id)}
-                        />
-                        <div>
-                          <div className="font-semibold text-foreground">{task.title}</div>
-                          <div className="text-sm text-gray-600">
-                            {[task.account, task.location].filter(Boolean).join(" - ") || "No account or location"}
-                          </div>
+                    return (
+                      <li
+                        key={task.id}
+                        className={clsx(
+                          "rounded-3xl border p-4 transition shadow-soft",
+                          checked
+                            ? "border-emerald-400 bg-emerald-50/60 ring-2 ring-emerald-300/40"
+                            : "theme-panel border-border-soft hover:border-emerald-300 hover:-translate-y-0.5"
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <label className="flex flex-1 cursor-pointer items-start gap-3">
+                            <input
+                              type="checkbox"
+                              className="mt-1"
+                              checked={checked}
+                              disabled={disabled}
+                              onChange={() => toggleSelect(task.id)}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <div className="font-semibold theme-title">{task.title}</div>
+                                {task.referenceNumber ? (
+                                  <div className="theme-panel-muted rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] theme-copy">
+                                    {task.referenceNumber}
+                                  </div>
+                                ) : null}
+                              </div>
+                              <div className="mt-2 text-sm theme-copy">
+                                {[task.account, task.location].filter(Boolean).join(" • ") || "No account or location"}
+                              </div>
 
-                          {task.assignedTo ? (
-                            <div className="mt-2 w-fit rounded-full bg-badge-green px-3 py-1 text-xs font-semibold text-brand-800">
-                              Assigned to {employees.find((employee) => Number(employee.id) === Number(task.assignedTo))?.name || task.assignedTo}
-                              {task.date ? ` - due ${task.date}` : ""}
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                {task.assignedTo ? (
+                                  <div className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900">
+                                    {assignedEmployeeName}
+                                    {task.date ? ` • due ${formatDateLabel(task.date)}` : ""}
+                                  </div>
+                                ) : (
+                                  <div className="theme-panel-muted rounded-full px-3 py-1 text-xs font-semibold theme-title">
+                                    Ready to assign
+                                  </div>
+                                )}
+                                {task.date ? (
+                                  <div className="theme-panel-muted rounded-full px-3 py-1 text-xs font-semibold theme-copy">
+                                    Due {formatDateLabel(task.date)}
+                                  </div>
+                                ) : null}
+                              </div>
                             </div>
-                          ) : (
-                            <div className="mt-2 w-fit rounded-full bg-surface-muted px-3 py-1 text-xs font-semibold text-foreground">Unassigned</div>
+                          </label>
+
+                          {!!task.assignedTo && (
+                            <button
+                              onClick={() => unassignTask(task.id)}
+                              className="rounded-xl bg-white px-3 py-1.5 text-xs font-semibold theme-copy ring-1 ring-border-soft transition hover:opacity-90"
+                              title="Unassign"
+                            >
+                              Unassign
+                            </button>
                           )}
                         </div>
-                      </div>
-
-                      {!!task.assignedTo && (
-                        <button
-                          onClick={() => unassignTask(task.id)}
-                          className="rounded-xl bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
-                          title="Unassign"
-                        >
-                          Unassign
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-
-        <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-          <h2 className="mb-3 text-lg font-black text-foreground">Current Assignments</h2>
-
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {groupedByEmployee.map(({ employee, tasks: employeeTasks }) => (
-              <div key={employee.id} className="rounded-2xl border border-border-soft bg-surface p-4">
-                <div className="mb-2 font-semibold text-foreground">
-                  {employee.name} {employee.role ? `- ${employee.role}` : ""}
-                </div>
-
-                {employeeTasks.length === 0 ? (
-                  <div className="text-sm text-gray-500">No tasks.</div>
-                ) : (
-                  <ul className="space-y-2 text-sm">
-                    {employeeTasks.map((task) => (
-                      <li key={task.id} className="flex items-center justify-between gap-3">
-                        <div>
-                          <div className="text-gray-900">{task.title}</div>
-                          <div className="text-gray-500">{task.date ? `due ${task.date}` : ""}</div>
-                        </div>
-                        <button
-                          onClick={() => unassignTask(task.id)}
-                          className="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-800 hover:bg-gray-200"
-                        >
-                          Unassign
-                        </button>
                       </li>
                     );
                   })}

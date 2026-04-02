@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { fetchApi } from "@/lib/api/api";
 
-const EMPLOYEE_TEXT_LIMIT = 25;
+const EMPLOYEE_NAME_LIMIT = 30;
+const EMPLOYEE_EMAIL_LIMIT = 45;
 const EMPLOYEE_DEFAULT_FORM = {
   name: "",
   role: "Technician",
@@ -49,8 +50,8 @@ function validateEmployeeData(data) {
 
   if (!data.name || !data.name.trim()) {
     errors.name = "Name is required";
-  } else if (data.name.trim().length > EMPLOYEE_TEXT_LIMIT) {
-    errors.name = `Name must be ${EMPLOYEE_TEXT_LIMIT} characters or less`;
+  } else if (data.name.trim().length > EMPLOYEE_NAME_LIMIT) {
+    errors.name = `Name must be ${EMPLOYEE_NAME_LIMIT} characters or less`;
   }
 
   if (data.email && data.email.trim()) {
@@ -58,8 +59,8 @@ function validateEmployeeData(data) {
       /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     if (!emailRegex.test(data.email.trim())) {
       errors.email = "Please enter a valid email address";
-    } else if (data.email.trim().length > EMPLOYEE_TEXT_LIMIT) {
-      errors.email = `Email must be ${EMPLOYEE_TEXT_LIMIT} characters or less`;
+    } else if (data.email.trim().length > EMPLOYEE_EMAIL_LIMIT) {
+      errors.email = `Email must be ${EMPLOYEE_EMAIL_LIMIT} characters or less`;
     }
   }
 
@@ -121,8 +122,8 @@ function EmployeeDetailModal({
                 <span className="theme-title text-sm font-semibold">Name</span>
                 <input
                   value={form.name}
-                  maxLength={EMPLOYEE_TEXT_LIMIT}
-                  onChange={(event) => onChange("name", event.target.value.slice(0, EMPLOYEE_TEXT_LIMIT))}
+                  maxLength={EMPLOYEE_NAME_LIMIT}
+                  onChange={(event) => onChange("name", event.target.value.slice(0, EMPLOYEE_NAME_LIMIT))}
                   className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
                     errors.name ? "border-red-400" : "border-border-soft"
                   }`}
@@ -147,8 +148,8 @@ function EmployeeDetailModal({
                 <span className="theme-title text-sm font-semibold">Email</span>
                 <input
                   value={form.email}
-                  maxLength={EMPLOYEE_TEXT_LIMIT}
-                  onChange={(event) => onChange("email", event.target.value.slice(0, EMPLOYEE_TEXT_LIMIT))}
+                  maxLength={EMPLOYEE_EMAIL_LIMIT}
+                  onChange={(event) => onChange("email", event.target.value.slice(0, EMPLOYEE_EMAIL_LIMIT))}
                   className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
                     errors.email ? "border-red-400" : "border-border-soft"
                   }`}
@@ -251,17 +252,9 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState(null);
-
-  const [form, setForm] = useState({
-    name: "",
-    role: "Technician",
-    email: "",
-    phone: "",
-    status: "Active",
-    permissionLevel: "Technician",
-  });
-
+  const [search, setSearch] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [modalMode, setModalMode] = useState("view");
   const [formErrors, setFormErrors] = useState({});
 
   const [form, setForm] = useState(EMPLOYEE_DEFAULT_FORM);
@@ -400,8 +393,11 @@ export default function EmployeesPage() {
     }
   }
 
-  async function performDelete(id) {
-    setDeleteTarget(null);
+  async function deleteEmployee(id) {
+    if (!confirm("Delete this employee?")) {
+      return;
+    }
+
     setError("");
     setBusy(true);
     try {
@@ -430,251 +426,37 @@ export default function EmployeesPage() {
         <div className="theme-panel rounded-card border p-6 shadow-soft">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="w-fit rounded-full bg-surface-muted px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-foreground">
+              <div className="theme-tag w-fit rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.18em]">
                 Team Workspace
               </div>
-              <div className="mt-4 text-2xl font-black tracking-tight text-foreground">
-                Create New Employee
+              <div className="theme-title mt-4 text-3xl font-black tracking-tight">
+                Employee Management
               </div>
               <p className="theme-copy mt-2 max-w-2xl text-sm leading-6">
                 Manage staff from a cleaner card-based directory, then open a profile modal to edit or remove them.
               </p>
             </div>
-            <div className="rounded-2xl border border-border-soft bg-surface-warm px-4 py-4 text-sm text-gray-600">
+            <div className="theme-panel-muted rounded-[26px] border px-5 py-4 text-sm shadow-soft">
               <div>
-                <span className="font-semibold text-foreground">{employees.length}</span> total employees
+                <span className="theme-title font-semibold">{employees.length}</span> total employees
               </div>
               <div className="mt-1">
-                <span className="font-semibold text-foreground">
+                <span className="theme-title font-semibold">
                   {employees.filter((employee) => String(employee.status || "Active").toLowerCase() === "active").length}
                 </span>{" "}
                 active right now
               </div>
-              <div className="mt-3 rounded-xl border border-border-soft bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
+              <div className="theme-panel mt-3 rounded-xl border px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em]">
                 Access level: {currentUser?.permissionLevel || currentUser?.role || "Unknown"}
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="grid gap-1">
-              <span className="text-sm font-bold text-gray-700">Name</span>
-              <input
-                className={`rounded-xl border bg-white px-3 py-2.5 ${
-                  formErrors.name ? "border-red-500" : "border-border-soft"
-                }`}
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g., Magnus Mullen"
-              />
-              {formErrors.name && (
-                <span className="text-xs text-red-600">{formErrors.name}</span>
-              )}
-            </label>
-
-            <label className="grid gap-1">
-              <span className="text-sm font-bold text-gray-700">Role</span>
-              <select
-                className="rounded-xl border border-border-soft bg-white px-3 py-2.5"
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-              >
-                {getRoleOptions(form.role).map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="grid gap-1">
-              <span className="text-sm font-bold text-gray-700">Email</span>
-              <input
-                className={`rounded-xl border bg-white px-3 py-2.5 ${
-                  formErrors.email ? "border-red-500" : "border-border-soft"
-                }`}
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="example@greenery.ca"
-              />
-              {formErrors.email && (
-                <span className="text-xs text-red-600">{formErrors.email}</span>
-              )}
-            </label>
-
-            <label className="grid gap-1">
-              <span className="text-sm font-bold text-gray-700">Phone</span>
-              <input
-                className={`rounded-xl border bg-white px-3 py-2.5 ${
-                  formErrors.phone ? "border-red-500" : "border-border-soft"
-                }`}
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="555-555-5555"
-              />
-              {formErrors.phone && (
-                <span className="text-xs text-red-600">{formErrors.phone}</span>
-              )}
-            </label>
-
-            <label className="grid gap-1">
-              <span className="text-sm font-bold text-gray-700">Status</span>
-              <select
-                className="rounded-xl border border-border-soft bg-white px-3 py-2.5"
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-              >
-                <option>Active</option>
-                <option>Inactive</option>
-              </select>
-            </label>
-
-            <label className="grid gap-1">
-              <span className="text-sm font-bold text-gray-700">Permission Level</span>
-              <select
-                className="rounded-xl border border-border-soft bg-white px-3 py-2.5"
-                value={form.permissionLevel}
-                onChange={(e) =>
-                  setForm({ ...form, permissionLevel: e.target.value })
-                }
-              >
-                {getPermissionOptions(form.permissionLevel).map((option) => (
-                  <option key={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {!isSuperAdmin ? (
-            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              Team management is limited to technician accounts here. Use the dedicated Super Admin
-              workspace for administrator-level staffing and access changes.
-            </div>
-          ) : null}
-
-          <div className="mt-4 flex gap-3">
-            <button
-              className="rounded-xl bg-brand-700 px-4 py-2.5 font-extrabold text-white disabled:opacity-60"
-              disabled={busy || !form.name.trim()}
-              onClick={createEmployee}
-            >
-              {busy ? "Saving..." : "Create Employee"}
-            </button>
-
-            <button
-              className="rounded-xl border border-border-soft bg-white px-4 py-2.5 font-extrabold text-gray-800 disabled:opacity-60"
-              disabled={busy}
-              onClick={refresh}
-            >
-              Refresh
-            </button>
-          </div>
-        </div>
-
-        <div className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
-          <div className="mb-4 text-2xl font-black tracking-tight text-foreground">
-            Team Directory
-          </div>
-          <p className="mb-5 text-sm leading-6 text-gray-600">
-            View employee status, role access, and contact details from one consistent directory.
-          </p>
-
-          {loading ? (
-            <div className="text-gray-600">Loading...</div>
-          ) : employees.length === 0 ? (
-            <div className="text-gray-600">No employees found.</div>
-          ) : (
-            <div className="grid grid-cols-3 gap-4">
-              {employees.map((emp) => (
-                <div
-                  key={emp.id}
-                  className="rounded-2xl border border-border-soft bg-surface p-4 shadow-soft"
-                >
-                  <div className="mb-2 flex items-center gap-3">
-                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-surface-muted text-xl font-black text-foreground">
-                      {emp.name?.[0]?.toUpperCase() || "U"}
-                    </div>
-                    <div>
-                      <div className="text-lg font-extrabold text-foreground">
-                        {emp.name}
-                      </div>
-                      <div className="text-sm font-bold text-gray-600">
-                        {emp.role}
-                      </div>
-                      <div className="text-xs font-semibold text-gray-500">
-                        ID: {emp.id}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2 text-sm font-semibold text-gray-700">
-                    <div>
-                      Email: <span className="font-normal">{emp.email || "-"}</span>
-                    </div>
-                    <div>
-                      Phone: <span className="font-normal">{emp.phone || "-"}</span>
-                    </div>
-                    <div>
-                      Status: <span className="font-normal">{emp.status || "Active"}</span>
-                    </div>
-                    <div>
-                      Permission: <span className="font-normal">{emp.permissionLevel || emp.role}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      className="flex-1 rounded-xl border border-border-soft bg-white px-3 py-2.5 font-extrabold text-black disabled:opacity-60"
-                      disabled={busy}
-                      onClick={() => {
-                        setEditing({ ...emp });
-                        setEditErrors({});
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="flex-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 font-extrabold text-red-700 disabled:opacity-60"
-                      disabled={busy}
-                      onClick={() => setDeleteTarget(emp.id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                  {deleteTarget === emp.id && (
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={() => performDelete(emp.id)}
-                        className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white"
-                      >
-                        Confirm delete
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(null)}
-                        className="rounded-lg bg-surface-muted px-3 py-1.5 text-sm font-semibold text-foreground"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {editing ? (
-          <div
-            className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-6"
-            onClick={() => setEditing(null)}
-          >
-            <div
-              className="w-full max-w-2xl rounded-2xl border border-border-soft bg-surface p-6 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="mb-3 text-xl font-extrabold text-foreground">
-                Edit Employee
-              </div>
-              <p className="mb-4 text-sm text-gray-600">
-                Update role, contact info, status, and access level from one place.
+          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="theme-panel rounded-[26px] border p-5 shadow-soft">
+              <div className="theme-title text-lg font-black">Create New Employee</div>
+              <p className="theme-copy mt-1 text-sm">
+                Add staff members, roles, and access levels from one friendly panel.
               </p>
 
               <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -685,8 +467,8 @@ export default function EmployeesPage() {
                       formErrors.name ? "border-red-400" : "border-border-soft"
                     }`}
                     value={form.name}
-                    maxLength={EMPLOYEE_TEXT_LIMIT}
-                    onChange={(event) => updateCreateField("name", event.target.value.slice(0, EMPLOYEE_TEXT_LIMIT))}
+                    maxLength={EMPLOYEE_NAME_LIMIT}
+                    onChange={(event) => updateCreateField("name", event.target.value.slice(0, EMPLOYEE_NAME_LIMIT))}
                     placeholder="Matthew Belsham"
                   />
                   {formErrors.name ? <span className="text-xs text-red-600">{formErrors.name}</span> : null}
@@ -712,8 +494,8 @@ export default function EmployeesPage() {
                       formErrors.email ? "border-red-400" : "border-border-soft"
                     }`}
                     value={form.email}
-                    maxLength={EMPLOYEE_TEXT_LIMIT}
-                    onChange={(event) => updateCreateField("email", event.target.value.slice(0, EMPLOYEE_TEXT_LIMIT))}
+                    maxLength={EMPLOYEE_EMAIL_LIMIT}
+                    onChange={(event) => updateCreateField("email", event.target.value.slice(0, EMPLOYEE_EMAIL_LIMIT))}
                     placeholder="name@greenery.ca"
                   />
                   {formErrors.email ? <span className="text-xs text-red-600">{formErrors.email}</span> : null}

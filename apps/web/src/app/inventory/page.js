@@ -50,6 +50,15 @@ function getPlantImage(plant) {
   return `https://placehold.co/600x420/f3efe2/1f3427?text=${name}`;
 }
 
+function StatTile({ label, value }) {
+  return (
+    <div className="rounded-[22px] border border-[#e2dac8] bg-white px-4 py-4 dark:border-border-soft dark:bg-surface">
+      <div className="text-xs font-bold uppercase tracking-[0.16em] text-gray-500">{label}</div>
+      <div className="mt-2 text-lg font-black text-[#1f3427] dark:text-foreground">{value}</div>
+    </div>
+  );
+}
+
 function Kpi({ label, value, tone = "default" }) {
   const toneClasses =
     tone === "danger"
@@ -340,12 +349,20 @@ export default function InventoryPage() {
             </>
           }
           right={
-            <button
-              onClick={loadInventorySurface}
-              className="rounded-xl bg-brand-700 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800"
-            >
-              Refresh
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={openCreateModal}
+                className="rounded-2xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800"
+              >
+                Add Plant
+              </button>
+              <button
+                onClick={loadInventorySurface}
+                className="rounded-2xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-800"
+              >
+                Refresh
+              </button>
+            </div>
           }
         />
 
@@ -414,47 +431,47 @@ export default function InventoryPage() {
 
           <div className="space-y-6">
             <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-              <h3 className="text-lg font-bold text-foreground">Plant load by location</h3>
-
+              <h3 className="theme-title text-lg font-bold">Low stock watch</h3>
               {loading ? (
                 <p className="theme-copy mt-4 text-sm">Loading low stock...</p>
               ) : plants.filter((plant) => Number(plant.quantity || 0) <= 2).length === 0 ? (
                 <p className="theme-copy mt-4 text-sm">No low-stock plant groups right now.</p>
               ) : (
                 <div className="mt-4 space-y-3">
-                  {locationLoad.map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex items-center justify-between rounded-xl border border-border-soft bg-surface px-4 py-3"
-                    >
-                      <div className="font-medium text-foreground">{item.label}</div>
-                      <div className="text-sm font-semibold text-gray-600">
-                        {item.value} plant{item.value === 1 ? "" : "s"}
-                      </div>
-                    </div>
-                  ))}
+                  {plants
+                    .filter((plant) => Number(plant.quantity || 0) <= 2)
+                    .slice(0, 5)
+                    .map((plant) => (
+                      <button
+                        key={plant.id}
+                        type="button"
+                        onClick={() => setSelectedPlant(plant)}
+                        className="flex w-full items-center justify-between rounded-2xl border border-border-soft bg-surface px-4 py-3 text-left hover:bg-surface-muted"
+                      >
+                        <div>
+                          <div className="font-semibold text-foreground">{plant.name}</div>
+                          <div className="text-sm text-muted">{formatCurrency(plant.cost_per_unit)}</div>
+                        </div>
+                        <div className="text-sm font-bold text-red-600">
+                          {plant.quantity} left
+                        </div>
+                      </button>
+                    ))}
                 </div>
               )}
             </section>
 
             <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-              <h3 className="text-lg font-bold text-foreground">Plant-heavy requests</h3>
-              {loading ? (
-                <p className="mt-4 text-sm text-gray-600">Loading requests…</p>
-              ) : plantReqs.length === 0 ? (
-                <p className="mt-4 text-sm text-gray-600">No open plant-heavy requests are in the queue.</p>
+              <h3 className="theme-title text-lg font-bold">Most requested plants</h3>
+              {topRequestedPlants.length === 0 ? (
+                <p className="theme-copy mt-4 text-sm">No plant demand is showing up yet.</p>
               ) : (
                 <div className="mt-4 space-y-3">
-                  {plantReqs.slice(0, 5).map((req) => (
-                    <div
-                      key={req.id}
-                      className="rounded-xl border border-border-soft bg-surface px-4 py-3"
-                    >
-                      <div className="font-semibold text-foreground">
-                        {req.actionRequired || req.referenceNumber || "Plant request"}
-                      </div>
-                      <div className="mt-1 text-sm text-gray-600">
-                        {[req.account, req.location].filter(Boolean).join(" • ") || "No account or location"}
+                  {topRequestedPlants.map((item) => (
+                    <div key={item.label} className="theme-panel rounded-2xl border px-4 py-3">
+                      <div className="theme-title font-semibold">{item.label}</div>
+                      <div className="theme-copy mt-1 text-sm">
+                        Mentioned in {item.value} open req{item.value === 1 ? "" : "s"}
                       </div>
                     </div>
                   ))}
@@ -510,5 +527,329 @@ export default function InventoryPage() {
         />
       ) : null}
     </AppShell>
+  );
+}
+
+function InventoryModal({ plant, mode, form, formErrors, busy, onChange, onClose, onSave, onDelete }) {
+  const isEdit = mode === "edit";
+  const previewPlant = {
+    ...(plant || {}),
+    name: isEdit ? form.name : plant?.name,
+    image_url: isEdit ? form.imagePreview || form.imageUrl || plant?.image_url : plant?.image_url,
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/45 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-4xl overflow-hidden rounded-[32px] border border-border-soft bg-surface shadow-elevated-lg"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="grid max-h-[92vh] gap-0 overflow-y-auto md:grid-cols-[1.15fr_0.85fr]">
+          <div className="relative min-h-[280px] bg-surface-muted">
+            <img
+              src={getPlantImage(previewPlant)}
+              alt={isEdit ? form.name || "Plant preview" : plant?.name || "Plant"}
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#102218]/75 via-transparent to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+              <div className="w-fit rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] backdrop-blur">
+                Inventory Item
+              </div>
+              <h2 className="mt-3 text-3xl font-black tracking-tight">
+                {isEdit ? form.name || "Plant name" : plant?.name || "Unnamed plant"}
+              </h2>
+              <p className="mt-2 max-w-md text-sm text-white/85">
+                {isEdit
+                  ? "Update stock count, pricing, and display details for this grouped plant item."
+                  : "Check stock, pricing, and open edit mode to manage this plant type."}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col justify-between p-6">
+            {isEdit ? (
+              <div className="space-y-4">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-muted">
+                    Edit Inventory Item
+                  </div>
+                  <div className="mt-2 text-sm text-muted">
+                    Changes apply to this grouped plant type across the current inventory batch.
+                  </div>
+                </div>
+
+                <label className="grid gap-1.5">
+                  <span className="text-sm font-semibold text-foreground">Plant name</span>
+                  <input
+                    value={form.name}
+                    maxLength={PLANT_LIMITS.name}
+                    onChange={(event) => onChange("name", event.target.value.slice(0, PLANT_LIMITS.name))}
+                    className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
+                      formErrors.name ? "border-red-400" : "border-border-soft"
+                    }`}
+                    placeholder="Aglaonema Silver Bay"
+                  />
+                  {formErrors.name ? <span className="text-xs text-red-600">{formErrors.name}</span> : null}
+                </label>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="grid gap-1.5">
+                    <span className="text-sm font-semibold text-foreground">Cost per unit</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.costPerUnit}
+                      onChange={(event) => onChange("costPerUnit", event.target.value)}
+                      className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
+                        formErrors.costPerUnit ? "border-red-400" : "border-border-soft"
+                      }`}
+                      placeholder="34.99"
+                    />
+                    {formErrors.costPerUnit ? (
+                      <span className="text-xs text-red-600">{formErrors.costPerUnit}</span>
+                    ) : null}
+                  </label>
+
+                  <label className="grid gap-1.5">
+                    <span className="text-sm font-semibold text-foreground">Units on hand</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="500"
+                      value={form.quantity}
+                      onChange={(event) => onChange("quantity", event.target.value)}
+                      className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
+                        formErrors.quantity ? "border-red-400" : "border-border-soft"
+                      }`}
+                    />
+                    {formErrors.quantity ? (
+                      <span className="text-xs text-red-600">{formErrors.quantity}</span>
+                    ) : (
+                      <span className="text-xs text-muted">Adjust the grouped stock count here.</span>
+                    )}
+                  </label>
+                </div>
+
+                <label className="grid gap-1.5">
+                  <span className="text-sm font-semibold text-foreground">Image URL</span>
+                  <input
+                    value={form.imageUrl}
+                    maxLength={PLANT_LIMITS.imageUrl}
+                    onChange={(event) =>
+                      onChange("imageUrl", event.target.value.slice(0, PLANT_LIMITS.imageUrl))
+                    }
+                    className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
+                      formErrors.imageUrl ? "border-red-400" : "border-border-soft"
+                    }`}
+                    placeholder="https://..."
+                  />
+                  {formErrors.imageUrl ? (
+                    <span className="text-xs text-red-600">{formErrors.imageUrl}</span>
+                  ) : (
+                    <span className="text-xs text-muted">Paste a URL or upload an image file below.</span>
+                  )}
+                </label>
+
+                <label className="grid gap-1.5">
+                  <span className="text-sm font-semibold text-foreground">Upload image</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={(event) => onChange("imageFile", event.target.files?.[0] || null)}
+                    className="rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
+                  />
+                  <span className="text-xs text-muted">JPEG, PNG, or WEBP up to 5MB.</span>
+                </label>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-muted">
+                    Inventory Snapshot
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <StatTile label="Units on hand" value={String(plant?.quantity || 0)} />
+                    <StatTile label="Cost per unit" value={formatCurrency(plant?.cost_per_unit)} />
+                    <StatTile label="Plant id" value={`#${plant?.id ?? "-"}`} />
+                    <StatTile
+                      label="Last added"
+                      value={plant?.created_at ? String(plant.created_at).slice(0, 10) : "Unknown"}
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-[24px] border border-border-soft bg-surface-muted p-4">
+                  <div className="text-sm font-semibold text-foreground">Quick note</div>
+                  <p className="mt-2 text-sm leading-6 text-muted">
+                    Use edit mode to update stock quantity, cost, or replace the image with a direct upload.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <button
+                onClick={onClose}
+                className="w-full rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm font-bold text-foreground hover:bg-surface-muted sm:flex-1"
+              >
+                Close
+              </button>
+              {isEdit ? (
+                <button
+                  onClick={onSave}
+                  disabled={busy}
+                  className="w-full rounded-2xl bg-brand-700 px-4 py-3 text-sm font-bold text-white hover:bg-brand-800 disabled:opacity-60 sm:flex-1"
+                >
+                  {busy ? "Saving..." : "Save Plant"}
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={onSave}
+                    className="w-full rounded-2xl border border-border-soft bg-surface-muted px-4 py-3 text-sm font-bold text-foreground hover:bg-surface-warm sm:flex-1"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={onDelete}
+                    disabled={busy}
+                    className="w-full rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 hover:bg-red-100 disabled:opacity-60 sm:flex-1"
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddInventoryModal({ form, formErrors, busy, onChange, onClose, onSave }) {
+  const previewPlant = {
+    name: form.name,
+    image_url: form.imagePreview || form.imageUrl,
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-black/45 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-xl rounded-[30px] border border-border-soft bg-surface p-6 shadow-elevated-lg"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="theme-tag w-fit rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.16em]">
+          Inventory
+        </div>
+        <h3 className="theme-title mt-4 text-3xl font-black tracking-tight">Add New Plant Stock</h3>
+        <p className="theme-copy mt-2 text-sm leading-6">
+          Add a plant type, optional image, optional cost, and how many units are currently on hand.
+        </p>
+
+        <div className="mt-6 grid gap-4">
+          <label className="grid gap-1.5">
+            <span className="text-sm font-semibold text-foreground">Plant name</span>
+            <input
+              value={form.name}
+              maxLength={PLANT_LIMITS.name}
+              onChange={(event) => onChange("name", event.target.value.slice(0, PLANT_LIMITS.name))}
+              className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
+                formErrors.name ? "border-red-400" : "border-border-soft"
+              }`}
+              placeholder="Fiddle Leaf Fig"
+            />
+            {formErrors.name ? <span className="text-xs text-red-600">{formErrors.name}</span> : null}
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1.5">
+              <span className="text-sm font-semibold text-foreground">Quantity</span>
+              <input
+                type="number"
+                min="1"
+                max="500"
+                value={form.quantity}
+                onChange={(event) => onChange("quantity", event.target.value)}
+                className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
+                  formErrors.quantity ? "border-red-400" : "border-border-soft"
+                }`}
+                placeholder="6"
+              />
+              {formErrors.quantity ? <span className="text-xs text-red-600">{formErrors.quantity}</span> : null}
+            </label>
+
+            <label className="grid gap-1.5">
+              <span className="text-sm font-semibold text-foreground">Cost per unit</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.costPerUnit}
+                onChange={(event) => onChange("costPerUnit", event.target.value)}
+                className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
+                  formErrors.costPerUnit ? "border-red-400" : "border-border-soft"
+                }`}
+                placeholder="28.50"
+              />
+              {formErrors.costPerUnit ? (
+                <span className="text-xs text-red-600">{formErrors.costPerUnit}</span>
+              ) : null}
+            </label>
+          </div>
+
+          <label className="grid gap-1.5">
+            <span className="text-sm font-semibold text-foreground">Image URL</span>
+            <input
+              value={form.imageUrl}
+              maxLength={PLANT_LIMITS.imageUrl}
+              onChange={(event) => onChange("imageUrl", event.target.value.slice(0, PLANT_LIMITS.imageUrl))}
+              className={`rounded-2xl border bg-white px-4 py-3 text-sm ${
+                formErrors.imageUrl ? "border-red-400" : "border-border-soft"
+              }`}
+              placeholder="https://..."
+            />
+            {formErrors.imageUrl ? <span className="text-xs text-red-600">{formErrors.imageUrl}</span> : null}
+          </label>
+
+          <label className="grid gap-1.5">
+            <span className="text-sm font-semibold text-foreground">Upload image</span>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              onChange={(event) => onChange("imageFile", event.target.files?.[0] || null)}
+              className="rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
+            />
+            <span className="text-xs text-muted">Use this if you do not have an image URL.</span>
+          </label>
+
+          <div className="overflow-hidden rounded-[24px] border border-border-soft bg-surface-muted">
+            <img
+              src={getPlantImage(previewPlant)}
+              alt={form.name || "Plant preview"}
+              className="h-48 w-full object-cover"
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <button
+            onClick={onClose}
+            className="w-full rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm font-bold text-foreground hover:bg-surface-muted sm:flex-1"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSave}
+            disabled={busy}
+            className="w-full rounded-2xl bg-brand-700 px-4 py-3 text-sm font-bold text-white hover:bg-brand-800 disabled:opacity-60 sm:flex-1"
+          >
+            {busy ? "Saving..." : "Add to Inventory"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
