@@ -4,12 +4,12 @@ import ThemeToggle from "./ThemeToggle";
 
 export default function TopBar({ title }) {
   return (
-    <header className="flex items-center justify-between border-b border-border-soft/80 bg-surface/90 px-8 backdrop-blur dark:border-white/10 dark:bg-[#23262de0]">
+    <header className="flex items-center justify-between border-b border-border-soft/80 bg-surface/90 px-4 md:px-6 lg:px-8 backdrop-blur dark:border-white/10 dark:bg-[#23262de0]">
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
           Greenery Operations
         </p>
-        <h1 className="mt-1 text-[24px] font-black tracking-tight text-foreground">
+        <h1 className="mt-1 text-lg md:text-[24px] font-black tracking-tight text-foreground">
           {title ?? "Page Title"}
         </h1>
       </div>

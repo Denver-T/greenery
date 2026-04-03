@@ -357,7 +357,7 @@ export default function TasksPage() {
 
           {activeTab === "queue" && reqs.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse">
+              <table className="min-w-[640px] border-collapse">
                 <thead>
                   <tr className="border-b text-left text-sm font-bold text-gray-700">
                     <th className="px-3 py-3">Reference</th>

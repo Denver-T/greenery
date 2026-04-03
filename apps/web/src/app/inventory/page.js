@@ -70,7 +70,7 @@ function Kpi({ label, value, tone = "default" }) {
   return (
     <div className={`rounded-card border p-5 shadow-soft ${toneClasses}`}>
       <div className="text-sm font-medium text-muted">{label}</div>
-      <div className="mt-1 text-3xl font-black tracking-tight text-foreground">{value}</div>
+      <div className="mt-1 text-2xl md:text-3xl font-black tracking-tight text-foreground">{value}</div>
     </div>
   );
 }
@@ -385,7 +385,7 @@ export default function InventoryPage() {
           </div>
         ) : null}
 
-        <section className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <section className="grid grid-cols-2 gap-4 md:gap-6 md:grid-cols-3 [&>*:last-child]:col-span-2 md:[&>*:last-child]:col-span-1">
           <Kpi label="Inventory value" value={formatCurrency(totalInventoryValue)} tone="accent" />
           <Kpi label="Low stock groups" value={String(lowStockCount)} tone={lowStockCount > 0 ? "danger" : "default"} />
           <Kpi label="Request pressure leaders" value={String(topRequestedPlants.length)} />
@@ -416,7 +416,7 @@ export default function InventoryPage() {
                     onClick={() => setSelectedPlant(plant)}
                     className="group overflow-hidden rounded-[26px] border border-[#ded4bf] bg-white text-left shadow-soft transition duration-200 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(31,52,39,0.18)] dark:border-border-soft dark:bg-surface"
                   >
-                    <div className="relative h-44 overflow-hidden bg-[#ebe4cf] dark:bg-surface-muted">
+                    <div className="relative h-36 md:h-44 overflow-hidden bg-[#ebe4cf] dark:bg-surface-muted">
                       <img
                         src={getPlantImage(plant)}
                         alt={plant.name}

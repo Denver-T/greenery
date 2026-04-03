@@ -107,7 +107,7 @@ function Kpi({ label, value }) {
   return (
     <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
       <div className="text-sm font-medium text-muted">{label}</div>
-      <div className="mt-1 text-3xl font-black tracking-tight text-foreground">{value}</div>
+      <div className="mt-1 text-2xl md:text-3xl font-black tracking-tight text-foreground">{value}</div>
     </div>
   );
 }
@@ -450,13 +450,13 @@ export default function Page() {
             aria-labelledby="tab-operations"
             hidden={activeTab !== "operations"}
           >
-            <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-4">
+            <section className="mt-6 grid grid-cols-2 gap-4 md:gap-6 md:grid-cols-4">
               {data.kpis.map((k) => (
                 <Kpi key={k.label} label={k.label} value={k.value} />
               ))}
             </section>
 
-            <section className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+            <section className="mt-6 grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
               <ActionCard
                 title="Review request queue"
                 description={`${data.activeReqs.length} open request${data.activeReqs.length === 1 ? "" : "s"} currently need attention.`}
@@ -522,7 +522,7 @@ export default function Page() {
             ) : analytics ? (
               <div className="space-y-6 mt-6">
                 {/* Period Selector */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {PERIOD_OPTIONS.map((p) => (
                     <button
                       key={p}
@@ -539,7 +539,7 @@ export default function Page() {
                 </div>
 
                 {/* KPI Row */}
-                <section className="grid grid-cols-1 gap-6 md:grid-cols-4">
+                <section className="grid grid-cols-2 gap-4 md:gap-6 md:grid-cols-4">
                   <Kpi label="Plant Types" value={analytics.overview.types} />
                   <Kpi label="Units on Hand" value={analytics.overview.units} />
                   <Kpi label="Inventory Value" value={formatCurrency(analytics.overview.value)} />

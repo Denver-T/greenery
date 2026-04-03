@@ -126,7 +126,7 @@ export default function SuperAdminPage() {
               <div className="w-fit rounded-full bg-surface-muted px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-foreground">
                 Governance Workspace
               </div>
-              <h1 className="mt-4 text-3xl font-black tracking-tight text-foreground">
+              <h1 className="mt-4 text-2xl md:text-3xl font-black tracking-tight text-foreground">
                 Super Admin Control
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-600">
@@ -166,14 +166,14 @@ export default function SuperAdminPage() {
 
         {!loading && isSuperAdmin ? (
           <>
-            <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(360px,0.88fr)]">
+            <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.88fr)]">
               <section className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-xs font-bold uppercase tracking-[0.16em] text-gray-500">
                       Admin Promotions
                     </div>
-                    <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground">
+                    <h2 className="mt-2 text-xl md:text-2xl font-black tracking-tight text-foreground">
                       Add new admins to the platform
                     </h2>
                   </div>
@@ -244,7 +244,7 @@ export default function SuperAdminPage() {
                 <div className="text-xs font-bold uppercase tracking-[0.16em] text-gray-500">
                   Current Admin Coverage
                 </div>
-                <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground">
+                <h2 className="mt-2 text-xl md:text-2xl font-black tracking-tight text-foreground">
                   Active privileged accounts
                 </h2>
                 <div className="mt-5 grid gap-3">
@@ -282,7 +282,7 @@ export default function SuperAdminPage() {
                   <div className="text-xs font-bold uppercase tracking-[0.16em] text-gray-500">
                     Activity Log
                   </div>
-                  <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground">
+                  <h2 className="mt-2 text-xl md:text-2xl font-black tracking-tight text-foreground">
                     Privileged activity history
                   </h2>
                 </div>
@@ -291,8 +291,8 @@ export default function SuperAdminPage() {
                 </div>
               </div>
 
-              <div className="mt-5 overflow-hidden rounded-2xl border border-border-soft">
-                <table className="w-full text-sm">
+              <div className="mt-5 overflow-x-auto rounded-2xl border border-border-soft">
+                <table className="min-w-[600px] w-full text-sm">
                   <thead>
                     <tr className="border-b border-border-soft bg-surface-warm text-xs font-bold uppercase tracking-[0.14em] text-foreground/60">
                       <th scope="col" className="px-4 py-3 text-left">Action</th>

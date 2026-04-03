@@ -44,7 +44,7 @@ function ProfilePreview({ displayName, email, photoURL }) {
 
 function StatCard({ label, value, hint }) {
   return (
-    <div className="flex min-h-[188px] flex-col rounded-2xl border border-border-soft bg-surface p-5 shadow-soft">
+    <div className="flex min-h-0 md:min-h-[188px] flex-col rounded-2xl border border-border-soft bg-surface p-5 shadow-soft">
       <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">{label}</div>
       <div className="mt-4 break-words text-[2rem] font-black tracking-tight leading-tight text-foreground">
         {value}
@@ -155,7 +155,7 @@ export default function ProfilePage() {
           />
         </div>
 
-        <div className="grid gap-7 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid gap-7 lg:grid-cols-[1.15fr_0.85fr]">
           <form
             onSubmit={onSave}
             className="rounded-card border border-border-soft bg-surface p-7 shadow-soft"

@@ -227,8 +227,8 @@ export default function AssignmentsPage() {
           ]}
         />
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.05fr_1.45fr]">
-          <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft xl:sticky xl:top-6 xl:self-start">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.05fr_1.45fr]">
+          <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft lg:sticky lg:top-6 lg:self-start">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <div className="theme-copy text-[11px] uppercase tracking-[0.22em]">Assignment Command</div>
