@@ -1,30 +1,30 @@
 # Session State
 
 ## Last Commit
-dfabadb — fix(web): resolve merge conflicts and integrate main features
+d7befd4 — test(web): add Vitest + Testing Library test suite
 
 ## Branch
-Denver
+Denver (ahead of origin/Denver by 2 commits — needs push)
 
 ## Active Work
-Merge integration from origin/main complete. All Matt features (plant CRUD, calendar custom events, employee enhancements, assignment UX, dark mode, input sanitization) integrated into Denver's design system.
+Responsive fix and web test setup complete and committed.
 
 ## Recently Completed
-- Merged origin/main into Denver (4 commits, including matt-deluxe PR)
-- Fixed merge artifacts: broken assigntasks JSX, undefined employees state, missing inventory modals
-- Tokenized theme-* CSS classes to use CSS vars instead of hardcoded hex
-- Added dark mode support (FOUC script, ThemeToggle with useSyncExternalStore, token overrides)
-- Added prefers-reduced-motion accessibility block
-- Fixed plantService lint error (unused parameter)
-- Adjusted employee validation limits (30 name / 45 email vs Matt's 25)
+- Mobile-first responsive spacing/typography across all web pages and shared components
+- Fixed superadmin activity table overflow (overflow-hidden → overflow-x-auto)
+- Added calendar today dot indicator for mobile viewports
+- Installed Vitest 4 + @testing-library/react for web app
+- Configured Vite 8 oxc to parse JSX in .js files (lang: "jsx" + include/exclude overrides)
+- Added WorkspaceHeader component test (4 tests)
 
 ## Open Decisions / Blockers
-- Employees page uses custom layout instead of WorkspaceHeader/WorkspaceToolbar (design inconsistency with other pages)
-- Dark mode palette is blue-gray toned, not warm earth-toned like light theme — palette refinement needed
-- `.dark [class~="bg-*"]` overrides in globals.css are brittle tech debt
-- `ensureScheduleColumns()` in schedule.js runs ALTER TABLE on every GET — should be optimized
-- Branch is 11 commits ahead of origin/Denver — needs push
+- Migration 003_analytics_indexes.sql must be run manually on existing databases
+- monday.com board integration — paused until client meeting
+- Notifications table has no service/controller (incomplete feature, tech debt)
+- Focus trapping on web modals deferred
+- Medium-severity UX items remaining: login page hardcoded hex, inventory hardcoded hex, SectionHeader touch targets, notification badge hardcoded "1", no haptics on mobile, no dark mode on mobile
+- Recharts STATUS_COLORS has 2 hardcoded hex values that don't adapt to dark mode (MVP tradeoff)
 
 ## Next Steps
 - Push branch to origin
-- Continue with next planned feature or address tech debt items above
+- Pick next priority: mobile-settings-rebuild, account-deletion, privacy-and-terms, or app-store-config from .agents/plans/
