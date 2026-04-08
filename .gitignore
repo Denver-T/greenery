@@ -43,8 +43,11 @@ Thumbs.db
 apps/api/uploads/
 !apps/api/uploads/.gitkeep
 
-# Claude Code config
-.claude/
+# Claude Code config — ignore everything personal under .claude/, but track
+# the project documentation subdirectories that CLAUDE.md references as authoritative.
+.claude/*
+!.claude/design/
+!.claude/design/**
 
 # Agent artifacts
 .agents/
