@@ -13,23 +13,51 @@ const baseSections = [
   {
     title: "Requests",
     items: [
-      { href: "/tasks", label: "Request Queue", description: "Review, edit, delete, and recover requests" },
-      { href: "/req", label: "New Request", description: "Create and submit a new work request" },
+      {
+        href: "/tasks",
+        label: "Request Queue",
+        description: "Review, edit, delete, and recover requests",
+      },
+      {
+        href: "/req",
+        label: "New Request",
+        description: "Create and submit a new work request",
+      },
     ],
   },
   {
     title: "Scheduling",
     items: [
-      { href: "/assigntasks", label: "Assignments", description: "Match open work to employees and due dates" },
-      { href: "/calendar", label: "Schedule Board", description: "See the calendar and daily workload" },
+      {
+        href: "/assigntasks",
+        label: "Assignments",
+        description: "Match open work to employees and due dates",
+      },
+      {
+        href: "/calendar",
+        label: "Schedule Board",
+        description: "See the calendar and daily workload",
+      },
     ],
   },
   {
     title: "Operations",
     items: [
-      { href: "/dashboard", label: "Overview", description: "Track workload, coverage, and activity" },
-      { href: "/employees", label: "Team", description: "Manage employees and staffing details" },
-      { href: "/inventory", label: "Inventory", description: "Review tracked plants and plant-heavy work" },
+      {
+        href: "/dashboard",
+        label: "Overview",
+        description: "Track workload, coverage, and activity",
+      },
+      {
+        href: "/employees",
+        label: "Team",
+        description: "Manage employees and staffing details",
+      },
+      {
+        href: "/inventory",
+        label: "Inventory",
+        description: "Review tracked plants and plant-heavy work",
+      },
     ],
   },
 ];
@@ -38,7 +66,7 @@ function normalizeLevel(user) {
   return user?.permissionLevel || user?.role || "Technician";
 }
 
-export default function Sidebar() {
+export default function Sidebar({ inDrawer = false, onNavigate }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [authUser, setAuthUser] = useState(null);
 
@@ -81,7 +109,9 @@ export default function Sidebar() {
     }));
 
     if (currentUser?.permissionLevel === "SuperAdmin") {
-      const operationsSection = resolvedSections.find((section) => section.title === "Operations");
+      const operationsSection = resolvedSections.find(
+        (section) => section.title === "Operations",
+      );
 
       operationsSection?.items.push({
         href: "/superadmin",
@@ -101,10 +131,15 @@ export default function Sidebar() {
   const chipLevel = normalizeLevel(currentUser);
   const chipPhoto = authUser?.photoURL || "";
 
+  const Tag = inDrawer ? "div" : "aside";
+  const wrapperClass = inDrawer
+    ? "flex h-full flex-col overflow-y-auto bg-[linear-gradient(180deg,#294733_0%,#1f3427_100%)] p-5 text-white"
+    : "hidden md:flex md:flex-col border-r border-white/10 bg-[linear-gradient(180deg,#294733_0%,#1f3427_100%)] p-5 text-white shadow-soft";
+
   return (
-    <aside
-      aria-label="Primary navigation"
-      className="hidden md:flex md:flex-col border-r border-white/10 bg-[linear-gradient(180deg,#294733_0%,#1f3427_100%)] p-5 text-white shadow-soft"
+    <Tag
+      aria-label={inDrawer ? undefined : "Primary navigation"}
+      className={wrapperClass}
     >
       <div className="rounded-[22px] border border-white/10 bg-white/6 p-4 backdrop-blur dark:bg-white/4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-white/60">
@@ -128,12 +163,12 @@ export default function Sidebar() {
             </div>
             <div className="grid gap-2">
               {section.items.map((item) => (
-                <NavItem key={item.href} {...item} />
+                <NavItem key={item.href} {...item} onClick={onNavigate} />
               ))}
             </div>
           </div>
         ))}
       </nav>
-    </aside>
+    </Tag>
   );
 }

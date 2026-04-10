@@ -450,7 +450,7 @@ export default function Page() {
             aria-labelledby="tab-operations"
             hidden={activeTab !== "operations"}
           >
-            <section className="mt-6 grid grid-cols-2 gap-4 md:gap-6 md:grid-cols-4">
+            <section className="mt-6 grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
               {data.kpis.map((k) => (
                 <Kpi key={k.label} label={k.label} value={k.value} />
               ))}
@@ -539,7 +539,7 @@ export default function Page() {
                 </div>
 
                 {/* KPI Row */}
-                <section className="grid grid-cols-2 gap-4 md:gap-6 md:grid-cols-4">
+                <section className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
                   <Kpi label="Plant Types" value={analytics.overview.types} />
                   <Kpi label="Units on Hand" value={analytics.overview.units} />
                   <Kpi label="Inventory Value" value={formatCurrency(analytics.overview.value)} />

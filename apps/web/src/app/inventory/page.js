@@ -421,7 +421,7 @@ export default function InventoryPage() {
           </div>
         ) : null}
 
-        <section className="grid grid-cols-2 gap-4 md:gap-6 md:grid-cols-3 [&>*:last-child]:col-span-2 md:[&>*:last-child]:col-span-1">
+        <section className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-3 [&>*:last-child]:col-span-2 lg:[&>*:last-child]:col-span-1">
           <Kpi
             label="Inventory value"
             value={formatCurrency(totalInventoryValue)}
@@ -459,7 +459,7 @@ export default function InventoryPage() {
             ) : plants.length === 0 ? (
               <p className="theme-copy text-sm">No plants are tracked yet.</p>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {plants.map((plant) => (
                   <button
                     key={plant.id}

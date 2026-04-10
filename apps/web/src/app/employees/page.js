@@ -746,7 +746,7 @@ export default function EmployeesPage() {
           ) : filteredEmployees.length === 0 ? (
             <div className="text-gray-600">No employees found.</div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredEmployees.map((employee) => (
                 <button
                   key={employee.id}
@@ -756,20 +756,20 @@ export default function EmployeesPage() {
                     setModalMode("view");
                     setFormErrors({});
                   }}
-                  className={`group rounded-[28px] border p-5 text-left shadow-soft transition duration-200 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(31,52,39,0.15)] ${getEmployeeTone(employee)}`}
+                  className={`group rounded-[28px] border p-4 text-left shadow-soft transition duration-200 hover:-translate-y-1 hover:shadow-[0_20px_40px_rgba(31,52,39,0.15)] lg:p-5 ${getEmployeeTone(employee)}`}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="theme-panel-muted theme-title grid h-14 w-14 place-items-center rounded-[20px] text-2xl font-black">
+                  <div className="flex items-start gap-3">
+                    <div className="theme-panel-muted theme-title grid h-12 w-12 shrink-0 place-items-center rounded-[18px] text-xl font-black lg:h-14 lg:w-14 lg:rounded-[20px] lg:text-2xl">
                       {employee.name?.[0]?.toUpperCase() || "U"}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="theme-title truncate text-xl font-black tracking-tight">
+                      <div className="theme-title truncate text-base font-black tracking-tight lg:text-lg xl:text-xl">
                         {employee.name}
                       </div>
-                      <div className="theme-copy mt-1 text-sm font-bold">
+                      <div className="theme-copy mt-1 truncate text-sm font-bold">
                         {employee.role}
                       </div>
-                      <div className="theme-copy mt-1 text-xs font-semibold uppercase tracking-[0.14em]">
+                      <div className="theme-copy mt-1 truncate text-xs font-semibold uppercase tracking-[0.14em]">
                         {employee.permissionLevel || employee.role}
                       </div>
                     </div>

@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export default function NavItem({ href, label, description, icon }) {
+export default function NavItem({ href, label, description, icon, onClick }) {
   const pathname = usePathname();
   const active = pathname === href;
 
   return (
     <Link
       href={href}
+      onClick={onClick}
       aria-current={active ? "page" : undefined}
       className={[
         // layout
@@ -34,7 +35,9 @@ export default function NavItem({ href, label, description, icon }) {
       <span className="min-w-0">
         <span className="block font-semibold">{label}</span>
         {description ? (
-          <span className="mt-0.5 block text-xs text-white/65">{description}</span>
+          <span className="mt-0.5 block text-xs text-white/65">
+            {description}
+          </span>
         ) : null}
       </span>
     </Link>
