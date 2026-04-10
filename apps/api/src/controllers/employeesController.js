@@ -1,6 +1,8 @@
 // apps/api/src/controllers/employeesController.js
 // Controller for the canonical `employees` resource and authenticated employee lookup.
 
+const admin = require("../../config/firebase");
+
 const employeesService = require("../services/employeesService");
 const { httpError } = require("../utils/httpError");
 const { parsePagination, paginatedResponse } = require("../utils/pagination");
@@ -331,6 +333,85 @@ async function getMe(req, res, next) {
   }
 }
 
+async function removeSelf(req, res, next) {
+  try {
+    if (!req.user) {
+      return next(httpError(401, "Authentication required", "AUTH_REQUIRED"));
+    }
+
+    const email =
+      typeof req.user.email === "string" ? req.user.email.trim().toLowerCase() : null;
+
+    if (!email) {
+      return next(
+        httpError(400, "Authenticated token is missing an email claim", "AUTH_INVALID_TOKEN"),
+      );
+    }
+
+    const employee = await employeesService.getEmployeeByEmail(email);
+
+    if (!employee) {
+      return next(httpError(404, "Authenticated employee not found", "EMPLOYEE_NOT_FOUND"));
+    }
+
+    // Last-SuperAdmin guard: refuse if this is the only SuperAdmin in the system.
+    // Without this, an org can delete itself out of administrative access.
+    if (normalizeAccessLevel(employee.permissionLevel) === "superadmin") {
+      const superAdminCount = await employeesService.countSuperAdmins();
+      if (superAdminCount <= 1) {
+        return next(
+          httpError(
+            409,
+            "Cannot delete the last super admin. Promote another administrator first.",
+            "LAST_SUPERADMIN",
+          ),
+        );
+      }
+    }
+
+    // Audit log BEFORE delete. actor_employee_id will be NULLed by FK cascade
+    // when the row is removed, but actor_email survives and metadata captures
+    // the full identity at deletion time.
+    await logActivity({
+      req,
+      action: "employee.self_deleted",
+      targetType: "employee",
+      targetId: employee.id,
+      metadata: {
+        name: employee.name,
+        email: employee.email,
+        role: employee.role,
+        permissionLevel: employee.permissionLevel,
+        firebase_uid: req.user.uid || null,
+      },
+    });
+
+    const deleted = await employeesService.deleteSelfEmployee(employee.id);
+
+    if (!deleted) {
+      return next(httpError(500, "Account deletion failed", "DELETE_FAILED"));
+    }
+
+    // Best-effort Firebase user deletion. If this fails the user is already
+    // unable to authenticate (no employees row → /auth/me returns 404), so
+    // we surface success and let ops clean up the orphan Firebase record.
+    try {
+      if (req.user.uid) {
+        await admin.auth().deleteUser(req.user.uid);
+      }
+    } catch (firebaseErr) {
+      console.warn(
+        `[removeSelf] Firebase user deletion failed for uid=${req.user.uid}:`,
+        firebaseErr?.message || firebaseErr,
+      );
+    }
+
+    return res.status(200).json({ message: "Account deleted successfully" });
+  } catch (err) {
+    return next(err);
+  }
+}
+
 module.exports = {
   getAll,
   getById,
@@ -338,5 +419,6 @@ module.exports = {
   update,
   remove,
   getMe,
+  removeSelf,
 };
 

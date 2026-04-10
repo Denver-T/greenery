@@ -59,7 +59,11 @@ describe("verifyToken", () => {
 
   it("returns 401 when Firebase rejects the token", async () => {
     admin.auth().verifyIdToken.mockRejectedValue(new Error("Token expired"));
-    const req = { headers: { authorization: "Bearer bad-token" } };
+    const req = {
+      headers: { authorization: "Bearer bad-token" },
+      method: "GET",
+      url: "/test",
+    };
     const next = jest.fn();
 
     jest.spyOn(console, "error").mockImplementation(() => {});
@@ -67,6 +71,27 @@ describe("verifyToken", () => {
 
     expect(next).toHaveBeenCalledWith(
       expect.objectContaining({ statusCode: 401, code: "AUTH_TOKEN_INVALID" })
+    );
+  });
+
+  it("logs auth failures in the structured format with timestamp, request id, method, path", async () => {
+    admin.auth().verifyIdToken.mockRejectedValue(
+      Object.assign(new Error("Token expired"), { code: "auth/id-token-expired" })
+    );
+    const req = {
+      headers: { authorization: "Bearer bad-token" },
+      method: "POST",
+      url: "/employees/5",
+    };
+    const next = jest.fn();
+
+    const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+    await verifyToken(req, mockRes(), next);
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /^\[auth\] \d{4}-\d{2}-\d{2}T[\d:.]+Z req=[a-f0-9]{8} POST \/employees\/5 — auth\/id-token-expired: Token expired$/
+      )
     );
   });
 

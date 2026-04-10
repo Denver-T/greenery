@@ -154,7 +154,7 @@ export default function WorkRequestDetails({ route, navigation }) {
             </View>
           </View>
 
-          <Pressable onPress={() => navigation.goBack()} style={styles.closeButton}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.closeButton} accessibilityRole="button" accessibilityLabel="Go back">
             <Text style={styles.closeButtonText}>Back</Text>
           </Pressable>
         </>

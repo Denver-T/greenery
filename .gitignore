@@ -43,9 +43,9 @@ Thumbs.db
 apps/api/uploads/
 !apps/api/uploads/.gitkeep
 
-# Claude Code config
+# Claude Code config — personal workflow state, not project artifacts
 .claude/
 
-# Agent artifacts
+# Agent artifacts — personal workflow state, not project artifacts
 .agents/
 

@@ -444,6 +444,15 @@ export default function Page() {
     }
   }
 
+  useEffect(() => {
+    if (!eventModalOpen) return;
+    function handleEsc(e) {
+      if (e.key === "Escape") closeEventModal();
+    }
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [eventModalOpen]);
+
   return (
     <AppShell title="View Calendar">
       <section className="space-y-6 p-6">
@@ -491,15 +500,15 @@ export default function Page() {
           }
         />
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_1fr]">
-          <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-            <div className="grid grid-cols-7 gap-1 px-1 pb-2 text-center text-sm font-medium theme-copy">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr_1fr]">
+          <section className="rounded-card border border-border-soft bg-surface p-3 md:p-5 shadow-soft">
+            <div className="grid grid-cols-7 gap-1 px-1 pb-2 text-center text-xs md:text-sm font-medium theme-copy">
               {["S", "M", "T", "W", "T", "F", "S"].map((d) => (
                 <div key={d} className="py-1">{d}</div>
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-px md:gap-1">
               {grid.map((cell) => {
                 const isToday = cell.key === todayKey;
                 const isSelected = cell.key === selectedDayKey;
@@ -510,19 +519,22 @@ export default function Page() {
                     key={cell.key}
                     onClick={() => handleDaySelect(cell)}
                     className={[
-                      "relative aspect-square rounded-md p-2 text-left outline-none ring-brand/40 transition",
+                      "relative aspect-square rounded-md p-1 md:p-2 text-left outline-none ring-brand/40 transition",
                       cell.inMonth ? "bg-surface-warm hover:bg-surface-muted" : "bg-surface-warm-alt text-gray-600",
                       isSelected ? "ring-2" : "",
                     ].join(" ")}
                   >
                     <div className="flex items-start justify-between">
-                      <span className={["text-sm", cell.inMonth ? "theme-title" : "theme-copy opacity-60"].join(" ")}>
+                      <span className={["text-xs md:text-sm", cell.inMonth ? "theme-title" : "theme-copy opacity-60"].join(" ")}>
                         {cell.date.getDate()}
                       </span>
                       {isToday ? (
-                        <span className="rounded-full bg-brand-600 px-1.5 text-[10px] font-medium text-white">
-                          Today
-                        </span>
+                        <>
+                          <span className="md:hidden h-1.5 w-1.5 rounded-full bg-brand-600" />
+                          <span className="hidden md:inline rounded-full bg-brand-600 px-1.5 text-[10px] font-medium text-white">
+                            Today
+                          </span>
+                        </>
                       ) : null}
                     </div>
 
@@ -635,6 +647,9 @@ export default function Page() {
         {eventModalOpen ? (
           <div className="fixed inset-0 z-[70] grid place-items-center bg-black/50 p-6" onClick={closeEventModal}>
             <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="event-modal-title"
               className="theme-panel w-full max-w-2xl rounded-3xl border border-border-soft p-6 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
@@ -643,7 +658,7 @@ export default function Page() {
                   <div className="theme-tag inline-flex rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em]">
                     Custom event
                   </div>
-                  <h3 className="theme-title mt-3 text-2xl font-black">
+                  <h3 id="event-modal-title" className="theme-title mt-3 text-2xl font-black">
                     {eventForm.id ? "Edit calendar event" : "Add calendar event"}
                   </h3>
                   <p className="theme-copy mt-2 text-sm">

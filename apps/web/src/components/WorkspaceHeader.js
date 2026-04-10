@@ -8,7 +8,7 @@ export default function WorkspaceHeader({
   actions = null,
 }) {
   return (
-    <section className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
+    <section className="rounded-card border border-border-soft bg-surface p-4 md:p-6 shadow-soft">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           {eyebrow ? (
@@ -16,14 +16,14 @@ export default function WorkspaceHeader({
               {eyebrow}
             </div>
           ) : null}
-          <h2 className="mt-4 text-2xl font-black tracking-tight text-foreground">{title}</h2>
+          <h2 className="mt-4 text-xl md:text-2xl font-black tracking-tight text-foreground">{title}</h2>
           {description ? (
             <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 dark:text-[#bcc2cb]">{description}</p>
           ) : null}
         </div>
 
         {actions || stats.length > 0 ? (
-          <div className="min-w-[220px] rounded-2xl border border-border-soft bg-surface-warm px-4 py-4">
+          <div className="min-w-0 sm:min-w-[220px] rounded-2xl border border-border-soft bg-surface-warm px-4 py-4">
             {actions ? (
               actions
             ) : (

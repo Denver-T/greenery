@@ -23,10 +23,10 @@ function ProfilePreview({ displayName, email, photoURL }) {
             <div className="w-fit rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/80">
               Identity Preview
             </div>
-            <h2 className="mt-5 text-3xl font-black tracking-tight leading-none md:text-4xl">
+            <h2 className="mt-5 break-words text-2xl font-black leading-tight tracking-tight md:text-3xl lg:text-4xl">
               {displayName || "Unnamed User"}
             </h2>
-            <p className="mt-3 break-all text-sm text-white/72">{email || "No email available"}</p>
+            <p className="mt-3 break-words text-sm text-white/72">{email || "No email available"}</p>
           </div>
         </div>
 
@@ -44,9 +44,9 @@ function ProfilePreview({ displayName, email, photoURL }) {
 
 function StatCard({ label, value, hint }) {
   return (
-    <div className="flex min-h-[188px] flex-col rounded-2xl border border-border-soft bg-surface p-5 shadow-soft">
+    <div className="flex min-h-0 flex-col rounded-2xl border border-border-soft bg-surface p-5 shadow-soft lg:min-h-[188px]">
       <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">{label}</div>
-      <div className="mt-4 break-words text-[2rem] font-black tracking-tight leading-tight text-foreground">
+      <div className="mt-4 break-words text-xl font-black leading-tight tracking-tight text-foreground md:text-2xl lg:text-3xl xl:text-[2rem]">
         {value}
       </div>
       <div className="mt-3 text-sm leading-6 text-gray-600">{hint}</div>
@@ -137,7 +137,7 @@ export default function ProfilePage() {
       <section className="space-y-7">
         <ProfilePreview displayName={displayName} email={email} photoURL={photoURL} />
 
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard
             label="Display Name"
             value={displayName || initials}
@@ -155,7 +155,7 @@ export default function ProfilePage() {
           />
         </div>
 
-        <div className="grid gap-7 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid gap-7 lg:grid-cols-[1.15fr_0.85fr]">
           <form
             onSubmit={onSave}
             className="rounded-card border border-border-soft bg-surface p-7 shadow-soft"

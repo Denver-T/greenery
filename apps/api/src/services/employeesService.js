@@ -204,6 +204,22 @@ async function deleteEmployee(id) {
   return result.affectedRows > 0;
 }
 
+async function countSuperAdmins() {
+  const [rows] = await db.query(
+    "SELECT COUNT(*) AS count FROM employees WHERE permissionLevel = 'SuperAdmin'",
+  );
+  return rows[0]?.count ?? 0;
+}
+
+async function deleteSelfEmployee(employeeId) {
+  // Hard delete. FKs to employees use ON DELETE SET NULL — references in
+  // work_reqs.assignedTo, schedule_events.employee_id, notifications.employee_id,
+  // and activity_logs.actor_employee_id are nulled automatically.
+  // Caller is responsible for: (a) ownership check, (b) audit log entry BEFORE delete.
+  const [result] = await db.query("DELETE FROM employees WHERE id = ?", [employeeId]);
+  return result.affectedRows > 0;
+}
+
 module.exports = {
   listEmployees,
   listEmployeesPaginated,
@@ -212,6 +228,8 @@ module.exports = {
   createEmployee,
   updateEmployee,
   deleteEmployee,
+  countSuperAdmins,
+  deleteSelfEmployee,
   mapEmployeeToAccount,
 };
 

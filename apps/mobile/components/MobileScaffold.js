@@ -24,6 +24,8 @@ export default function MobileScaffold({
   scroll = true,
   contentContainerStyle,
   showBackButton,
+  statusBarStyle = "dark-content",
+  statusBarBackground = COLORS.parchment,
 }) {
   const navigation = useNavigation();
   const route = useRoute();
@@ -55,7 +57,7 @@ export default function MobileScaffold({
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar backgroundColor={COLORS.parchment} barStyle="dark-content" />
+      <StatusBar backgroundColor={statusBarBackground} barStyle={statusBarStyle} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.layout}

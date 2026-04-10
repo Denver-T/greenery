@@ -2,7 +2,10 @@
 
 import AppShell from "@/components/AppShell";
 import { fetchApi } from "@/lib/api/api";
-import { getTodayDateInputValue, sanitizeObjectStrings } from "@/lib/inputSafety";
+import {
+  getTodayDateInputValue,
+  sanitizeObjectStrings,
+} from "@/lib/inputSafety";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -73,7 +76,11 @@ export default function ReqPage() {
   }, []);
 
   useEffect(() => {
-    if (!mapsApiKey || !accountAddressRef.current || typeof window === "undefined") {
+    if (
+      !mapsApiKey ||
+      !accountAddressRef.current ||
+      typeof window === "undefined"
+    ) {
       return undefined;
     }
 
@@ -85,10 +92,13 @@ export default function ReqPage() {
         return;
       }
 
-      autocomplete = new window.google.maps.places.Autocomplete(accountAddressRef.current, {
-        fields: ["formatted_address"],
-        types: ["address"],
-      });
+      autocomplete = new window.google.maps.places.Autocomplete(
+        accountAddressRef.current,
+        {
+          fields: ["formatted_address"],
+          types: ["address"],
+        },
+      );
 
       listener = autocomplete.addListener("place_changed", () => {
         const place = autocomplete.getPlace();
@@ -101,10 +111,14 @@ export default function ReqPage() {
     if (window.google?.maps?.places) {
       attachAutocomplete();
     } else {
-      const existingScript = document.getElementById("google-maps-places-script");
+      const existingScript = document.getElementById(
+        "google-maps-places-script",
+      );
 
       if (existingScript) {
-        existingScript.addEventListener("load", attachAutocomplete, { once: true });
+        existingScript.addEventListener("load", attachAutocomplete, {
+          once: true,
+        });
       } else {
         const script = document.createElement("script");
         script.id = "google-maps-places-script";
@@ -131,7 +145,9 @@ export default function ReqPage() {
     try {
       const fd = new FormData(e.currentTarget);
       if (!currentEmployeeName) {
-        throw new Error("Your employee account could not be resolved. Please sign in again.");
+        throw new Error(
+          "Your employee account could not be resolved. Please sign in again.",
+        );
       }
 
       const cleaned = sanitizeObjectStrings(
@@ -166,7 +182,7 @@ export default function ReqPage() {
           method: { maxLength: REQ_LIMITS.method },
           location: { maxLength: REQ_LIMITS.location },
           notes: { maxLength: REQ_LIMITS.notes, preserveNewlines: true },
-        }
+        },
       );
 
       if (!cleaned.account) {
@@ -205,7 +221,8 @@ export default function ReqPage() {
               Create Work Request
             </h2>
             <p className="theme-copy mt-2 max-w-2xl text-sm leading-6">
-              Capture the core request details first, then add plant and staging information if needed.
+              Capture the core request details first, then add plant and staging
+              information if needed.
             </p>
           </div>
 
@@ -213,14 +230,22 @@ export default function ReqPage() {
             <div className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">
               Generated Reference
             </div>
-            <div className="mt-2 text-lg font-black text-foreground">{generatedRef}</div>
-            <div className="mt-1 text-sm text-gray-600">Request date {today}</div>
+            <div className="mt-2 text-lg font-black text-foreground">
+              {generatedRef}
+            </div>
+            <div className="mt-1 text-sm text-gray-600">
+              Request date {today}
+            </div>
           </div>
         </div>
       </section>
 
       <section className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
-        <form onSubmit={onSubmit} encType="multipart/form-data" className="space-y-6">
+        <form
+          onSubmit={onSubmit}
+          encType="multipart/form-data"
+          className="space-y-6"
+        >
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr_1fr]">
             <div className="space-y-6">
               <FormSection
@@ -249,7 +274,7 @@ export default function ReqPage() {
                     <input
                       name="techName"
                       placeholder="Magnus"
-                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
                       required
                     />
                     <span className="theme-copy mt-1 text-xs">
@@ -261,7 +286,7 @@ export default function ReqPage() {
                       name="account"
                       maxLength={REQ_LIMITS.account}
                       placeholder="Inter Pipeline"
-                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
                       required
                     />
                   </Field>
@@ -270,7 +295,7 @@ export default function ReqPage() {
                       name="accountContact"
                       maxLength={REQ_LIMITS.accountContact}
                       placeholder="Georgia Blevins"
-                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
                     />
                   </Field>
                   <Field label="Account Address">
@@ -279,18 +304,24 @@ export default function ReqPage() {
                       name="accountAddress"
                       maxLength={REQ_LIMITS.accountAddress}
                       placeholder="123 Sesame St."
-                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
                     />
                     <span className="theme-copy mt-1 text-xs">
-                      Browser autofill works now. Google Places autocomplete will turn on when `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set.
+                      Browser autofill works now. Google Places autocomplete
+                      will turn on when `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is
+                      set.
                     </span>
                   </Field>
-                  <Field label="Action Required" required className="md:col-span-2">
+                  <Field
+                    label="Action Required"
+                    required
+                    className="md:col-span-2"
+                  >
                     <input
                       name="actionRequired"
                       maxLength={REQ_LIMITS.actionRequired}
                       placeholder="Soil top up"
-                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
                     />
                   </Field>
                 </div>
@@ -302,16 +333,34 @@ export default function ReqPage() {
               >
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label="Number of Plants">
-                    <input type="number" min="0" name="numberOfPlants" placeholder="4" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
+                    <input
+                      type="number"
+                      min="0"
+                      name="numberOfPlants"
+                      placeholder="4"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
+                    />
                   </Field>
                   <Field label="Plant Wanted">
-                    <input name="plantWanted" placeholder="Aglaonema" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
+                    <input
+                      name="plantWanted"
+                      placeholder="Aglaonema"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
+                    />
                   </Field>
                   <Field label="Plant Replaced">
-                    <input name="plantReplaced" placeholder="Aglaonema" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
+                    <input
+                      name="plantReplaced"
+                      placeholder="Aglaonema"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
+                    />
                   </Field>
                   <Field label="Plant Size">
-                    <select name="plantSize" defaultValue="3 Gal" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40">
+                    <select
+                      name="plantSize"
+                      defaultValue="3 Gal"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
+                    >
                       <option>1 Gal</option>
                       <option>2 Gal</option>
                       <option>3 Gal</option>
@@ -319,7 +368,11 @@ export default function ReqPage() {
                     </select>
                   </Field>
                   <Field label="Plant Height">
-                    <select name="plantHeight" defaultValue="Shorter than 2 feet" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40">
+                    <select
+                      name="plantHeight"
+                      defaultValue="Shorter than 2 feet"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
+                    >
                       <option>Shorter than 2 feet</option>
                       <option>2-4 feet</option>
                       <option>4-6 feet</option>
@@ -327,13 +380,25 @@ export default function ReqPage() {
                     </select>
                   </Field>
                   <Field label="Planter Type and Size">
-                    <input name="planterTypeSize" placeholder="Lechuza 40" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
+                    <input
+                      name="planterTypeSize"
+                      placeholder="Lechuza 40"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
+                    />
                   </Field>
                   <Field label="Planter Colour">
-                    <input name="planterColour" placeholder="White" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
+                    <input
+                      name="planterColour"
+                      placeholder="White"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
+                    />
                   </Field>
                   <Field label="Staging Material" className="md:col-span-2">
-                    <input name="stagingMaterial" placeholder="Grey Spanish Moss" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
+                    <input
+                      name="stagingMaterial"
+                      placeholder="Grey Spanish Moss"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
+                    />
                   </Field>
                 </div>
               </FormSection>
@@ -346,20 +411,37 @@ export default function ReqPage() {
               >
                 <div className="grid grid-cols-1 gap-4">
                   <Field label="Lighting">
-                    <select name="lighting" defaultValue="Medium" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40">
+                    <select
+                      name="lighting"
+                      defaultValue="Medium"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
+                    >
                       <option>Low</option>
                       <option>Medium</option>
                       <option>High</option>
                     </select>
                   </Field>
                   <Field label="Method">
-                    <input name="method" placeholder="Use spade to insert soil" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
+                    <input
+                      name="method"
+                      placeholder="Use spade to insert soil"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
+                    />
                   </Field>
                   <Field label="Location">
-                    <input name="location" placeholder="Lobby" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
+                    <input
+                      name="location"
+                      placeholder="Lobby"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
+                    />
                   </Field>
                   <Field label="Notes">
-                    <textarea name="notes" rows={4} placeholder="Bring key to get into building" className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-gray-400" />
+                    <textarea
+                      name="notes"
+                      rows={4}
+                      placeholder="Bring key to get into building"
+                      className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
+                    />
                   </Field>
                 </div>
               </FormSection>
@@ -383,7 +465,9 @@ export default function ReqPage() {
                 <ul className="theme-copy mt-3 space-y-2 text-sm leading-6">
                   <li>1. Confirm the account and work type.</li>
                   <li>2. Add plant details only when they affect execution.</li>
-                  <li>3. Include notes or a photo when extra context matters.</li>
+                  <li>
+                    3. Include notes or a photo when extra context matters.
+                  </li>
                 </ul>
               </div>
             </div>
@@ -397,7 +481,8 @@ export default function ReqPage() {
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-soft pt-4">
             <div className="theme-copy text-sm">
-              Review the account details before submitting. After save, you will return to the queue.
+              Review the account details before submitting. After save, you will
+              return to the queue.
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -425,7 +510,9 @@ export default function ReqPage() {
 function FormSection({ title, description, children }) {
   return (
     <div className="rounded-2xl border border-border-soft bg-surface p-5">
-      <h3 className="text-lg font-black tracking-tight text-foreground">{title}</h3>
+      <h3 className="text-lg font-black tracking-tight text-foreground">
+        {title}
+      </h3>
       <p className="mt-1 text-sm leading-6 text-gray-600">{description}</p>
       <div className="mt-4">{children}</div>
     </div>

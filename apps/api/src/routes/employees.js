@@ -50,6 +50,16 @@ router.put(
   employeesController.update
 );
 
+// Self-delete: any authenticated user can delete their own account.
+// Authorization (last-SuperAdmin guard) lives in the controller, not middleware.
+// MUST be registered before "/:id" so Express does not parse "me" as an id.
+router.delete(
+  "/me",
+  writeLimiter,
+  verifyToken,
+  employeesController.removeSelf
+);
+
 router.delete(
   "/:id",
   writeLimiter,
