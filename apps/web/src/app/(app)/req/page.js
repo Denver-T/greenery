@@ -1,6 +1,5 @@
 "use client";
 
-import AppShell from "@/components/AppShell";
 import { fetchApi } from "@/lib/api/api";
 import {
   getTodayDateInputValue,
@@ -210,7 +209,7 @@ export default function ReqPage() {
   }
 
   return (
-    <AppShell title="Create Work REQ">
+    <>
       <section className="mb-6 rounded-card border border-border-soft bg-surface p-6 shadow-soft">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -503,7 +502,7 @@ export default function ReqPage() {
           </div>
         </form>
       </section>
-    </AppShell>
+    </>
   );
 }
 

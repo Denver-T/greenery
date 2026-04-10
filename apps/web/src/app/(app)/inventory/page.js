@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import AppShell from "@/components/AppShell";
 import WorkspaceHeader from "@/components/WorkspaceHeader";
 import WorkspaceToolbar from "@/components/WorkspaceToolbar";
 import { fetchApi } from "@/lib/api/api";
@@ -366,7 +365,7 @@ export default function InventoryPage() {
   }, [selectedPlant, editingPlant, showCreateModal, deletePlantCandidate]);
 
   return (
-    <AppShell title="Inventory">
+    <>
       <section className="space-y-6 p-6">
         <WorkspaceHeader
           eyebrow="Inventory Workspace"
@@ -665,7 +664,7 @@ export default function InventoryPage() {
           </div>
         </div>
       ) : null}
-    </AppShell>
+    </>
   );
 }
 
