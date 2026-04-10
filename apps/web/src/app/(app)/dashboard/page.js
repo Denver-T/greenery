@@ -16,7 +16,6 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 
-import AppShell from "@/components/AppShell";
 import WorkspaceHeader from "@/components/WorkspaceHeader";
 import { fetchApi } from "@/lib/api/api";
 
@@ -107,12 +106,20 @@ function Kpi({ label, value }) {
   return (
     <div className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
       <div className="text-sm font-medium text-muted">{label}</div>
-      <div className="mt-1 text-2xl md:text-3xl font-black tracking-tight text-foreground">{value}</div>
+      <div className="mt-1 text-2xl md:text-3xl font-black tracking-tight text-foreground">
+        {value}
+      </div>
     </div>
   );
 }
 
-function HBarList({ title, items, valueKey = "value", labelKey = "label", empty }) {
+function HBarList({
+  title,
+  items,
+  valueKey = "value",
+  labelKey = "label",
+  empty,
+}) {
   const max = Math.max(1, maxOf(items, valueKey));
 
   return (
@@ -126,8 +133,13 @@ function HBarList({ title, items, valueKey = "value", labelKey = "label", empty 
             const val = it[valueKey];
             const pct = Math.round((val / max) * 100);
             return (
-              <div key={`${it[labelKey]}-${i}`} className="grid grid-cols-12 items-center gap-3">
-                <div className="theme-copy col-span-4 truncate text-sm">{it[labelKey]}</div>
+              <div
+                key={`${it[labelKey]}-${i}`}
+                className="grid grid-cols-12 items-center gap-3"
+              >
+                <div className="theme-copy col-span-4 truncate text-sm">
+                  {it[labelKey]}
+                </div>
                 <div className="col-span-6">
                   <div className="h-3 w-full rounded bg-surface-muted">
                     <div
@@ -173,7 +185,10 @@ function FocusList({ title, items, empty }) {
       ) : (
         <div className="mt-4 space-y-3">
           {items.map((item) => (
-            <div key={`${item.title}-${item.meta}`} className="rounded-xl border border-border-soft bg-surface px-4 py-3">
+            <div
+              key={`${item.title}-${item.meta}`}
+              className="rounded-xl border border-border-soft bg-surface px-4 py-3"
+            >
               <div className="font-semibold text-foreground">{item.title}</div>
               <div className="mt-1 text-sm text-gray-600">{item.meta}</div>
             </div>
@@ -198,7 +213,9 @@ function ScheduleList({ title, items, empty }) {
               className="flex items-center justify-between rounded-xl border border-border-soft bg-surface px-4 py-3"
             >
               <div className="font-medium text-foreground">{item.label}</div>
-              <div className="text-sm font-semibold text-gray-600">{item.value}</div>
+              <div className="text-sm font-semibold text-gray-600">
+                {item.value}
+              </div>
             </div>
           ))}
         </div>
@@ -209,21 +226,41 @@ function ScheduleList({ title, items, empty }) {
 
 function StockIndicator({ quantity, demand }) {
   if (demand === 0 || quantity > demand * 2) {
-    return <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-700"><span className="inline-block h-2 w-2 rounded-full bg-green-500" />Healthy</span>;
+    return (
+      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-green-700">
+        <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
+        Healthy
+      </span>
+    );
   }
   if (quantity > 0) {
-    return <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-yellow-700"><span className="inline-block h-2 w-2 rounded-full bg-yellow-500" />Watch</span>;
+    return (
+      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-yellow-700">
+        <span className="inline-block h-2 w-2 rounded-full bg-yellow-500" />
+        Watch
+      </span>
+    );
   }
-  return <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-700"><span className="inline-block h-2 w-2 rounded-full bg-red-500" />Critical</span>;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-700">
+      <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
+      Critical
+    </span>
+  );
 }
 
 /* ─── Operations Data Builder ─── */
 
 function buildDashboardData({ employees, reqs, tasks, schedule }) {
   const activeReqs = reqs.filter(
-    (req) => !["completed", "cancelled"].includes(String(req.status || "").toLowerCase())
+    (req) =>
+      !["completed", "cancelled"].includes(
+        String(req.status || "").toLowerCase(),
+      ),
   );
-  const assignedTasks = tasks.filter((task) => task.assignedTo ?? task.assigned_to);
+  const assignedTasks = tasks.filter(
+    (task) => task.assignedTo ?? task.assigned_to,
+  );
   const todaysSchedule = schedule
     .filter((event) => isToday(event.start_time))
     .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
@@ -238,10 +275,17 @@ function buildDashboardData({ employees, reqs, tasks, schedule }) {
 
   const dueSoon = assignedTasks
     .filter((task) => task.dueDate || task.due_date)
-    .sort((a, b) => new Date(a.dueDate || a.due_date) - new Date(b.dueDate || b.due_date))
+    .sort(
+      (a, b) =>
+        new Date(a.dueDate || a.due_date) - new Date(b.dueDate || b.due_date),
+    )
     .slice(0, 4)
     .map((task) => ({
-      title: task.actionRequired || task.title || task.referenceNumber || "Assigned task",
+      title:
+        task.actionRequired ||
+        task.title ||
+        task.referenceNumber ||
+        "Assigned task",
       meta: `Due ${String(task.dueDate || task.due_date).slice(0, 10)}${task.account ? ` • ${task.account}` : ""}`,
     }));
 
@@ -264,7 +308,10 @@ function buildDashboardData({ employees, reqs, tasks, schedule }) {
     nextStops,
     actionRequiredBreakdown: countBy(activeReqs, (req) => req.actionRequired),
     accountLoad: countBy(activeReqs, (req) => req.account),
-    byAssignee: countBy(todaysSchedule, (event) => event.employee_name || "Unassigned").map((item) => ({
+    byAssignee: countBy(
+      todaysSchedule,
+      (event) => event.employee_name || "Unassigned",
+    ).map((item) => ({
       label: item.label,
       value: `${item.value} stop${item.value === 1 ? "" : "s"} today`,
     })),
@@ -337,7 +384,8 @@ export default function Page() {
   const analyticsRequestId = useRef(0);
 
   useEffect(() => {
-    if (activeTab !== "analytics" || period === lastFetchedPeriod.current) return;
+    if (activeTab !== "analytics" || period === lastFetchedPeriod.current)
+      return;
 
     lastFetchedPeriod.current = period;
     const requestId = ++analyticsRequestId.current;
@@ -389,7 +437,8 @@ export default function Page() {
     const idx = TAB_IDS.indexOf(activeTab);
     let next = idx;
     if (e.key === "ArrowRight") next = (idx + 1) % TAB_IDS.length;
-    else if (e.key === "ArrowLeft") next = (idx - 1 + TAB_IDS.length) % TAB_IDS.length;
+    else if (e.key === "ArrowLeft")
+      next = (idx - 1 + TAB_IDS.length) % TAB_IDS.length;
     else return;
     e.preventDefault();
     setActiveTab(TAB_IDS[next]);
@@ -397,8 +446,10 @@ export default function Page() {
   }
 
   return (
-    <AppShell title="Dashboard Analytics">
-      {loading ? <div className="theme-copy p-6">Loading analytics…</div> : null}
+    <>
+      {loading ? (
+        <div className="theme-copy p-6">Loading analytics…</div>
+      ) : null}
       {error ? (
         <div className="rounded-card border border-red-200 bg-red-50 p-4 text-red-700 shadow-soft">
           {error}
@@ -408,17 +459,27 @@ export default function Page() {
         <>
           <WorkspaceHeader
             eyebrow="Operations Overview"
-            title={activeTab === "operations" ? "Today's command surface" : "Plant analytics"}
+            title={
+              activeTab === "operations"
+                ? "Today's command surface"
+                : "Plant analytics"
+            }
             description={
               activeTab === "operations"
                 ? "Prioritize live work, staffing pressure, and today's schedule from one operating view."
                 : "Track plant demand, replacement patterns, and stock health over time."
             }
-            stats={activeTab === "operations" ? operationsStats : analyticsStats}
+            stats={
+              activeTab === "operations" ? operationsStats : analyticsStats
+            }
           />
 
           {/* ── Tab Bar ── */}
-          <div role="tablist" aria-label="Dashboard views" className="mt-6 flex gap-1 rounded-2xl bg-surface-muted p-1 w-fit">
+          <div
+            role="tablist"
+            aria-label="Dashboard views"
+            className="mt-6 flex gap-1 rounded-2xl bg-surface-muted p-1 w-fit"
+          >
             {[
               { id: "operations", label: "Operations" },
               { id: "analytics", label: "Plant Analytics" },
@@ -496,7 +557,10 @@ export default function Page() {
             </section>
 
             <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <HBarList title="Open Work by Type" items={data.actionRequiredBreakdown} />
+              <HBarList
+                title="Open Work by Type"
+                items={data.actionRequiredBreakdown}
+              />
               <HBarList title="Open Work by Account" items={data.accountLoad} />
               <ScheduleList
                 title="Today's Coverage"
@@ -514,7 +578,9 @@ export default function Page() {
             hidden={activeTab !== "analytics"}
           >
             {analyticsLoading ? (
-              <div className="theme-copy mt-6 p-6">Loading plant analytics…</div>
+              <div className="theme-copy mt-6 p-6">
+                Loading plant analytics…
+              </div>
             ) : analyticsError ? (
               <div className="mt-6 rounded-card border border-red-200 bg-red-50 p-4 text-red-700 shadow-soft">
                 {analyticsError}
@@ -542,41 +608,88 @@ export default function Page() {
                 <section className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-4">
                   <Kpi label="Plant Types" value={analytics.overview.types} />
                   <Kpi label="Units on Hand" value={analytics.overview.units} />
-                  <Kpi label="Inventory Value" value={formatCurrency(analytics.overview.value)} />
+                  <Kpi
+                    label="Inventory Value"
+                    value={formatCurrency(analytics.overview.value)}
+                  />
                   <Kpi label="Low Stock" value={analytics.overview.lowStock} />
                 </section>
 
                 {/* Charts Row */}
                 <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                  <div role="img" aria-label="Requests over time bar chart" className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-                    <h3 className="text-lg font-bold text-foreground">Requests Over Time</h3>
+                  <div
+                    role="img"
+                    aria-label="Requests over time bar chart"
+                    className="rounded-card border border-border-soft bg-surface p-5 shadow-soft"
+                  >
+                    <h3 className="text-lg font-bold text-foreground">
+                      Requests Over Time
+                    </h3>
                     {analytics.requestsOverTime.length === 0 ? (
-                      <p className="theme-copy mt-4 text-sm">No request data for this period.</p>
+                      <p className="theme-copy mt-4 text-sm">
+                        No request data for this period.
+                      </p>
                     ) : (
-                      <div className="mt-4" style={{ width: "100%", height: 280 }}>
+                      <div
+                        className="mt-4"
+                        style={{ width: "100%", height: 280 }}
+                      >
                         <ResponsiveContainer>
                           <BarChart data={analytics.requestsOverTime}>
-                            <XAxis dataKey="period" tickFormatter={formatPeriodLabel} tick={{ fontSize: 12 }} />
-                            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                            <XAxis
+                              dataKey="period"
+                              tickFormatter={formatPeriodLabel}
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis
+                              allowDecimals={false}
+                              tick={{ fontSize: 12 }}
+                            />
                             <Tooltip labelFormatter={formatPeriodLabel} />
-                            <Bar dataKey="count" fill="var(--brand)" radius={[4, 4, 0, 0]} />
+                            <Bar
+                              dataKey="count"
+                              fill="var(--brand)"
+                              radius={[4, 4, 0, 0]}
+                            />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
                     )}
                   </div>
 
-                  <div role="img" aria-label="Requests by status pie chart" className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-                    <h3 className="text-lg font-bold text-foreground">Requests by Status</h3>
+                  <div
+                    role="img"
+                    aria-label="Requests by status pie chart"
+                    className="rounded-card border border-border-soft bg-surface p-5 shadow-soft"
+                  >
+                    <h3 className="text-lg font-bold text-foreground">
+                      Requests by Status
+                    </h3>
                     {analytics.requestsByStatus.length === 0 ? (
-                      <p className="theme-copy mt-4 text-sm">No request data for this period.</p>
+                      <p className="theme-copy mt-4 text-sm">
+                        No request data for this period.
+                      </p>
                     ) : (
-                      <div className="mt-4" style={{ width: "100%", height: 280 }}>
+                      <div
+                        className="mt-4"
+                        style={{ width: "100%", height: 280 }}
+                      >
                         <ResponsiveContainer>
                           <PieChart>
-                            <Pie data={analytics.requestsByStatus} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={90} label>
+                            <Pie
+                              data={analytics.requestsByStatus}
+                              dataKey="count"
+                              nameKey="status"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={90}
+                              label
+                            >
                               {analytics.requestsByStatus.map((entry, i) => (
-                                <Cell key={entry.status} fill={STATUS_COLORS[i % STATUS_COLORS.length]} />
+                                <Cell
+                                  key={entry.status}
+                                  fill={STATUS_COLORS[i % STATUS_COLORS.length]}
+                                />
                               ))}
                             </Pie>
                             <Tooltip />
@@ -592,45 +705,90 @@ export default function Page() {
                 <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                   <HBarList
                     title="Top Requested Plants"
-                    items={analytics.topRequested.map((r) => ({ label: r.plant, value: r.count }))}
+                    items={analytics.topRequested.map((r) => ({
+                      label: r.plant,
+                      value: r.count,
+                    }))}
                     empty="No plant requests in this period."
                   />
                   <HBarList
                     title="Top Replaced Plants"
-                    items={analytics.topReplaced.map((r) => ({ label: r.plant, value: r.count }))}
+                    items={analytics.topReplaced.map((r) => ({
+                      label: r.plant,
+                      value: r.count,
+                    }))}
                     empty="No plant replacements in this period."
                   />
                   <HBarList
                     title="Top Accounts by Volume"
-                    items={analytics.topAccountsByVolume.map((a) => ({ label: a.label, value: a.count }))}
+                    items={analytics.topAccountsByVolume.map((a) => ({
+                      label: a.label,
+                      value: a.count,
+                    }))}
                     empty="No account data in this period."
                   />
                 </section>
 
                 {/* Stock vs Demand Table */}
                 <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-                  <h3 className="text-lg font-bold text-foreground">Stock vs Demand</h3>
+                  <h3 className="text-lg font-bold text-foreground">
+                    Stock vs Demand
+                  </h3>
                   {analytics.stockVsDemand.length === 0 ? (
-                    <p className="theme-copy mt-3 text-sm">No plant inventory tracked yet.</p>
+                    <p className="theme-copy mt-3 text-sm">
+                      No plant inventory tracked yet.
+                    </p>
                   ) : (
                     <div className="mt-4 overflow-x-auto">
                       <table className="w-full text-left text-sm">
                         <thead>
                           <tr className="border-b border-border-soft">
-                            <th scope="col" className="pb-3 font-semibold text-muted">Plant</th>
-                            <th scope="col" className="pb-3 text-right font-semibold text-muted">In Stock</th>
-                            <th scope="col" className="pb-3 text-right font-semibold text-muted">Open Reqs</th>
-                            <th scope="col" className="pb-3 text-right font-semibold text-muted">Status</th>
+                            <th
+                              scope="col"
+                              className="pb-3 font-semibold text-muted"
+                            >
+                              Plant
+                            </th>
+                            <th
+                              scope="col"
+                              className="pb-3 text-right font-semibold text-muted"
+                            >
+                              In Stock
+                            </th>
+                            <th
+                              scope="col"
+                              className="pb-3 text-right font-semibold text-muted"
+                            >
+                              Open Reqs
+                            </th>
+                            <th
+                              scope="col"
+                              className="pb-3 text-right font-semibold text-muted"
+                            >
+                              Status
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
                           {analytics.stockVsDemand.map((row) => (
-                            <tr key={row.name} className="border-b border-border-soft last:border-0">
-                              <td className="py-3 font-medium text-foreground">{row.name}</td>
-                              <td className="py-3 text-right tabular-nums text-foreground">{row.quantity}</td>
-                              <td className="py-3 text-right tabular-nums text-foreground">{row.openRequests}</td>
+                            <tr
+                              key={row.name}
+                              className="border-b border-border-soft last:border-0"
+                            >
+                              <td className="py-3 font-medium text-foreground">
+                                {row.name}
+                              </td>
+                              <td className="py-3 text-right tabular-nums text-foreground">
+                                {row.quantity}
+                              </td>
+                              <td className="py-3 text-right tabular-nums text-foreground">
+                                {row.openRequests}
+                              </td>
                               <td className="py-3 text-right">
-                                <StockIndicator quantity={row.quantity} demand={row.openRequests} />
+                                <StockIndicator
+                                  quantity={row.quantity}
+                                  demand={row.openRequests}
+                                />
                               </td>
                             </tr>
                           ))}
@@ -642,18 +800,31 @@ export default function Page() {
 
                 {/* Low Stock Watch */}
                 <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
-                  <h3 className="text-lg font-bold text-foreground">Low Stock Watch</h3>
+                  <h3 className="text-lg font-bold text-foreground">
+                    Low Stock Watch
+                  </h3>
                   {analytics.lowStockPlants.length === 0 ? (
-                    <p className="theme-copy mt-3 text-sm">No low-stock plants right now.</p>
+                    <p className="theme-copy mt-3 text-sm">
+                      No low-stock plants right now.
+                    </p>
                   ) : (
                     <div className="mt-4 space-y-3">
                       {analytics.lowStockPlants.map((plant) => (
-                        <div key={plant.name} className="flex items-center justify-between rounded-xl border border-border-soft bg-surface px-4 py-3">
+                        <div
+                          key={plant.name}
+                          className="flex items-center justify-between rounded-xl border border-border-soft bg-surface px-4 py-3"
+                        >
                           <div>
-                            <div className="font-semibold text-foreground">{plant.name}</div>
-                            <div className="text-sm text-muted">{formatCurrency(plant.cost_per_unit)} per unit</div>
+                            <div className="font-semibold text-foreground">
+                              {plant.name}
+                            </div>
+                            <div className="text-sm text-muted">
+                              {formatCurrency(plant.cost_per_unit)} per unit
+                            </div>
                           </div>
-                          <div className="text-sm font-bold text-red-600">{plant.quantity} left</div>
+                          <div className="text-sm font-bold text-red-600">
+                            {plant.quantity} left
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -661,11 +832,13 @@ export default function Page() {
                 </section>
               </div>
             ) : (
-              <div className="theme-copy mt-6 p-6">Select the Plant Analytics tab to load data.</div>
+              <div className="theme-copy mt-6 p-6">
+                Select the Plant Analytics tab to load data.
+              </div>
             )}
           </div>
         </>
       ) : null}
-    </AppShell>
+    </>
   );
 }
