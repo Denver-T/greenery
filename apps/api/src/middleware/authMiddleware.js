@@ -1,5 +1,6 @@
 // apps/api/src/middleware/authMiddleware.js
 
+const crypto = require("crypto");
 const admin = require("../../config/firebase");
 const employeesService = require("../services/employeesService");
 const { httpError } = require("../utils/httpError");
@@ -73,9 +74,14 @@ async function verifyToken(req, res, next) {
   } catch (err) {
     // Avoid leaking provider internals to the client while still logging
     // enough context locally to debug auth configuration issues.
-    console.error("verifyToken failed");
-    console.error("code:", err?.code);
-    console.error("message:", err?.message);
+    // Never log the token, the Authorization header, or the decoded claims.
+    const requestId = req.id || crypto.randomUUID().slice(0, 8);
+    const timestamp = new Date().toISOString();
+    const method = req.method || "UNKNOWN";
+    const url = req.originalUrl || req.url || "/";
+    console.error(
+      `[auth] ${timestamp} req=${requestId} ${method} ${url} — ${err?.code || "unknown"}: ${err?.message || "verifyToken failed"}`
+    );
 
     return next(
       httpError(401, "Invalid authentication token", "AUTH_TOKEN_INVALID")

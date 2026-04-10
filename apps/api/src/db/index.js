@@ -4,6 +4,18 @@
 
 const mysql = require("mysql2");
 
+// Fail-fast at module load if required DB env vars are missing or empty.
+// Mirrors the pattern in apps/api/config/firebase.js so the API crashes
+// immediately on misconfiguration instead of failing mid-request.
+// DB_PORT is intentionally NOT required — getPool() defaults it to 3306.
+const requiredDbEnv = ["DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME"];
+
+for (const key of requiredDbEnv) {
+  if (!process.env[key] || process.env[key].trim() === "") {
+    throw new Error(`Missing required database environment variable: ${key}`);
+  }
+}
+
 let pool;
 
 function getPool() {

@@ -4,6 +4,7 @@
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
 const path = require("path");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpecs = require("../config/swagger");
@@ -22,15 +23,42 @@ const analyticsRoutes = require("./routes/analytics");
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
 
+// CORS allowlist computed once at module load. Reads from CORS_ORIGINS env var
+// (comma-separated). Defaults cover the local web (3000) and Expo dev (8082)
+// origins. No wildcard escape hatch — production must set CORS_ORIGINS explicitly.
+const corsOrigins = (
+  process.env.CORS_ORIGINS || "http://localhost:3000,http://localhost:8082"
+)
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin(origin, cb) {
+    // Allow same-origin / curl / server-to-server (no Origin header)
+    if (!origin) return cb(null, true);
+    if (corsOrigins.includes(origin)) return cb(null, true);
+    // Attach statusCode and code so the global error handler returns 403 instead
+    // of 500 and does NOT log the rejection as "Unhandled server error".
+    const err = new Error("Origin not allowed by CORS");
+    err.statusCode = 403;
+    err.code = "CORS_ORIGIN_DENIED";
+    return cb(err);
+  },
+};
+
 const app = express();
 
 /**
  * Core middleware
- * - `cors()` keeps local web/mobile development simple.
+ * - `helmet()` sets baseline security headers (CSP, HSTS, X-Frame-Options, etc.)
+ *   and runs first so even CORS-rejected responses get protected.
+ * - `cors(corsOptions)` enforces the allowlist defined above.
  * - `express.json()` enables JSON request parsing for the API surface.
  * - `/uploads` serves request images saved by the work-request flow.
  */
-app.use(cors());
+app.use(helmet());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
@@ -55,9 +83,27 @@ app.use("/analytics", analyticsRoutes);
 /**
  * API documentation
  * Swagger is mounted in-process so the docs always reflect the running server.
+ *
+ * Helmet's default `contentSecurityPolicy` (set by `app.use(helmet())` above)
+ * blocks the inline scripts that swagger-ui-express ships in its HTML shell —
+ * `script-src 'self'` rejects them and the page renders blank in real browsers.
+ *
+ * The naive fix `helmet({ contentSecurityPolicy: false })` does NOT work here
+ * because by the time this per-route middleware runs, the global helmet has
+ * already set the CSP header on the response. `helmet({...false})` only stops
+ * the CSP module from running — it does not remove an existing header.
+ *
+ * The correct fix is to explicitly strip the CSP header on this subroute before
+ * swaggerUi.serve runs. Every other helmet header (X-Frame-Options, HSTS,
+ * X-Content-Type-Options, etc.) is left intact because nothing removes them.
+ * This is a surgical opt-out for /api-docs only, not a global escape hatch.
  */
 app.use(
   "/api-docs",
+  (req, res, next) => {
+    res.removeHeader("Content-Security-Policy");
+    return next();
+  },
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpecs, {
     swaggerOptions: { defaultModelsExpandDepth: -1 },

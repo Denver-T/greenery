@@ -6,6 +6,8 @@ const { verifyToken } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/authorize");
 const { writeLimiter } = require("../middleware/rateLimiters");
 const { getAccessRank, normalizeAccessLevel } = require("../utils/permissions");
+const { toPositiveInt } = require("../utils/validators");
+const { httpError } = require("../utils/httpError");
 
 const AUDIENCE_LEVELS = ["technician", "manager", "admin"];
 const EVENT_TYPES = ["request", "custom"];
@@ -198,7 +200,14 @@ router.put(
   authorize("admin"),
   async (req, res, next) => {
     try {
-      const existing = await getScheduleEventById(req.params.id);
+      const eventId = toPositiveInt(req.params.id);
+      if (eventId === null) {
+        return next(
+          httpError(400, "Schedule event id must be a positive integer", "VALIDATION_ERROR")
+        );
+      }
+
+      const existing = await getScheduleEventById(eventId);
       if (!existing) {
         return res.status(404).json({ error: "Schedule event not found." });
       }
@@ -227,10 +236,10 @@ router.put(
             created_by_email = ?
           WHERE id = ?
         `,
-        [title, details, startTime, endTime, employeeId, audienceLevel, req.user?.email || null, req.params.id]
+        [title, details, startTime, endTime, employeeId, audienceLevel, req.user?.email || null, eventId]
       );
 
-      const updated = await getScheduleEventById(req.params.id);
+      const updated = await getScheduleEventById(eventId);
       return res.status(200).json({ data: updated });
     } catch (err) {
       return next(err);
@@ -245,7 +254,14 @@ router.delete(
   authorize("admin"),
   async (req, res, next) => {
     try {
-      const existing = await getScheduleEventById(req.params.id);
+      const eventId = toPositiveInt(req.params.id);
+      if (eventId === null) {
+        return next(
+          httpError(400, "Schedule event id must be a positive integer", "VALIDATION_ERROR")
+        );
+      }
+
+      const existing = await getScheduleEventById(eventId);
       if (!existing) {
         return res.status(404).json({ error: "Schedule event not found." });
       }
@@ -254,7 +270,7 @@ router.delete(
         return res.status(403).json({ error: "Only custom events can be deleted here." });
       }
 
-      await db.query(`DELETE FROM schedule_events WHERE id = ?`, [req.params.id]);
+      await db.query(`DELETE FROM schedule_events WHERE id = ?`, [eventId]);
       return res.status(204).send();
     } catch (err) {
       return next(err);
