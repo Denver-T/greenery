@@ -25,7 +25,13 @@ async function waitForFirebaseUser() {
 }
 
 export async function fetchApi(endpoint, options = {}) {
-  const { method = "GET", body, headers, ...customConfig } = options;
+  const {
+    method = "GET",
+    body,
+    headers,
+    raw = false,
+    ...customConfig
+  } = options;
   const defaultHeaders = {};
 
   if (!isFormData(body)) {
@@ -82,6 +88,9 @@ export async function fetchApi(endpoint, options = {}) {
       return payload;
     }
 
+    // `raw: true` — caller needs the full envelope (e.g. pagination meta).
+    // Default unwraps `.data` so legacy `{data: ...}` responses stay ergonomic.
+    if (raw) return payload;
     return payload?.data ?? payload;
   } catch (error) {
     console.error(`[API Error] ${method} ${endpoint}:`, error);

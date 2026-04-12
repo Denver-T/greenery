@@ -669,9 +669,9 @@ export default function Page() {
                             {entry.workReqId ? (
                               <button
                                 onClick={() =>
-                                  router.push(`/tasks?open=${entry.workReqId}`)
+                                  router.push(`/req/${entry.workReqId}`)
                                 }
-                                className="rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white hover:bg-foreground"
+                                className="rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                               >
                                 Open request
                               </button>

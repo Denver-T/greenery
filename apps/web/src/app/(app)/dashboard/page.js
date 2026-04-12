@@ -519,10 +519,10 @@ export default function Page() {
 
             <section className="mt-6 grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
               <ActionCard
-                title="Review request queue"
-                description={`${data.activeReqs.length} open request${data.activeReqs.length === 1 ? "" : "s"} currently need attention.`}
-                href="/tasks"
-                actionLabel="Open queue"
+                title="Browse work requests"
+                description={`${data.activeReqs.length} open request${data.activeReqs.length === 1 ? "" : "s"} in the directory. Open any to view, edit, or delete.`}
+                href="/req/list"
+                actionLabel="View all requests"
               />
               <ActionCard
                 title="Manage assignments"
