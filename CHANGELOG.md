@@ -5,6 +5,58 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-12 — feat(web): work request routes (list/detail/edit) + login contrast fix
+
+**Commits:** `34ad54a` `5a46d74` (this entry)
+
+### What changed
+
+**Phase 3 — Web: work request routes (list/detail/edit + delete flow)**
+- New routes: `/req/list` (paginated directory), `/req/[id]` (full detail with sync panel), `/req/[id]/edit` (form pre-filled).
+- Extracted the existing create form into `WorkRequestForm` (`mode="create" | "edit"`). Uncontrolled FormData-based, dirty tracking + beforeunload guard preserved. ~450 lines, single source of truth for both flows.
+- New `SyncStatusBadge` resolves four states (Synced / Queued / Failed / Not synced) from `monday_item_id`, `monday_synced_at`, and an optional `queueAttempts`. Rendered on list rows AND the detail page.
+- New memoized `WorkRequestRow` for the list directory.
+- New `DeleteWorkRequestDialog` (`role="dialog"`, `aria-modal`, focus trap, Escape, backdrop close, return-focus on unmount). Parent controls mount via conditional rendering — sidesteps the `react-hooks/set-state-in-effect` lint error while still resetting state on each open.
+- Detail page gates Edit behind Manager+ and Delete behind Administrator+, mirroring the API `authorize()` scopes (server is still authoritative).
+- Tasks page keeps its Queue + Recently Deleted tabs but its View button now navigates to the new detail route. The "Undo Delete" flow was renamed to "Recreate from snapshot" to set expectations honestly — the server assigns a fresh `WR-YYYY-NNNN` on POST.
+- Calendar's "Open request" button and the dashboard `ActionCard` now point at the new routes.
+- `fetchApi` gained an opt-in `raw: true` flag so the list page can read pagination meta (`totalCount`) without losing the existing auto-unwrap of `.data` for every other caller.
+- `routes.js` gained a `DYNAMIC_ROUTES` regex layer (checked before the static ROUTES array) so `/req/42` resolves to "Work Request Detail" instead of colliding with the `/req` create page. `/req/42/edit` resolves to "Edit Work Request". Test coverage at `routes.test.js`.
+
+**Test additions (+23 web tests, 29 → 52 passing)**
+- `SyncStatusBadge.test.js` — 6 tests covering each state and the priority order.
+- `WorkRequestRow.test.js` — 6 tests covering rendering, link target, status pill, fallback placeholders.
+- `DeleteWorkRequestDialog.test.js` — 7 tests covering ARIA attrs, Cancel/Confirm wiring, error display, Escape, missing reference number.
+- `routes.test.js` — 4 new dynamic-route tests.
+
+**Login contrast fix (`34ad54a`)**
+- Login page email/password inputs now set explicit `color: #223126` plus a scoped `<style>` block targeting `.login-input::placeholder` and `:-webkit-autofill`. Browser autofill suggestions, placeholder text, and typed text all render with adequate contrast against the cream `#f4f1e8` background.
+- Surface fix only — the deeper issue is that `apps/web/src/app/page.js` is built entirely with inline `style={...}` objects and can't participate in the design token system. Logged as a post-launch open thread.
+
+### Why
+
+- The Monday.com sync (Phase 2) is invisible without a UI surface. `/req/list` plus the detail/edit pages give operators a way to see the current sync state of every request, edit fields and watch them propagate to Monday, and confirm deletes round-trip.
+- Tasks page modal-based detail view was a UX dead-end (no deep links, no back button, no per-request URL). Route-based detail unlocks bookmarks, browser back, and audit-trail-friendly URLs for the Friday demo.
+- Login contrast was demo-blocking — it's the first thing the audience sees.
+
+### Lessons learned
+
+- **`fetchApi` auto-unwrap of `.data` is a footgun for paginated endpoints.** First implementation of the list page tried to handle both shapes (array vs object) and ended up always seeing the unwrapped array, capping `totalCount` at the current page size. Pagination silently never showed beyond page 1. Fix was to make the unwrap opt-out, not heuristic. **Takeaway:** when an API helper auto-unwraps a key, callers that need the envelope should be explicit, never inferred — heuristic fallbacks just paper over the bug until production data is large enough to surface it.
+- **`<select defaultValue>` with a hardcoded fallback silently mutates DB nulls.** First WorkRequestForm pass had `defaultValue={initialValues.plantSize || "3 Gal"}`. Editing a row with a null `plantSize` would default the select to "3 Gal", and saving would write "3 Gal" to both Greenery and Monday — user never touched the field. Fix is mode-aware: edit mode uses `""` as the default + adds a sentinel `<option value="">— not set —</option>`, and the server's `body.X ?? existing.X` back-fill preserves the null. **Takeaway:** any default-value pattern that uses `||` against a nullable column is a silent mutation in disguise. Pre-existing rows with non-canonical values (legacy values not in the option list) have the same issue and are still latent — logged for post-launch.
+- **Permission-gate UX, not just the API.** First detail-page version showed Edit/Delete buttons unconditionally and let the API's `authorize()` reject the call. Technicians would click and see a 403 error in a dialog, which is bad demo UX. Client-side permission gating mirrors the server's authorize scopes — purely cosmetic, but the API is still authoritative.
+- **`<dt>/<dd>` need a `<dl>` parent.** Easy to miss — was rendering correct visual output but invalid HTML and confused screen readers. The `MetaRow` component was correctly emitting `dt`/`dd` but its parent was a plain `<div>`. **Takeaway:** any time a small leaf component emits semantic-pair elements, audit the parents on every use site.
+- **Two cycles of `/review` was the right cadence.** Cycle 1 caught 2 critical + 5 important. Cycle 2 verified the fixes and surfaced two pre-existing latent issues (legacy select values, edit-PUT can't actively clear fields) that I logged for post-launch instead of trying to wedge into this commit. Holding the line on "out of scope" prevented a Phase 3 commit from sprawling into Phase 4.
+- **Inline styles can't target pseudo-classes.** Login page contrast fix — inline `style={}` objects are convenient but block `::placeholder`, `:-webkit-autofill`, `:focus-visible`, and the design token system. Surface-patched with a scoped `<style>` element this time; full conversion is a post-launch task.
+
+### Out of scope (post-launch open threads)
+
+- Login page full conversion from inline styles to className + design tokens.
+- WorkRequestForm legacy non-canonical select values — silent mutation still possible if any production row has a value outside the 4 canonical options.
+- Edit PUT can't actively clear nullable string fields — `buildReqPayload` treats null as "not provided". Asymmetric with `numberOfPlants` which uses `!== undefined`. Migrate to "any key in `req.body` is explicit intent" post-launch.
+- 8 `/auth/me` fetchers across the web app — `web-shared-user-fetch` shared hook is implied. Phase 3 added a new one in the detail page.
+
+---
+
 ## 2026-04-12 — feat: Monday sync outbound + web design token foundation + button system
 
 **Commits:** _pending_ (single large checkpoint covering Phases 2, 2.5, 2.6, 2.7 of the web launch sprint; split into atomic commits on stage)
