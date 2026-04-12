@@ -51,46 +51,46 @@ export default function LoginPage() {
   }
 
   async function onSubmit(e) {
-  e.preventDefault();
-  setError("");
-  setLoading(true);
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-  try {
-    const credential = await withPersistence(() =>
-      signInWithEmailAndPassword(auth, email.trim(), password)
-    );
+    try {
+      const credential = await withPersistence(() =>
+        signInWithEmailAndPassword(auth, email.trim(), password),
+      );
 
-    const token = await credential.user.getIdToken(true);
-    localStorage.setItem("token", token);
+      const token = await credential.user.getIdToken(true);
+      localStorage.setItem("token", token);
 
-    router.push("/dashboard");
-  } catch (err) {
-    setError(translateFirebaseError(err?.code));
-  } finally {
-    setLoading(false);
+      router.push("/dashboard");
+    } catch (err) {
+      setError(translateFirebaseError(err?.code));
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   async function onGoogle() {
-  setError("");
-  setLoading(true);
+    setError("");
+    setLoading(true);
 
-  try {
-    const provider = new GoogleAuthProvider();
-    const credential = await withPersistence(() =>
-      signInWithPopup(auth, provider)
-    );
+    try {
+      const provider = new GoogleAuthProvider();
+      const credential = await withPersistence(() =>
+        signInWithPopup(auth, provider),
+      );
 
-    const token = await credential.user.getIdToken(true);
-    localStorage.setItem("token", token);
+      const token = await credential.user.getIdToken(true);
+      localStorage.setItem("token", token);
 
-    router.push("/dashboard");
-  } catch (err) {
-    setError(translateFirebaseError(err?.code));
-  } finally {
-    setLoading(false);
+      router.push("/dashboard");
+    } catch (err) {
+      setError(translateFirebaseError(err?.code));
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   async function onForgotPassword() {
     if (!email) {
@@ -112,6 +112,16 @@ export default function LoginPage() {
 
   return (
     <div style={styles.page}>
+      <style>{`
+        .login-input::placeholder { color: #5c6b56; opacity: 1; }
+        .login-input:-webkit-autofill,
+        .login-input:-webkit-autofill:hover,
+        .login-input:-webkit-autofill:focus {
+          -webkit-text-fill-color: #223126;
+          -webkit-box-shadow: 0 0 0 1000px #f4f1e8 inset;
+          caret-color: #223126;
+        }
+      `}</style>
       <div style={styles.bgOverlay} />
       <div style={styles.bgShapeA} />
       <div style={styles.bgShapeB} />
@@ -131,6 +141,7 @@ export default function LoginPage() {
           <label style={styles.label}>
             Email
             <input
+              className="login-input"
               style={styles.input}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -141,6 +152,7 @@ export default function LoginPage() {
           <label style={styles.label}>
             Password
             <input
+              className="login-input"
               style={styles.input}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -169,7 +181,13 @@ export default function LoginPage() {
           </div>
 
           {error ? <div style={styles.error}>{error}</div> : null}
-          {resetSent ? <p style={{ color: "var(--brand-700)", marginTop: 8, fontSize: 14 }}>If that email exists, a reset link has been sent.</p> : null}
+          {resetSent ? (
+            <p
+              style={{ color: "var(--brand-700)", marginTop: 8, fontSize: 14 }}
+            >
+              If that email exists, a reset link has been sent.
+            </p>
+          ) : null}
 
           <button
             disabled={loading}
@@ -212,7 +230,7 @@ const styles = {
       "linear-gradient(145deg, #1f3427 0%, #294733 42%, #5f7d4b 100%)",
     position: "relative",
     overflow: "hidden",
-    fontFamily: 'var(--font-sans)',
+    fontFamily: "var(--font-sans)",
   },
   bgOverlay: {
     position: "absolute",
@@ -301,6 +319,7 @@ const styles = {
     border: "1px solid rgba(95,125,75,0.18)",
     outline: "none",
     background: "#f4f1e8",
+    color: "#223126",
     fontSize: "14px",
   },
   row: {

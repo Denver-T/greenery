@@ -14,9 +14,14 @@ const baseSections = [
     title: "Requests",
     items: [
       {
+        href: "/req/list",
+        label: "Work Requests",
+        description: "Browse, open, and edit every work request",
+      },
+      {
         href: "/tasks",
         label: "Request Queue",
-        description: "Review, edit, delete, and recover requests",
+        description: "Table view with restore for recent deletions",
       },
       {
         href: "/req",

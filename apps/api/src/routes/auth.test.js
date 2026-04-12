@@ -47,7 +47,7 @@ describe("GET /auth/me", () => {
     const res = await request(app).get("/auth/me");
 
     expect(res.status).toBe(401);
-    expect(res.body.code).toBe("AUTH_TOKEN_MISSING");
+    expect(res.body.error.code).toBe("AUTH_TOKEN_MISSING");
   });
 
   it("returns 404 when the authenticated email has no employee record", async () => {

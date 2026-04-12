@@ -54,7 +54,7 @@ describe("PUT /schedule/:id — param validation", () => {
       .send({});
 
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 });
 
@@ -73,7 +73,7 @@ describe("DELETE /schedule/:id — param validation", () => {
       .set("Authorization", "Bearer test-token");
 
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 });
 

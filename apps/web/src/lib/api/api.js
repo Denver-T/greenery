@@ -25,7 +25,13 @@ async function waitForFirebaseUser() {
 }
 
 export async function fetchApi(endpoint, options = {}) {
-  const { method = "GET", body, headers, ...customConfig } = options;
+  const {
+    method = "GET",
+    body,
+    headers,
+    raw = false,
+    ...customConfig
+  } = options;
   const defaultHeaders = {};
 
   if (!isFormData(body)) {
@@ -58,8 +64,17 @@ export async function fetchApi(endpoint, options = {}) {
       : await response.text();
 
     if (!response.ok) {
+      // Two error response shapes exist in the API:
+      //   New (via errorHandler): { error: { code, message, details } }
+      //   Legacy (direct returns): { error: "string message" }
+      // Try both so legacy routes (reqs, schedule, employeesController) still
+      // surface their validation messages after the errorHandler shape change.
       const errorMessage =
-        (typeof payload === "string" ? payload : payload?.error || payload?.message) ||
+        (typeof payload === "string"
+          ? payload
+          : typeof payload?.error === "string"
+            ? payload.error
+            : payload?.error?.message || payload?.message) ||
         `HTTP Error ${response.status}`;
 
       if (response.status === 401 && typeof window !== "undefined") {
@@ -73,6 +88,9 @@ export async function fetchApi(endpoint, options = {}) {
       return payload;
     }
 
+    // `raw: true` — caller needs the full envelope (e.g. pagination meta).
+    // Default unwraps `.data` so legacy `{data: ...}` responses stay ergonomic.
+    if (raw) return payload;
     return payload?.data ?? payload;
   } catch (error) {
     console.error(`[API Error] ${method} ${endpoint}:`, error);

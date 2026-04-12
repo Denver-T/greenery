@@ -7,12 +7,33 @@
   --foreground: #223126;
   --surface: #fffdf7;
   --surface-muted: #f0ebde;
+  --surface-warm: #f8f4ea;
+  --surface-warm-alt: #faf8f2;
+  --badge-green: #e6f3ea;
   --border-soft: #d5ddc8;
   --border-strong: #bcc8b1;
   --brand: #5f7d4b;
   --brand-700: #294733;
   --accent: #c98b45;
   --muted: #617060;
+
+  /* Text variants beyond --foreground (mirrored from mobile theme.js) */
+  /* Prefixed --fg-* to avoid collision with Tailwind v4's --text-* font-size namespace */
+  --fg-primary: #223126;
+  --fg-soft: #8a9486;
+  --fg-on-brand: #f7f8f3;
+
+  /* Semantic colors — mirrored from mobile theme.js COLORS */
+  /* Non-prefixed so @theme inline can alias as --color-* without self-reference */
+  --success: #2f7d4e;
+  --success-soft: #ddf1e4;
+  --warning: #a8771e;
+  --warning-soft: #f7e7bf;
+  --danger: #b5463c;
+  --danger-soft: #f4deda;
+  --danger-border: rgba(181, 70, 60, 0.2);
+  --info: #3e6e79;
+  --info-soft: #ddecf0;
 }
 
 .dark {
@@ -20,12 +41,35 @@
   --foreground: #ece8de;
   --surface: #23262d;
   --surface-muted: #2d3139;
+  /* Dark-mode equivalents for light-tint surface variants
+     (so bg-surface-warm etc. render readable in dark mode) */
+  --surface-warm: #2d3139;
+  --surface-warm-alt: #343a44;
+  --badge-green: #1f3327;
   --border-soft: #3b4049;
   --border-strong: #4a5160;
   --brand: #8ea77b;
-  --brand-700: #d7c8a2;
+  /* Keep primary brand forest green in dark mode (decision D1 2026-04-12):
+     was #d7c8a2 (cream) which made bg-brand-700 buttons look disabled */
+  --brand-700: #3d5a30;
   --accent: #d79b53;
   --muted: #a6acb6;
+
+  /* Text variants (mirrored from mobile theme.js COLORS_DARK) */
+  --fg-primary: #f1ecdd;
+  --fg-soft: #9ca890;
+  --fg-on-brand: #f7f8f3;
+
+  /* Semantic colors — mirrored from mobile theme.js COLORS_DARK */
+  --success: #5baf73;
+  --success-soft: #1f3327;
+  --warning: #d9a04a;
+  --warning-soft: #3a2e18;
+  --danger: #e07268;
+  --danger-soft: #3a1f1c;
+  --danger-border: rgba(224, 114, 104, 0.35);
+  --info: #6fa0ab;
+  --info-soft: #1b2d32;
 }
 
 @theme inline {
@@ -40,10 +84,10 @@
   --color-accent: var(--accent);
   --color-muted: var(--muted);
 
-  /* surface variants for hardcoded hex replacement */
-  --color-surface-warm: #f8f4ea;
-  --color-surface-warm-alt: #faf8f2;
-  --color-badge-green: #e6f3ea;
+  /* surface variants — now theme-aware via :root/.dark cascade */
+  --color-surface-warm: var(--surface-warm);
+  --color-surface-warm-alt: var(--surface-warm-alt);
+  --color-badge-green: var(--badge-green);
   --color-border-dashed: #d5ddc8;
 
   /* brand variants for emerald replacement */
@@ -51,10 +95,92 @@
   --color-brand-600: #6b8b57;
   --color-brand-800: #3d5a30;
 
+  /* Semantic colors — theme-aware via :root / .dark override */
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-border: var(--danger-border);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  /* Foreground text variants — theme-aware */
+  --color-fg-primary: var(--fg-primary);
+  --color-fg-soft: var(--fg-soft);
+  --color-fg-on-brand: var(--fg-on-brand);
+
+  /* Canonical spacing scale — generates p-*, m-*, gap-*, space-x-*, size-*, etc. */
+  --spacing-0: 0px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-20: 80px;
+  --spacing-24: 96px;
+  --spacing-32: 128px;
+
+  /* Type scale — generates text-xs through text-6xl */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+
+  /* Line heights — generates leading-tight through leading-loose */
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+  --leading-loose: 1.8;
+
+  /* Radius scale — generates rounded-sm through rounded-full */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadow scale — generates shadow-sm through shadow-xl */
+  /* (sits beside existing @utility shadow-soft/elevated/elevated-lg) */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.10), 0 2px 4px -2px rgb(0 0 0 / 0.10);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.10), 0 4px 6px -4px rgb(0 0 0 / 0.10);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.10), 0 8px 10px -6px rgb(0 0 0 / 0.10);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+  /* Motion durations — generates duration-fast, duration-normal, etc. */
+  --duration-instant: 50ms;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+  --duration-page: 500ms;
+
+  /* Motion easings — generates ease-out, ease-in, ease-inout, ease-spring */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-inout: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
   /* optional fonts (if you wire them in layout.js) */
   --font-sans: "Space Grotesk", "Segoe UI", "Helvetica Neue", sans-serif;
   --font-mono:
     "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+  /* Legacy alias — --radius-card was the original radius token, now aliases --radius-lg */
   --radius-card: 12px;
 }
 
@@ -142,6 +268,18 @@ button {
 .dark :is(input, textarea, select)[readonly] {
   color: #c7ccd4;
   background-color: #343842;
+}
+
+/* Native date/time controls read color-scheme to pick picker chrome.
+   html.dark already sets this globally but some browsers scope it per-input. */
+.dark :is(
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="week"]
+) {
+  color-scheme: dark;
 }
 
 .dark [class~="bg-white"] {
@@ -287,14 +425,10 @@ button {
   color: #efd4af;
 }
 
-.dark .theme-button {
-  background: #6f8fc7;
-  color: #f7f9fc;
-}
-
-.dark .theme-button:hover {
-  background: #82a1d8;
-}
+/* .theme-button inherits from the default rule which uses var(--brand-700).
+   The dark-mode override above was a hardcoded cold blue (#6f8fc7) left over
+   from an earlier dark-mode attempt. Removed 2026-04-12 — now follows the
+   brand token cascade so the button stays on-brand in dark mode. */
 
 @utility shadow-soft {
   box-shadow:

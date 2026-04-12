@@ -12,6 +12,8 @@ const { verifyToken } = require("../middleware/authMiddleware");
 const { authorize } = require("../middleware/authorize");
 const { writeLimiter } = require("../middleware/rateLimiters");
 const { parsePagination, paginatedResponse } = require("../utils/pagination");
+const { nextReferenceNumber } = require("../services/reqSequenceService");
+const mondaySyncService = require("../services/mondaySyncService");
 
 const router = express.Router();
 
@@ -220,8 +222,17 @@ function buildReqPayload(body = {}, file = null, existing = null) {
   };
 }
 
+const REQ_COLUMNS = `id, referenceNumber, requestDate, techName, account, accountContact,
+  accountAddress, actionRequired, numberOfPlants, plantWanted, plantReplaced, plantSize,
+  plantHeight, planterTypeSize, planterColour, stagingMaterial, lighting, method, location,
+  notes, picturePath, assignedTo, dueDate, status, monday_item_id, monday_synced_at,
+  created_at, updated_at`;
+
 async function getReqById(id) {
-  const [rows] = await db.query(`SELECT * FROM work_reqs WHERE id = ?`, [id]);
+  const [rows] = await db.query(
+    `SELECT ${REQ_COLUMNS} FROM work_reqs WHERE id = ? LIMIT 1`,
+    [id],
+  );
   return rows[0] || null;
 }
 
@@ -242,9 +253,14 @@ router.post(
   async (req, res, next) => {
     try {
       const authenticatedTechName = await getAuthenticatedEmployeeName(req);
+
+      // Server-generated reference number (WR-YYYY-NNNN)
+      const refNumber = await nextReferenceNumber();
+
       const payload = buildReqPayload(
         {
           ...req.body,
+          referenceNumber: refNumber,
           techName: authenticatedTechName || req.body?.techName,
           requestDate: getTodayDateOnlyString(),
         },
@@ -307,6 +323,14 @@ router.post(
         ]
       );
 
+      const newRow = { id: result.insertId, ...payload };
+
+      // Fire-and-forget Monday sync
+      void (async () => {
+        try { await mondaySyncService.pushCreate(newRow); }
+        catch (err) { console.error("[monday-sync] pushCreate failed", err.message); }
+      })();
+
       return res.status(201).json({
         ok: true,
         id: result.insertId,
@@ -332,16 +356,16 @@ router.get(
   async (req, res, next) => {
     try {
       const pagination = parsePagination(req.query);
+      const listColumns = `id, referenceNumber, requestDate, techName, account, actionRequired,
+            location, picturePath, assignedTo, dueDate, status, monday_item_id, monday_synced_at, created_at`;
+
       if (pagination) {
         const [countResult] = await db.query(
-          `SELECT COUNT(*) as total FROM work_reqs WHERE referenceNumber LIKE 'REQ-%'`,
+          `SELECT COUNT(*) as total FROM work_reqs`,
         );
         const [rows] = await db.query(
-          `SELECT
-            id, referenceNumber, requestDate, techName, account, actionRequired,
-            location, picturePath, assignedTo, dueDate, status, created_at
+          `SELECT ${listColumns}
           FROM work_reqs
-          WHERE referenceNumber LIKE 'REQ-%'
           ORDER BY id DESC
           LIMIT ? OFFSET ?`,
           [pagination.pageSize, pagination.offset],
@@ -350,11 +374,8 @@ router.get(
       }
 
       const [rows] = await db.query(
-        `SELECT
-          id, referenceNumber, requestDate, techName, account, actionRequired,
-          location, picturePath, assignedTo, dueDate, status, created_at
+        `SELECT ${listColumns}
         FROM work_reqs
-        WHERE referenceNumber LIKE 'REQ-%'
         ORDER BY id DESC`,
       );
       return res.json({ data: rows });
@@ -467,6 +488,13 @@ router.put(
         ]
       );
 
+      // Fire-and-forget Monday sync
+      const updatedRow = { id, ...payload, monday_item_id: existing.monday_item_id };
+      void (async () => {
+        try { await mondaySyncService.pushUpdate(updatedRow); }
+        catch (err) { console.error("[monday-sync] pushUpdate failed", err.message); }
+      })();
+
       return res.json({ ok: true, id });
     } catch (err) {
       return next(err);
@@ -487,9 +515,20 @@ router.delete(
         return res.status(400).json({ error: "Invalid id" });
       }
 
-      const [result] = await db.query(`DELETE FROM work_reqs WHERE id = ?`, [id]);
-      if (result.affectedRows === 0) {
+      // Fetch before deleting so we have monday_item_id for sync
+      const existing = await getReqById(id);
+      if (!existing) {
         return res.status(404).json({ error: "REQ not found" });
+      }
+
+      await db.query(`DELETE FROM work_reqs WHERE id = ?`, [id]);
+
+      // Fire-and-forget Monday sync
+      if (existing.monday_item_id) {
+        void (async () => {
+          try { await mondaySyncService.pushDelete(existing); }
+          catch (err) { console.error("[monday-sync] pushDelete failed", err.message); }
+        })();
       }
 
       return res.json({ ok: true });
