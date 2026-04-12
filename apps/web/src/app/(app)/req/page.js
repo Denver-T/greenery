@@ -1,6 +1,7 @@
 "use client";
 
 import { fetchApi } from "@/lib/api/api";
+import Button from "@/components/Button";
 import {
   getTodayDateInputValue,
   sanitizeObjectStrings,
@@ -45,6 +46,32 @@ export default function ReqPage() {
   const [error, setError] = useState("");
   const [currentEmployeeName, setCurrentEmployeeName] = useState("");
   const [loadingEmployee, setLoadingEmployee] = useState(true);
+  const [formDirty, setFormDirty] = useState(false);
+
+  // Warn on browser close/refresh/external nav if the form has unsaved edits.
+  // Does not catch in-app sidebar clicks — those are handled by the Cancel button below.
+  useEffect(() => {
+    if (!formDirty) return undefined;
+    function onBeforeUnload(e) {
+      e.preventDefault();
+      e.returnValue = "";
+      return "";
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [formDirty]);
+
+  function handleCancel() {
+    if (
+      formDirty &&
+      !window.confirm(
+        "Discard this work request? Any unsaved changes will be lost.",
+      )
+    ) {
+      return;
+    }
+    router.back();
+  }
 
   const today = getTodayDateInputValue();
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -200,6 +227,8 @@ export default function ReqPage() {
         body: fd,
       });
 
+      // Clear dirty flag before navigating so beforeunload doesn't fire
+      setFormDirty(false);
       router.push("/tasks?created=1");
     } catch (err) {
       setError(err.message || "Something went wrong");
@@ -242,6 +271,9 @@ export default function ReqPage() {
       <section className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
         <form
           onSubmit={onSubmit}
+          onInput={() => {
+            if (!formDirty) setFormDirty(true);
+          }}
           encType="multipart/form-data"
           className="space-y-6"
         >
@@ -484,20 +516,23 @@ export default function ReqPage() {
               return to the queue.
             </div>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="rounded-xl bg-gray-200 px-4 py-2.5 font-medium text-gray-800 hover:bg-gray-300"
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={handleCancel}
+                disabled={submitting}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
+                variant="primary"
+                size="md"
+                loading={submitting}
                 disabled={submitting}
-                className="inline-flex items-center rounded-xl bg-brand-700 px-5 py-2.5 font-semibold text-white shadow hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Submitting..." : "Submit REQ"}
-              </button>
+              </Button>
             </div>
           </div>
         </form>

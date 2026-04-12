@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { fetchApi } from "@/lib/api/api";
+import Button from "@/components/Button";
 
 const EMPLOYEE_NAME_LIMIT = 30;
 const EMPLOYEE_EMAIL_LIMIT = 45;
@@ -661,21 +662,24 @@ export default function EmployeesPage() {
             </div>
 
             <div className="mt-5 flex gap-3">
-              <button
-                className="theme-button rounded-2xl px-5 py-3 font-extrabold disabled:opacity-60"
-                disabled={busy || !form.name.trim()}
+              <Button
+                variant="primary"
+                size="lg"
+                loading={busy}
+                disabled={!form.name.trim()}
                 onClick={createEmployee}
               >
                 {busy ? "Saving..." : "Create Employee"}
-              </button>
+              </Button>
 
-              <button
-                className="theme-panel-muted theme-title rounded-2xl border px-5 py-3 font-extrabold disabled:opacity-60"
+              <Button
+                variant="secondary"
+                size="lg"
                 disabled={busy}
                 onClick={refresh}
               >
                 Refresh
-              </button>
+              </Button>
             </div>
           </div>
 

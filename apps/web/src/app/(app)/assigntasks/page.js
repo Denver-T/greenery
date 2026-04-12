@@ -2,6 +2,7 @@
 
 import WorkspaceHeader from "@/components/WorkspaceHeader";
 import WorkspaceToolbar from "@/components/WorkspaceToolbar";
+import Button from "@/components/Button";
 import { fetchApi } from "@/lib/api/api";
 import {
   formatDateLabel,
@@ -292,23 +293,27 @@ export default function AssignmentsPage() {
                       key={employee.id}
                       type="button"
                       onClick={() => setSelectedEmployeeId(String(employee.id))}
+                      aria-pressed={active}
                       className={clsx(
                         "rounded-2xl border p-4 text-left transition shadow-soft",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                         active
-                          ? "border-emerald-400 bg-emerald-50/60 ring-2 ring-emerald-300/40"
-                          : "theme-panel hover:border-emerald-300 hover:-translate-y-0.5",
+                          ? "border-brand-700 bg-success-soft ring-2 ring-brand-700/40"
+                          : "theme-panel hover:border-brand hover:-translate-y-0.5",
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white font-black theme-title ring-1 ring-border-soft">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-surface font-black theme-title ring-1 ring-border-soft">
                           {getEmployeeInitials(employee.name)}
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="truncate theme-title font-semibold">
                             {employee.name}
                           </div>
-                          <div className="theme-copy text-sm">
-                            {employee.role || "Team member"} -{" "}
+                          <div className="truncate theme-copy text-sm">
+                            {employee.role || "Team member"}
+                          </div>
+                          <div className="theme-copy text-xs">
                             {employeeTasks.length} active
                           </div>
                         </div>
@@ -384,20 +389,18 @@ export default function AssignmentsPage() {
               ) : null}
             </div>
 
-            <button
-              onClick={assignTasks}
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={submitting}
               disabled={!canAssign}
-              className={clsx(
-                "w-full rounded-2xl px-4 py-3 text-sm font-semibold text-white transition",
-                canAssign
-                  ? "bg-emerald-600 hover:bg-emerald-500"
-                  : "bg-emerald-300",
-              )}
+              onClick={assignTasks}
             >
               {submitting
                 ? "Assigning..."
                 : `Assign ${selectedCount > 0 ? `(${selectedCount})` : ""}`}
-            </button>
+            </Button>
 
             <div
               className={clsx(

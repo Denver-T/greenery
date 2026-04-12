@@ -17,6 +17,7 @@ import {
 import { format, parseISO } from "date-fns";
 
 import WorkspaceHeader from "@/components/WorkspaceHeader";
+import Button from "@/components/Button";
 import { fetchApi } from "@/lib/api/api";
 
 /* ─── Constants ─── */
@@ -165,13 +166,12 @@ function ActionCard({ title, description, href, actionLabel }) {
   return (
     <section className="rounded-card border border-border-soft bg-surface p-5 shadow-soft">
       <h3 className="text-lg font-bold text-foreground">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-gray-600">{description}</p>
-      <Link
-        href={href}
-        className="mt-4 inline-flex rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-foreground"
-      >
-        {actionLabel}
-      </Link>
+      <p className="mt-2 text-sm leading-6 text-muted">{description}</p>
+      <div className="mt-4">
+        <Button href={href} variant="primary" size="md">
+          {actionLabel}
+        </Button>
+      </div>
     </section>
   );
 }
