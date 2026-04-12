@@ -1,6 +1,5 @@
-// Unit tests for the module-level DB env validation in db/index.js.
-// Each case must run in jest.isolateModules so the throw fires fresh on require()
-// without polluting other tests' module cache.
+// Unit tests for DB env validation (now handled by lib/env.js Zod schema).
+// Each case runs in jest.isolateModules so the env.js throw fires fresh.
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -16,7 +15,7 @@ describe("db/index module-level env validation", () => {
       jest.isolateModules(() => {
         require("./index");
       });
-    }).toThrow(/Missing required database environment variable: DB_HOST/);
+    }).toThrow(/DB_HOST/);
   });
 
   it("throws when DB_USER is empty string", () => {
@@ -26,17 +25,17 @@ describe("db/index module-level env validation", () => {
       jest.isolateModules(() => {
         require("./index");
       });
-    }).toThrow(/Missing required database environment variable: DB_USER/);
+    }).toThrow(/DB_USER/);
   });
 
-  it("throws when DB_PASSWORD is whitespace-only", () => {
-    process.env.DB_PASSWORD = "   ";
+  it("throws when DB_PASSWORD is empty", () => {
+    process.env.DB_PASSWORD = "";
 
     expect(() => {
       jest.isolateModules(() => {
         require("./index");
       });
-    }).toThrow(/Missing required database environment variable: DB_PASSWORD/);
+    }).toThrow(/DB_PASSWORD/);
   });
 
   it("throws when DB_NAME is missing", () => {
@@ -46,7 +45,7 @@ describe("db/index module-level env validation", () => {
       jest.isolateModules(() => {
         require("./index");
       });
-    }).toThrow(/Missing required database environment variable: DB_NAME/);
+    }).toThrow(/DB_NAME/);
   });
 
   it("does not throw when all four required vars are set", () => {

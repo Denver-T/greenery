@@ -410,7 +410,7 @@ describe("DELETE /employees/me", () => {
       .set("Authorization", "Bearer test-token");
 
     expect(res.status).toBe(409);
-    expect(res.body.code).toBe("LAST_SUPERADMIN");
+    expect(res.body.error.code).toBe("LAST_SUPERADMIN");
   });
 
   it("allows a super admin to self-delete when another super admin exists", async () => {

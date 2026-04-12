@@ -101,8 +101,6 @@ Routes → Controllers → Services → MySQL (mysql2 parameterized queries). No
 ### Web Patterns
 
 - Next.js app directory (`src/app/`)
-- `AuthProvider` wraps the app with Firebase auth context
-- `ProtectedRoute` guards pages by permission level
 - `Sidebar` reflects current user's `permissionLevel`
 - `fetchApi()` in `src/lib/api/api.js` handles auth headers and error responses
 

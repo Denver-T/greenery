@@ -49,11 +49,12 @@ module.exports = (err, req, res, next) => {
     console.error("Database connection error:", err);
 
     return res.status(503).json({
-      status: "error",
-      code: "DATABASE_UNAVAILABLE",
-      message:
-        "Database service is unavailable. Ensure MySQL is running and environment variables are configured.",
-      details: [],
+      error: {
+        code: "DATABASE_UNAVAILABLE",
+        message:
+          "Database service is unavailable. Ensure MySQL is running and environment variables are configured.",
+        details: [],
+      },
       timestamp: now,
     });
   }
@@ -81,10 +82,11 @@ module.exports = (err, req, res, next) => {
    * This is the structure controllers should rely on by calling `next(httpError(...))`.
    */
   return res.status(statusCode).json({
-    status: "error",
-    code: err?.code || "INTERNAL_SERVER_ERROR",
-    message: err?.message || "Internal Server Error",
-    details: Array.isArray(err?.details) ? err.details : [],
+    error: {
+      code: err?.code || "INTERNAL_SERVER_ERROR",
+      message: err?.message || "Internal Server Error",
+      details: Array.isArray(err?.details) ? err.details : [],
+    },
     timestamp: now,
   });
 };

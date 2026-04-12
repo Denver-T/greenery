@@ -58,8 +58,17 @@ export async function fetchApi(endpoint, options = {}) {
       : await response.text();
 
     if (!response.ok) {
+      // Two error response shapes exist in the API:
+      //   New (via errorHandler): { error: { code, message, details } }
+      //   Legacy (direct returns): { error: "string message" }
+      // Try both so legacy routes (reqs, schedule, employeesController) still
+      // surface their validation messages after the errorHandler shape change.
       const errorMessage =
-        (typeof payload === "string" ? payload : payload?.error || payload?.message) ||
+        (typeof payload === "string"
+          ? payload
+          : typeof payload?.error === "string"
+            ? payload.error
+            : payload?.error?.message || payload?.message) ||
         `HTTP Error ${response.status}`;
 
       if (response.status === 401 && typeof window !== "undefined") {

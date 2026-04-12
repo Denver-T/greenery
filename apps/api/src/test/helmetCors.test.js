@@ -50,7 +50,7 @@ describe("CORS allowlist", () => {
       .set("Origin", "http://evil.com");
 
     expect(res.status).toBe(403);
-    expect(res.body.code).toBe("CORS_ORIGIN_DENIED");
+    expect(res.body.error.code).toBe("CORS_ORIGIN_DENIED");
     expect(res.headers["access-control-allow-origin"]).toBeUndefined();
   });
 
@@ -69,7 +69,7 @@ describe("CORS allowlist", () => {
       .set("Origin", "http://localhost:3000.evil.com");
 
     expect(res.status).toBe(403);
-    expect(res.body.code).toBe("CORS_ORIGIN_DENIED");
+    expect(res.body.error.code).toBe("CORS_ORIGIN_DENIED");
     expect(res.headers["access-control-allow-origin"]).toBeUndefined();
   });
 
@@ -93,7 +93,7 @@ describe("CORS allowlist", () => {
       .set("Access-Control-Request-Method", "POST");
 
     expect(res.status).toBe(403);
-    expect(res.body.code).toBe("CORS_ORIGIN_DENIED");
+    expect(res.body.error.code).toBe("CORS_ORIGIN_DENIED");
     expect(res.headers["access-control-allow-origin"]).toBeUndefined();
   });
 });

@@ -20,10 +20,11 @@ describe("errorHandler", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        status: "error",
-        code: "VALIDATION_ERROR",
-        message: "Bad input",
-        details: [],
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Bad input",
+          details: [],
+        },
       })
     );
   });
@@ -37,6 +38,8 @@ describe("errorHandler", () => {
     const body = res.json.mock.calls[0][0];
     expect(body.timestamp).toBeDefined();
     expect(() => new Date(body.timestamp)).not.toThrow();
+    expect(body.error).toBeDefined();
+    expect(body.error.code).toBeDefined();
   });
 
   it("defaults to 500 for errors without a valid statusCode", () => {
@@ -70,7 +73,9 @@ describe("errorHandler", () => {
       expect(res.status).toHaveBeenCalledWith(503);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: "DATABASE_UNAVAILABLE",
+          error: expect.objectContaining({
+            code: "DATABASE_UNAVAILABLE",
+          }),
         })
       );
     }
@@ -95,6 +100,7 @@ describe("errorHandler", () => {
 
     const body = res.json.mock.calls[0][0];
     expect(body.stack).toBeUndefined();
+    expect(body.error.stack).toBeUndefined();
   });
 
   it("preserves details array from httpError", () => {
@@ -105,7 +111,7 @@ describe("errorHandler", () => {
     errorHandler(err, mockReq(), res, mockNext);
 
     const body = res.json.mock.calls[0][0];
-    expect(body.details).toEqual(details);
+    expect(body.error.details).toEqual(details);
   });
 
   it("defaults details to empty array when not provided", () => {
@@ -116,6 +122,6 @@ describe("errorHandler", () => {
     errorHandler(err, mockReq(), res, mockNext);
 
     const body = res.json.mock.calls[0][0];
-    expect(body.details).toEqual([]);
+    expect(body.error.details).toEqual([]);
   });
 });
