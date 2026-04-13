@@ -5,6 +5,105 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-13 — feat(api): Phase 4.1–4.4 — Monday inbound webhook + loop prevention
+
+**Commits:** `b58a2b0` `1936e36` `f386ae4` `3e015d0` (this entry)
+
+### What changed
+
+Phase 4 of the Monday work-request sync plan — the inbound half of the
+two-way sync. Greenery now reacts to changes made directly on the Monday
+board and applies them to its own database, while suppressing echoes
+from its own outbound pushes via an in-memory deduplication set.
+
+**Phase 4.2.0 — Live webhook payload capture (`b58a2b0`)**
+- Five throwaway-but-reusable scripts under `apps/api/scripts/`:
+  - `monday-diag.sh` — three-step diagnostic (board read, webhook list, current user) so we can isolate auth/permission/shape issues independently
+  - `monday-introspect-webhook-events.sh` — queries Monday's `WebhookEventType` enum so we don't guess at registration enum names
+  - `monday-webhook-register-capture.sh` — registers webhooks via GraphQL variables (no string-interpolation brittleness)
+  - `monday-webhook-teardown.sh` — deletes webhooks by id
+  - `local-webhook-echo.js` — Express server that echoes Monday's registration challenge and logs every event body, used behind a cloudflared quick tunnel
+- `.gitignore` updated to exclude `.monday-webhook-samples.json` so captured Monday user/item IDs stay out of git.
+
+**Phase 4.1 — `loopPreventionSet.js` (`1936e36`)**
+- In-memory `Map<signature, expiryEpochMs>`, 15s TTL, 10k entry size cap with FIFO eviction
+- Lazy pruning on `has()` calls — no background timer, no test-hang risk
+- Stable signature: SHA-256 of `${itemId}:${columnId}:${stableStringify(value)}`
+- `stableStringify` recursively sorts object keys so equivalent payloads with different key order produce identical hashes (Monday responses don't guarantee key ordering)
+- Process-local — multi-process deployment would need Redis; accepted for current single-process API
+
+**Phase 4.2 — Webhook route (`f386ae4`)**
+- `POST /monday/webhook/:secret` mounted at `app.js`
+- URL-based secret authentication via `crypto.timingSafeEqual`. Fail-closed: missing or mismatched secret returns 404 with no body
+- Auth failures log `[monday-webhook] auth failure` with the source IP from `cf-connecting-ip` — never the URL or the secret
+- Boot-time warning when the route is mounted with no configured secret so production misconfiguration is impossible to miss
+- Monday registration challenge handshake runs BEFORE event dispatch (handlers assume `event.type` exists)
+- Always returns 200 after dispatch — even if the handler throws — to prevent Monday's retry-on-non-2xx from duplicating side effects
+- Factory pattern (`createMondayWebhookRouter`) so tests can inject their own secret and event handler without monkey-patching the env module cache
+- `MONDAY_WEBHOOK_SECRET` validated via Zod with `.min(32).optional()` — short secrets crash at boot, missing ones boot fine and the route fails closed
+- `.env.example` documents the placeholder plus the `openssl rand -hex 32` generation command
+
+**Phase 4.3 — Event handler (`f386ae4`)**
+- `mondayWebhookHandler.handleEvent(event)` dispatches on the runtime `event.type` string (NOT the registration enum — Monday renamed `change_column_value` → `update_column_value` and `item_deleted` → `delete_pulse` between API versions; we discovered this empirically in 4.2.0 capture)
+- `handleUpdateColumnValue` decodes the value into a canonical scalar, checks loop prevention via the matching signature, and runs a parameterized `UPDATE work_reqs SET <field> = ? WHERE monday_item_id = ?`
+- `<field>` is interpolated from a static whitelist (`SYNCED_FIELDS = new Set(Object.values(COLUMN_TO_FIELD))`) — defense-in-depth assertion against future refactors that might weaken the source-of-truth invariant
+- `handleDeletePulse` runs `DELETE FROM work_reqs WHERE monday_item_id = ?` with a `__delete__` sentinel signature for echo suppression
+- `handleCreatePulse` logs and ignores in v1 — items created directly on Monday have no required-field guarantees; deferred to v2
+- All DB writes are direct SQL — never through reqs.js controllers — so the inbound apply path doesn't re-trigger the outbound sync and create a different kind of loop
+- Defense in depth: events for an unexpected `boardId` are silently dropped before dispatch
+- Field-name normalizer (`resolveItemId`) handles Monday's `pulseId` vs `itemId` flip across event types
+- Decoder handles four column types empirically + defensively: text, long_text, numbers, date
+
+**Phase 4.4 — Outbound loop-prevention hooks (`3e015d0`)**
+- `mondaySyncService.pushCreate/pushUpdate/pushDelete` now call `rememberOutboundColumnSignatures(itemId, workReq)` after every successful Monday API call
+- `remember()` sits BETWEEN the Monday API call and the subsequent `db.query` bookkeeping — failed pushes don't poison the set
+- Both the primary push functions AND the `drainQueue` retry branches get the hooks, so retried items also seed the prevention set
+- Delete pushes remember a sentinel signature (`columnId="__delete__"`, `value=null`) matching what `handleDeletePulse` computes
+- `mondayColumnValues.js` gains `toSignatureValue(field, value)` — canonical scalar normalizer (dates → YYYY-MM-DD string, numbers → number, text → string). Both sides of the loop must hash the same canonical form or echo detection silently fails open.
+- Round-trip tests prove the suppression works end-to-end: `pushUpdate` → `handleEvent` skips the inbound DB write when the signature matches; counter-test with a different value confirms genuine edits still apply
+
+### Test additions (+82 tests, 243 → 326)
+
+- `loopPreventionSet.test.js` — 27 tests covering signature stability across object key order, TTL expiry, lazy pruning, FIFO eviction under cap, prune-before-evict path
+- `mondayWebhook.test.js` — 14 unit tests + 1 integration test against the real wired `app.js` (`jest.isolateModules` + `jest.doMock` to inject env without polluting the module cache)
+- `mondayWebhookHandler.test.js` — 33 tests across `resolveItemId`, `decodeWebhookValue` (text/long_text/numbers/date variants + null + unknown-type), dispatcher, `handleUpdateColumnValue` (mapped/unmapped column, missing fields, loop-prevention skip, zero-row warning, itemId/pulseId tolerance), `handleDeletePulse`, `handleCreatePulse`
+- `mondaySyncService.test.js` — 8 new tests for the outbound loop-prevention hooks (signature count after success, no signatures on failure, delete sentinel) and 3 round-trip echo-suppression scenarios
+
+### Why
+
+Phase 2 (Greenery → Monday outbound sync) shipped earlier in the sprint
+but is half a system. Phase 4 closes the loop: anything edited or
+deleted on the Monday board now flows back to Greenery within seconds.
+The headline value prop for the Friday demo is "two-way sync between
+the field-team app and the Monday board" — Phase 4 is what makes the
+"two-way" claim real instead of marketing.
+
+Loop prevention is the keystone — without it, the bidirectional sync
+would create infinite update loops every time anyone edited anything,
+because Greenery's outbound push would fire a webhook back into
+Greenery's inbound handler, which would write to the DB, which would
+fire another outbound push, and so on. The plan dedicated 30% of
+Phase 4's time budget to loop prevention specifically.
+
+### Lessons learned
+
+- **Empirical capture saves hours of guesswork.** Phase 4.2.0 was budgeted at 15 minutes for "capture one webhook payload." It took longer (~45 min including paste-mangling debug + a Monday API token rotation) but uncovered THREE plan-invalidating findings: (a) GraphQL-registered webhooks arrive with NO Authorization header — the plan's JWT auth strategy was wrong; (b) Monday's enum names (`change_column_value`, `item_deleted`) differ from the runtime `event.type` strings (`update_column_value`, `delete_pulse`) due to a rename between API versions; (c) `update_column_value` uses `pulseId`/`pulseName` but `delete_pulse` uses `itemId`/`itemName` for the same logical entity. **Takeaway:** never write a handler against documented payload shapes when you can capture a real one in 15 minutes.
+- **`grep -n` against `.env` is a secret leak waiting to happen.** This session had two accidental secret leaks via tool output — first the Monday API token (rotated via Developer Center), then the freshly minted webhook secret (rotated via second `sed` pass). Both were blast-radius-contained but indicate the wrong default. **Going forward:** never use `grep -n`, `cat`, or `head` on `.env` files in tool output. Verify with metadata only — `grep -c`, `awk '{print length}'`, `wc`-style aggregations.
+- **`set -euo pipefail` + macOS bash 3.2 + Unicode ellipsis = unbound-variable error.** macOS ships with bash 3.2 from 2007, which mis-parses the Unicode ellipsis (`…`) as part of an adjacent variable name under nounset. `echo "Deleting webhook $WEBHOOK_ID…"` exploded with `WEBHOOK_ID?: unbound variable`. Fix: use `${WEBHOOK_ID}...` with brace expansion + ASCII dots. **Takeaway:** if a shell script will run on macOS, stick to ASCII in identifier-adjacent strings.
+- **Express 5 deprecated bare `*` wildcards.** `app.post("*", handler)` in Express 5 throws `PathError [TypeError]: Missing parameter name at index 1: *`. Fix: use a regex (`app.post(/.*/, handler)`) or a named wildcard (`app.post("/*path", handler)`). Logged for any future Express 4 → 5 migration.
+- **Cache-warm `jest.mock` doesn't work for indirect transitive imports.** Adding `const env = require("../lib/env")` to `mondayWebhookHandler.js` for the new `boardId` defense-in-depth check broke two test files that `require` the handler indirectly. The auto-mock of `../db` triggers loading the real `db/index.js` to fingerprint its exports, which transitively loads `env.js`, which fails Zod validation before `setupFilesAfterEach` runs. Fix: explicitly `jest.mock("../lib/env", () => ({...}))` in any test file whose dependency chain reaches env.js. Same pattern as `analytics.test.js` and `mondaySyncService.test.js`. **Takeaway:** in a Zod-validated env.js codebase, env mocks have to be hoisted in any test file that touches a module that touches db that touches env.
+- **The signature canonicalization is the silent-failure failure mode.** Loop prevention works only if both sides hash the *same* canonical form. Outbound passes `String(workReq.field)`; inbound passes `decodeWebhookValue(event.value, columnType)`. Both have to converge to identical strings/numbers/dates. The very first version of Phase 4.3 hashed `event.value` directly (the raw Monday-shape wrapper object) — Phase 4.4 caught this during integration testing because the round-trip test failed. Fix was to decode BEFORE hashing on the inbound side. Without round-trip tests, this would have shipped silently broken and only manifested as occasional duplicate updates in production. **Takeaway:** any time two code paths must agree on a hash, write the integration test that hashes both sides and asserts equality.
+- **Two `/review` cycles is the right cadence even mid-phase.** Cycle 1 caught 7 important findings (4 fixable in code, 3 deferred). Cycle 2 wasn't needed because all 7 got addressed in the same fix pass. Holding the line on "fix everything the review flagged before commit" prevents the deferred items from accumulating into a Phase 5 backlog.
+
+### Out of scope for this entry (post-launch open threads)
+
+- Text/long_text/numbers/date column webhook shapes are unverified. Phase 4.2.0 only captured a `color`/status column change — `decodeWebhookValue` defensively handles three plausible text shapes but if Monday wraps text values in a shape we haven't anticipated, echo suppression silently fails. **After Phase 4.5 registers the real long-lived webhook**, capture one text edit, one number edit, one date edit and verify against the decoder.
+- Loop-prevention signature inefficiency — `rememberOutboundColumnSignatures` remembers signatures for ALL non-null fields on every push, not just the ones that changed. Self-healing via TTL but worth optimizing post-launch.
+- Bash diagnostic scripts under `apps/api/scripts/` will be superseded by Phase 4.5's Node CLI. Delete in a cleanup commit after 4.5 ships.
+- Phase 4.5 itself — the `monday-register-webhook.js` Node CLI is the only remaining Phase 4 task. Then Phases 5 (admin endpoint + backfill) and 6 (perf audit + demo polish).
+
+---
+
 ## 2026-04-12 — feat(web): work request routes (list/detail/edit) + login contrast fix
 
 **Commits:** `34ad54a` `5a46d74` (this entry)
