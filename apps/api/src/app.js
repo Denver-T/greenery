@@ -19,6 +19,7 @@ const reqRoutes = require("./routes/reqs");
 const scheduleRoutes = require("./routes/schedule");
 const superAdminRoutes = require("./routes/superadmin");
 const analyticsRoutes = require("./routes/analytics");
+const createMondayWebhookRouter = require("./routes/mondayWebhook");
 
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
@@ -79,6 +80,11 @@ app.use("/reqs", reqRoutes);
 app.use("/schedule", scheduleRoutes);
 app.use("/superadmin", superAdminRoutes);
 app.use("/analytics", analyticsRoutes);
+
+// Monday inbound webhook (Phase 4). URL-based secret auth — the secret lives
+// in the path, so this router runs BEFORE notFound and logs NOTHING about the
+// path to avoid leaking the secret into application logs.
+app.use("/monday", createMondayWebhookRouter());
 
 /**
  * API documentation

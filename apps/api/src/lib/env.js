@@ -11,7 +11,9 @@ const { z } = require("zod");
 const envSchema = z.object({
   // Server
   PORT: z.coerce.number().default(3001),
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
 
   // Database
   DB_HOST: z.string().min(1),
@@ -21,7 +23,9 @@ const envSchema = z.object({
   DB_NAME: z.string().min(1),
 
   // CORS
-  CORS_ORIGINS: z.string().default("http://localhost:3000,http://localhost:8082"),
+  CORS_ORIGINS: z
+    .string()
+    .default("http://localhost:3000,http://localhost:8082"),
 
   // Firebase Admin
   FIREBASE_PROJECT_ID: z.string().min(1),
@@ -37,10 +41,12 @@ const envSchema = z.object({
   RATE_LIMIT_WRITE_WINDOW_MS: z.coerce.number().default(60000),
   RATE_LIMIT_WRITE_MAX: z.coerce.number().default(30),
 
-  // Monday.com (optional — sync features degrade gracefully when absent)
+  // Monday.com (optional — sync features degrade gracefully when absent).
+  // MONDAY_WEBHOOK_SECRET must be ≥32 chars when set — used in the inbound
+  // webhook URL path for authentication. Generate with: openssl rand -hex 32
   MONDAY_API_TOKEN: z.string().optional(),
   MONDAY_BOARD_ID: z.string().optional(),
-  MONDAY_WEBHOOK_SECRET: z.string().optional(),
+  MONDAY_WEBHOOK_SECRET: z.string().min(32).optional(),
   MONDAY_API_VERSION: z.string().default("2024-10"),
 });
 
