@@ -5,6 +5,143 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-13 — fix(api): Monday webhook decoder aliases and unsupported-type sentinel
+
+**Commits:** `c6badc5` `543804f`
+
+### What changed
+
+Two commits closing out Phase 4 after a full end-to-end walkthrough of the
+web-UI-driven bidirectional sync path ("Path B"):
+
+**`c6badc5` — chore(api): consolidate Monday webhook scripts into node CLI**
+- Deleted four one-shot bash scripts from the Phase 4.2.0 capture work:
+  `monday-diag.sh`, `monday-introspect-webhook-events.sh`,
+  `monday-webhook-register-capture.sh`, `monday-webhook-teardown.sh`
+- Added `scripts/monday-register-webhook.js` — production-grade CLI that
+  handles `--register`, `--list`, `--delete <id>`, `--delete-all --yes`,
+  with partial-rollback on registration failure, existing-webhook detection,
+  secret-redacted logging, and a sanity guard that rejects a `--url` that
+  already contains the webhook path fragment
+- Added `scripts/monday-smoke-seed.js` — one-shot seed for smoke tests
+  (inserts a throwaway `work_req`, calls `pushCreate`, prints the resulting
+  `monday_item_id` for the driver to edit/delete on the Monday UI)
+- Rewrote the `.env.example` Monday section to explain that blank values
+  are fine but non-empty-short values crash boot, with a reference to the
+  `emptyToUndefined` preprocess in `env.js`
+
+**`543804f` — fix(api): Monday webhook decoder aliases + sentinel + review hardening**
+
+*Critical bug fixes caught during the Path B e2e walkthrough:*
+
+1. Monday sends `columnType="long-text"` (hyphen) in webhook bodies for
+   long_text columns, not `"long_text"` (underscore). The decoder's switch
+   case didn't match, fell through to `default`, returned `null`, and the
+   handler wrote `NULL` to the DB — silently clearing the field. Would
+   have broken every notes / accountAddress / actionRequired / method
+   edit from the Monday side.
+2. Monday sends `columnType="numeric"` for number columns, not `"numbers"`.
+   Same silent-clear failure mode for `numberOfPlants`.
+
+*Fixes:*
+- Added hyphen-to-underscore normalization at the top of `decodeWebhookValue`
+- Added `"numeric"` as an explicit case fall-through for `"numbers"`
+- **Introduced a `DECODE_UNSUPPORTED` sentinel** — previously unknown column
+  types returned `null` which the handler applied as a field clear. Now
+  unknown types return the sentinel and the handler explicitly skips the
+  `UPDATE` while logging loudly. Defense-in-depth against future alias drift.
+
+*Phase 4 review follow-ups (bundled with the decoder fixes since they
+all touch the same files):*
+- `env.js` — `emptyToUndefined` Zod preprocess on all three Monday env
+  vars so a blank `.env` copy of `.env.example` degrades to "Monday sync
+  disabled" instead of crashing validation on `z.string().min(32).optional()`
+  (which rejects empty string because `optional()` only allows undefined)
+- `loopPreventionSet.hashValue` — guards against `undefined` input by
+  normalizing to `null` before hashing (prevents a latent crash from a
+  future caller who forgets to pre-filter)
+- `mondaySyncService.pushCreate` — added a timing-rationale comment so a
+  future reader doesn't "fix" the remember-after-create call order into
+  remember-before-create (which would create orphan signatures on failure)
+- `mondayWebhookHandler.handleUpdateColumnValue` — added a DESIGN CONSTRAINT
+  comment at the UPDATE call site explaining why the handler writes via
+  direct SQL instead of going through `reqs.js` (avoiding an infinite
+  outbound-trigger loop) and what future maintainers must replicate here
+  if they add side-effects to `reqs.js`
+
+*5 new regression tests (326 → 331):*
+- `decodeWebhookValue` returns the `DECODE_UNSUPPORTED` sentinel (not null)
+  for unknown column types
+- `decodeWebhookValue` routes `long-text` (hyphen) to the same case as
+  `long_text` (underscore)
+- `decodeWebhookValue` routes `numeric` to the same case as `numbers`
+- `decodeWebhookValue` treats null/undefined columnType as unsupported
+- `handleUpdateColumnValue` skips the UPDATE when the decoder returns
+  the `DECODE_UNSUPPORTED` sentinel
+
+### Why
+
+Phase 4.5 earlier today validated the backend-driven flows (column edit
+Monday→DB, echo suppression via sync queue, delete round-trip) but left the
+web-UI-driven outbound path untested end-to-end. The Path B walkthrough was
+supposed to be a rubber-stamp validation; it caught two critical bugs that
+would have shipped on Friday and broken the live demo the first time anyone
+touched a long_text or number column from the Monday side.
+
+The two Monday-side column type naming divergences (`long-text` vs
+`long_text`, `numeric` vs `numbers`) are **undocumented** in Monday's
+public API reference — the GraphQL API uses one set of names for `column.type`
+and the webhook bodies use another. There's no way to catch this without an
+empirical round-trip test against a live board.
+
+The decoder sentinel is the actually-important fix. Without it, any future
+column type name drift from Monday would silently corrupt DB state. With it,
+any drift loudly refuses to write and logs a clear "unsupported columnType"
+warning. The codebase was one-webhook-format-change away from silently
+clearing production data.
+
+### Lessons learned
+
+- **Unit tests that mock Monday's webhook body shape are not a substitute
+  for live fixture samples.** The original Phase 4 tests used handcrafted
+  `columnType: "long_text"` strings everywhere because that's what Monday's
+  GraphQL enum says. The webhook body actually uses `"long-text"`. Both
+  bugs (long-text and numeric) would have been caught by a single captured
+  real webhook payload per column type. The SESSION.md open thread from
+  Phase 4.5 specifically flagged this gap: *"Text/long_text/numbers/date
+  column webhook shapes are unverified."* Phase 4.5 deferred it; Path B
+  paid for the deferral in live debugging time. Next time: capture
+  empirical fixture samples FIRST, then write the decoder against them.
+- **"Silent null on unknown type" is a dangerous default.** The original
+  decoder's `default:` returned `null` with a warning log, rationalized as
+  "safer than writing arbitrary shapes as a JSON string into a VARCHAR."
+  But `null` in SQL is not neutral — it **clears the field**. The sentinel
+  approach (caller must explicitly handle "I can't decode this") is the
+  correct default for any unknown-input decoder that feeds into a write.
+  Generalize: when a decoder's return type is also a valid "clear this"
+  value, you MUST disambiguate "unknown" from "intentional clear."
+- **The review-driven `.env.example` fix was also bootstrap-critical.**
+  The existing Zod schema (`z.string().min(32).optional()`) would have
+  crashed every fresh-install boot because `optional()` doesn't allow
+  empty string. The review caught it as a 🟡; the same class of bug as
+  the decoder sentinel (an "obvious" null vs undefined vs empty-string
+  distinction biting a validator).
+- **Two-layer fixes beat one-layer fixes.** The decoder fix has both
+  hyphen normalization AND the sentinel AND explicit case fall-throughs.
+  If any one layer breaks, the other two still prevent data corruption.
+- **Path B e2e walkthrough was worth 10x its cost.** 20 minutes of manual
+  clicking caught what 88 unit tests missed. When a code path crosses a
+  system boundary (in this case, our API ↔ Monday's webhook delivery),
+  unit tests with mocked shapes prove nothing about the real wire format.
+- **The fire-and-forget pattern in `reqs.js` works correctly in practice
+  under normal timing.** pushCreate/pushUpdate/pushDelete calls from the
+  route handlers reliably `remember` the loop-prevention signatures before
+  Monday echoes back. No race conditions observed in any of the 6 Path B
+  round-trips (3 create, 3 edit, 3 delete). The theoretical timing race
+  (documented in the new pushCreate comment) is genuinely theoretical.
+
+---
+
 ## 2026-04-13 — feat(api): Phase 4.1–4.4 — Monday inbound webhook + loop prevention
 
 **Commits:** `b58a2b0` `1936e36` `f386ae4` `3e015d0` (this entry)
