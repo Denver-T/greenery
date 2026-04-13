@@ -5,7 +5,50 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
-## 2026-04-13 — fix(api): Monday webhook decoder aliases and unsupported-type sentinel
+## 2026-04-13 — fix(api): webhook rate limiter and board-id env invariant
+
+### What changed
+
+Two 🟡 Important findings from the Phase 4 `/review` applied as a single fix.
+
+- `apps/api/src/middleware/rateLimiters.js` — added `webhookLimiter`
+  (300 events/minute/IP, configurable via `RATE_LIMIT_WEBHOOK_*` env).
+  Cap is intentionally higher than `writeLimiter` so legitimate Monday
+  bursts (batch column edits, board imports) aren't throttled.
+- `apps/api/src/app.js` — mounted `webhookLimiter` on `/monday` ahead of
+  `createMondayWebhookRouter()`.
+- `apps/api/src/lib/env.js` — added a Zod `.refine()` requiring
+  `MONDAY_BOARD_ID` whenever `MONDAY_WEBHOOK_SECRET` is set. Boot fails
+  fast with a precise message if the pair is half-configured.
+
+### Why
+
+Both findings hardened defenses against a leaked URL secret. The secret
+was leaked once during the Phase 4 session (rotated immediately), so
+the threat model isn't theoretical.
+
+- Rate limiter caps blast radius on a leaked secret without changing
+  steady-state behavior. The route's primary auth is still the timing-
+  safe URL-path secret comparison.
+- The env invariant prevents a misconfigured prod (secret set, board id
+  empty) from silently disabling the inbound `boardId !== expected`
+  defense-in-depth filter inside `mondayWebhookHandler.js`.
+
+### Lessons learned
+
+- `express-rate-limit` ships with sensible defaults — wiring a third
+  limiter took two lines once the existing pattern was in place. Worth
+  investing in shared middleware modules early.
+- Zod `.refine()` cross-field invariants are the right fit for "if A
+  then B must be present" config rules. Catching this at boot time is
+  much better than discovering the misconfiguration via a stolen-secret
+  incident in production.
+- Tests already covered the surface area being touched — no new tests
+  were needed. The existing `mondayWebhook.test.js` route tests still
+  pass because `webhookLimiter` is mounted upstream of the synthetic
+  test app's router factory.
+
+
 
 **Commits:** `c6badc5` `543804f`
 

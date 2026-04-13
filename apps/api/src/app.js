@@ -20,6 +20,7 @@ const scheduleRoutes = require("./routes/schedule");
 const superAdminRoutes = require("./routes/superadmin");
 const analyticsRoutes = require("./routes/analytics");
 const createMondayWebhookRouter = require("./routes/mondayWebhook");
+const { webhookLimiter } = require("./middleware/rateLimiters");
 
 const notFound = require("./middleware/notFound");
 const errorHandler = require("./middleware/errorHandler");
@@ -83,8 +84,10 @@ app.use("/analytics", analyticsRoutes);
 
 // Monday inbound webhook (Phase 4). URL-based secret auth — the secret lives
 // in the path, so this router runs BEFORE notFound and logs NOTHING about the
-// path to avoid leaking the secret into application logs.
-app.use("/monday", createMondayWebhookRouter());
+// path to avoid leaking the secret into application logs. webhookLimiter is
+// defense-in-depth against a leaked secret — bounds blast radius without
+// throttling legitimate Monday bursts (300/min/IP).
+app.use("/monday", webhookLimiter, createMondayWebhookRouter());
 
 /**
  * API documentation

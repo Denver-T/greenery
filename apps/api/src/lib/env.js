@@ -13,7 +13,8 @@ const { z } = require("zod");
 // empty values because optional() only accepts undefined, not "".
 const emptyToUndefined = (v) => (v === "" ? undefined : v);
 
-const envSchema = z.object({
+const envSchema = z
+  .object({
   // Server
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z
@@ -58,8 +59,20 @@ const envSchema = z.object({
     emptyToUndefined,
     z.string().min(32).optional(),
   ),
-  MONDAY_API_VERSION: z.string().default("2024-10"),
-});
+    MONDAY_API_VERSION: z.string().default("2024-10"),
+  })
+  // When MONDAY_WEBHOOK_SECRET is set, MONDAY_BOARD_ID must also be set.
+  // The inbound handler uses MONDAY_BOARD_ID as a defense-in-depth filter
+  // (drop events for unexpected boards) — without it, a stolen secret
+  // could be used against any Monday board the API is exposed to.
+  .refine(
+    (v) => !v.MONDAY_WEBHOOK_SECRET || !!v.MONDAY_BOARD_ID,
+    {
+      message:
+        "MONDAY_BOARD_ID is required when MONDAY_WEBHOOK_SECRET is set (defense-in-depth: webhook handler drops events for unexpected boards)",
+      path: ["MONDAY_BOARD_ID"],
+    },
+  );
 
 const result = envSchema.safeParse(process.env);
 

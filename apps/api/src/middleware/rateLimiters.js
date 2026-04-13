@@ -35,6 +35,19 @@ const RATE_LIMIT_WRITE_MAX = toInt(
   60 // 60 writes per window per IP
 );
 
+// Webhook limiter cap is intentionally higher than writeLimiter — Monday
+// can deliver legitimate bursts (batch column edits, board imports) and
+// throttling them would drop real events. The limiter is defense-in-depth
+// against a leaked URL secret, not the primary auth control.
+const RATE_LIMIT_WEBHOOK_WINDOW_MS = toInt(
+  process.env.RATE_LIMIT_WEBHOOK_WINDOW_MS,
+  60 * 1000 // 1 minute
+);
+const RATE_LIMIT_WEBHOOK_MAX = toInt(
+  process.env.RATE_LIMIT_WEBHOOK_MAX,
+  300 // 300 events per minute per IP
+);
+
 /**
  * Standardized handler for when rate limit is exceeded.
  */
@@ -68,7 +81,20 @@ const writeLimiter = rateLimit({
   handler: rateLimitHandler,
 });
 
+// Webhook limiter (highest cap)
+// Mounted on inbound third-party webhook routes (e.g. Monday) where the
+// URL secret is the primary auth and rate limiting is a leaked-secret
+// blast-radius bound, not abuse prevention.
+const webhookLimiter = rateLimit({
+  windowMs: RATE_LIMIT_WEBHOOK_WINDOW_MS,
+  max: RATE_LIMIT_WEBHOOK_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: rateLimitHandler,
+});
+
 module.exports = {
   loginLimiter,
   writeLimiter,
+  webhookLimiter,
 };
