@@ -8,6 +8,11 @@ const { z } = require("zod");
  *        env.DB_HOST, env.PORT, etc.
  */
 
+// Empty string → undefined, so `FOO=` in .env behaves identically to an
+// absent line. Without this, `z.string().min(N).optional()` crashes boot on
+// empty values because optional() only accepts undefined, not "".
+const emptyToUndefined = (v) => (v === "" ? undefined : v);
+
 const envSchema = z.object({
   // Server
   PORT: z.coerce.number().default(3001),
@@ -44,9 +49,15 @@ const envSchema = z.object({
   // Monday.com (optional — sync features degrade gracefully when absent).
   // MONDAY_WEBHOOK_SECRET must be ≥32 chars when set — used in the inbound
   // webhook URL path for authentication. Generate with: openssl rand -hex 32
-  MONDAY_API_TOKEN: z.string().optional(),
-  MONDAY_BOARD_ID: z.string().optional(),
-  MONDAY_WEBHOOK_SECRET: z.string().min(32).optional(),
+  // All three Monday vars run through emptyToUndefined so a fresh `.env`
+  // copied from `.env.example` with blank values degrades to "Monday sync
+  // disabled" instead of hard-crashing validation.
+  MONDAY_API_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
+  MONDAY_BOARD_ID: z.preprocess(emptyToUndefined, z.string().optional()),
+  MONDAY_WEBHOOK_SECRET: z.preprocess(
+    emptyToUndefined,
+    z.string().min(32).optional(),
+  ),
   MONDAY_API_VERSION: z.string().default("2024-10"),
 });
 

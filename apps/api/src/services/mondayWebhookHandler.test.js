@@ -19,6 +19,7 @@ const {
   handleCreatePulse,
   decodeWebhookValue,
   resolveItemId,
+  DECODE_UNSUPPORTED,
 } = require("./mondayWebhookHandler");
 
 const ITEM_ID = 11729244228;
@@ -103,9 +104,43 @@ describe("decodeWebhookValue", () => {
     expect(decodeWebhookValue(null, "date")).toBe(null);
   });
 
-  it("returns null for unknown column types", () => {
-    expect(decodeWebhookValue({ value: "x" }, "color")).toBe(null);
-    expect(decodeWebhookValue({ value: "x" }, "some-new-type")).toBe(null);
+  it("returns the UNSUPPORTED sentinel (NOT null) for unknown column types", () => {
+    // Regression: previously this returned null, which the handler wrote
+    // to the DB as a silent field clear. Now it returns a sentinel the
+    // handler must check for before applying the write.
+    expect(decodeWebhookValue({ value: "x" }, "color")).toBe(DECODE_UNSUPPORTED);
+    expect(decodeWebhookValue({ value: "x" }, "board-relation")).toBe(
+      DECODE_UNSUPPORTED,
+    );
+  });
+
+  it("routes long-text (hyphen) to the same case as long_text (underscore)", () => {
+    // Regression for Phase 4 Path B e2e — Monday sends `long-text` in
+    // webhook bodies, not `long_text`. Before normalization the case
+    // fell through to default and the handler silently cleared notes.
+    expect(
+      decodeWebhookValue(
+        { text: "Path B edit test", changed_at: "2026-04-13T18:55:35.282Z" },
+        "long-text",
+      ),
+    ).toBe("Path B edit test");
+  });
+
+  it("routes numeric (webhook form) to the same case as numbers (graphql form)", () => {
+    // Regression for Phase 4 Path B e2e — Monday sends `numeric` in
+    // webhook bodies for the number column, not `numbers`. The two
+    // forms must route to the same decoder or numberOfPlants edits
+    // on the Monday board silently clear the DB column.
+    expect(decodeWebhookValue({ value: "7" }, "numeric")).toBe(7);
+    expect(decodeWebhookValue(7, "numeric")).toBe(7);
+    expect(decodeWebhookValue({ value: "not-a-number" }, "numeric")).toBe(null);
+  });
+
+  it("normalization treats null and undefined columnType as unsupported", () => {
+    expect(decodeWebhookValue({ text: "x" }, null)).toBe(DECODE_UNSUPPORTED);
+    expect(decodeWebhookValue({ text: "x" }, undefined)).toBe(
+      DECODE_UNSUPPORTED,
+    );
   });
 });
 
@@ -212,6 +247,50 @@ describe("handleUpdateColumnValue", () => {
     const [sql, params] = db.query.mock.calls[0];
     expect(sql).toMatch(/UPDATE work_reqs SET dueDate = \?/);
     expect(params[0]).toBe("2026-04-30");
+  });
+
+  it("handles long-text (hyphen) end-to-end through the handler", async () => {
+    // Regression for Phase 4 Path B e2e — before the fix this webhook
+    // shape fell into the default case, decodeWebhookValue returned
+    // null, and the handler dutifully wrote NULL to work_reqs.notes,
+    // silently clearing production data on every long_text edit.
+    db.query.mockResolvedValue(updateResult(1));
+    await handleUpdateColumnValue({
+      type: "update_column_value",
+      pulseId: ITEM_ID,
+      columnId: NOTES_COLUMN,
+      columnType: "long-text",
+      value: {
+        text: "Path B edit test",
+        changed_at: "2026-04-13T18:55:35.282Z",
+      },
+    });
+
+    expect(db.query).toHaveBeenCalledTimes(1);
+    const [sql, params] = db.query.mock.calls[0];
+    expect(sql).toMatch(/UPDATE work_reqs SET notes = \?/);
+    expect(params[0]).toBe("Path B edit test");
+  });
+
+  it("skips the UPDATE when decoder returns the UNSUPPORTED sentinel", async () => {
+    // Defense-in-depth: if Monday someday adds a new column type or
+    // renames one we do use, the handler must NOT silently clear the
+    // field by writing null. It must refuse the write and log loudly.
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    await handleUpdateColumnValue({
+      type: "update_column_value",
+      pulseId: ITEM_ID,
+      columnId: NOTES_COLUMN, // a mapped column — gets past the whitelist
+      columnType: "some-future-type-we-do-not-handle",
+      value: { text: "would-be-cleared" },
+    });
+
+    expect(db.query).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/skipping, decoder does not support/),
+    );
+    warnSpy.mockRestore();
   });
 
   it("skips events whose columnId is not in COLUMN_TO_FIELD", async () => {

@@ -79,6 +79,14 @@ async function pushCreate(workReq) {
       columnValues,
     );
 
+    // `remember` must run AFTER createItem succeeds so we never populate
+    // the set with signatures for changes that didn't actually reach Monday.
+    // Do NOT move this earlier even though in theory Monday could fire a
+    // column webhook before createItem's HTTPS response arrives — in practice
+    // (a) Monday fires `create_pulse` on new items, not `change_column_value`,
+    // so this race does not apply to the create path, and (b) webhook delivery
+    // latency exceeds the local `await` resolution by orders of magnitude.
+    // Moving the remember earlier would create orphan signatures on failure.
     rememberOutboundColumnSignatures(itemId, workReq);
 
     await db.query(

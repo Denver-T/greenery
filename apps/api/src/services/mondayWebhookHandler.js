@@ -40,6 +40,14 @@ const db = require("../db");
 const loopPrevention = require("../utils/loopPreventionSet");
 const { COLUMN_TO_FIELD } = require("../lib/mondayColumnValues");
 
+// Sentinel returned by decodeWebhookValue when the columnType is one we
+// don't understand. Distinct from `null` (which means "intentional clear"),
+// so the handler can skip the UPDATE instead of silently wiping the field.
+// Found the hard way during Phase 4 Path B e2e — Monday sends `long-text`
+// (hyphen) in webhook bodies while our cases used `long_text` (underscore),
+// causing notes writes to fall into the "unknown" branch and clear the DB.
+const DECODE_UNSUPPORTED = Symbol("DECODE_UNSUPPORTED");
+
 // Whitelist used for the defense-in-depth guard on the dynamic SQL
 // `SET <field> = ?` interpolation in handleUpdateColumnValue. COLUMN_TO_FIELD
 // is a constant map built from FIELD_MAP at module load, so `field` is
@@ -132,6 +140,18 @@ async function handleUpdateColumnValue(event) {
   // same canonical form or echo detection silently fails.
   const decoded = decodeWebhookValue(event.value, event.columnType);
 
+  // Fail-safe: if the decoder couldn't handle this columnType, skip the
+  // UPDATE. Writing the sentinel to the DB would be wrong, and writing
+  // null would silently clear the field (which is how we shipped until
+  // the Phase 4 Path B e2e caught it). Manual intervention or a decoder
+  // update is required before this write can be safely applied.
+  if (decoded === DECODE_UNSUPPORTED) {
+    console.warn(
+      `[monday-webhook] update_column_value itemId=${itemId} field=${field} columnType=${event.columnType} — skipping, decoder does not support this type`,
+    );
+    return;
+  }
+
   const signature = loopPrevention.computeSignature(itemId, columnId, decoded);
   if (loopPrevention.has(signature)) {
     console.log(
@@ -154,6 +174,16 @@ async function handleUpdateColumnValue(event) {
   // Parameterized UPDATE filtered by monday_item_id. No separate lookup
   // — if the row doesn't exist the UPDATE matches zero rows and we log.
   // `field` is safe because SYNCED_FIELDS is a static whitelist.
+  //
+  // DESIGN CONSTRAINT — direct SQL, NOT reqs.js:
+  //   Going through the normal PUT /reqs/:id path would fire
+  //   mondaySyncService.pushUpdate() and kick off an outbound push to
+  //   Monday, which would echo back through this same handler and loop.
+  //   Direct SQL = one write, no outbound re-trigger. If reqs.js ever
+  //   grows side-effects (audit logging, activity stream, notifications,
+  //   webhooks, etc.) that should ALSO fire for Monday-origin changes,
+  //   those side-effects must be replicated HERE explicitly — they will
+  //   NOT be picked up automatically via this direct-SQL path.
   const [result] = await db.query(
     `UPDATE work_reqs SET ${field} = ?, updated_at = NOW() WHERE monday_item_id = ?`,
     [decoded, String(itemId)],
@@ -242,19 +272,39 @@ function resolveItemId(event) {
 
 /**
  * Decode a Monday webhook `event.value` into a scalar that matches the
- * work_reqs column type. Defensive — null-safe, unknown-type-safe,
- * accepts multiple shapes because Monday's webhook body format varies
- * across column types.
+ * work_reqs column type. Defensive — null-safe, multi-shape-tolerant.
  *
  * Column types we care about (from .agents/monday-board-map.md):
  *   text, long_text, numbers, date
  *
- * Returns null for "clear the field".
+ * Return contract:
+ *   - plain scalar (string/number) on a successful decode
+ *   - `null` for an intentional field clear (Monday sent empty/null)
+ *   - `DECODE_UNSUPPORTED` (sentinel) when the columnType is one we
+ *     don't understand — caller MUST skip the DB write, not apply it
+ *     as a null, to avoid silently wiping the field
+ *
+ * Monday's webhook bodies use different columnType strings than the
+ * GraphQL API — empirically caught during Phase 4 Path B e2e:
+ *
+ *   GraphQL enum    webhook string   notes
+ *   -------------   ---------------  -----
+ *   long_text       long-text        hyphen in webhooks
+ *   numbers         numeric          different word entirely
+ *   text            text             same
+ *   date            date             same
+ *
+ * We handle this in two layers:
+ *   1. Hyphen → underscore normalization (covers long-text → long_text)
+ *   2. Explicit case fall-throughs (covers numeric → numbers and any
+ *      future alias Monday invents that isn't just hyphenation)
  */
 function decodeWebhookValue(value, columnType) {
   if (value === null || value === undefined) return null;
 
-  switch (columnType) {
+  const normalizedType = String(columnType || "").replace(/-/g, "_");
+
+  switch (normalizedType) {
     case "text":
       // Short text: webhook body is { value: "the string" } in 2024-10.
       // Fall back to value.text for defensive compatibility.
@@ -265,13 +315,18 @@ function decodeWebhookValue(value, columnType) {
 
     case "long_text":
       // Long text: body shape is { text: "..." }.
+      // Monday sends columnType="long-text" (hyphen) in webhooks; the
+      // hyphen normalization above routes it here.
       if (typeof value === "string") return value;
       if (value.text != null) return String(value.text);
       if (value.value != null) return String(value.value);
       return null;
 
     case "numbers":
-      // Numbers: Monday stores as strings in JSON.
+    case "numeric":
+      // Numbers: Monday stores as strings in JSON. Monday sends
+      // columnType="numeric" in webhooks but "numbers" in the GraphQL
+      // API — accept both. Empirically caught in Path B numeric test.
       if (typeof value === "number") return value;
       if (typeof value === "string") {
         const n = Number(value);
@@ -291,13 +346,14 @@ function decodeWebhookValue(value, columnType) {
     }
 
     default:
-      // Unknown column type — log once (caller already logs the event)
-      // and return null so the UPDATE clears the field. Safer than
-      // writing arbitrary shapes as JSON strings into a VARCHAR column.
+      // Unknown column type — return the sentinel so the caller skips
+      // the UPDATE entirely. Previously this returned `null` and the
+      // handler dutifully wrote NULL to the DB, silently clearing the
+      // field on any column type we hadn't hardcoded.
       console.warn(
-        `[monday-webhook] decodeWebhookValue: unknown columnType=${columnType} — returning null`,
+        `[monday-webhook] decodeWebhookValue: unsupported columnType=${columnType} — caller will skip the write`,
       );
-      return null;
+      return DECODE_UNSUPPORTED;
   }
 }
 
@@ -308,4 +364,5 @@ module.exports = {
   handleCreatePulse,
   decodeWebhookValue,
   resolveItemId,
+  DECODE_UNSUPPORTED,
 };

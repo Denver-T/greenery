@@ -59,11 +59,17 @@ function stableStringify(value) {
  * Used as part of the signature so the same "value after update" from
  * both sides of the loop produces the same signature. 16 hex chars is
  * 64 bits — collision risk is negligible for a 15-second window.
+ *
+ * Normalizes `undefined` → `null` up front. `stableStringify(undefined)`
+ * returns JS `undefined` (not the string "undefined"), which would then
+ * crash `crypto.update()`. Every current call site pre-filters null, but
+ * this guard means a future caller can't accidentally trigger that.
  */
 function hashValue(value) {
+  const normalized = value === undefined ? null : value;
   return crypto
     .createHash("sha256")
-    .update(stableStringify(value))
+    .update(stableStringify(normalized))
     .digest("hex")
     .slice(0, 16);
 }
