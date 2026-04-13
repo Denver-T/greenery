@@ -43,6 +43,11 @@ Thumbs.db
 apps/api/uploads/
 !apps/api/uploads/.gitkeep
 
+# Monday webhook capture samples — contain live Monday user/item IDs from
+# local development captures. Structure reference for Phase 4.3 only.
+apps/api/scripts/.monday-webhook-samples.json
+apps/api/scripts/.backfill-orphans.log
+
 # Claude Code config — personal workflow state, not project artifacts
 .claude/
 
