@@ -6,26 +6,26 @@
 
 // Greenery field → { columnId, mondayType }
 const FIELD_MAP = {
-  requestDate:    { columnId: "date_mm2aq9wj",      type: "date" },
-  techName:       { columnId: "text_mm2amsvb",       type: "text" },
-  account:        { columnId: "text_mm2ahm04",       type: "text" },
-  accountContact: { columnId: "text_mm2afc5",        type: "text" },
-  accountAddress: { columnId: "long_text_mm2aqvxj",  type: "long_text" },
-  actionRequired: { columnId: "long_text_mm2a1ckm",  type: "long_text" },
-  numberOfPlants: { columnId: "numeric_mm2aqtnt",    type: "numbers" },
-  plantWanted:    { columnId: "text_mm2asd86",       type: "text" },
-  plantReplaced:  { columnId: "text_mm2ah91n",       type: "text" },
-  plantSize:      { columnId: "text_mm2adb9d",       type: "text" },
-  plantHeight:    { columnId: "text_mm2ac5mt",       type: "text" },
-  planterTypeSize:{ columnId: "text_mm2ad3h0",       type: "text" },
-  planterColour:  { columnId: "text_mm2av6h7",       type: "text" },
-  stagingMaterial:{ columnId: "text_mm2ansvp",       type: "text" },
-  lighting:       { columnId: "text_mm2abm4d",       type: "text" },
-  method:         { columnId: "long_text_mm2azyfd",  type: "long_text" },
-  location:       { columnId: "text_mm2ah7qz",       type: "text" },
-  notes:          { columnId: "long_text_mm2ajdep",  type: "long_text" },
-  dueDate:        { columnId: "date4",               type: "date" },
-  status:         { columnId: "text_mm2ae3s9",       type: "text" },
+  requestDate: { columnId: "date_mm2aq9wj", type: "date" },
+  techName: { columnId: "text_mm2amsvb", type: "text" },
+  account: { columnId: "text_mm2ahm04", type: "text" },
+  accountContact: { columnId: "text_mm2afc5", type: "text" },
+  accountAddress: { columnId: "long_text_mm2aqvxj", type: "long_text" },
+  actionRequired: { columnId: "long_text_mm2a1ckm", type: "long_text" },
+  numberOfPlants: { columnId: "numeric_mm2aqtnt", type: "numbers" },
+  plantWanted: { columnId: "text_mm2asd86", type: "text" },
+  plantReplaced: { columnId: "text_mm2ah91n", type: "text" },
+  plantSize: { columnId: "text_mm2adb9d", type: "text" },
+  plantHeight: { columnId: "text_mm2ac5mt", type: "text" },
+  planterTypeSize: { columnId: "text_mm2ad3h0", type: "text" },
+  planterColour: { columnId: "text_mm2av6h7", type: "text" },
+  stagingMaterial: { columnId: "text_mm2ansvp", type: "text" },
+  lighting: { columnId: "text_mm2abm4d", type: "text" },
+  method: { columnId: "long_text_mm2azyfd", type: "long_text" },
+  location: { columnId: "text_mm2ah7qz", type: "text" },
+  notes: { columnId: "long_text_mm2ajdep", type: "long_text" },
+  dueDate: { columnId: "date4", type: "date" },
+  status: { columnId: "text_mm2ae3s9", type: "text" },
 };
 
 // Reverse lookup: Monday columnId → Greenery field name
@@ -126,10 +126,50 @@ function fromWebhookPayload(event) {
   return { mondayItemId, columnId, field, value };
 }
 
+/**
+ * Normalize a raw work_reqs field value into the canonical scalar used
+ * by loopPreventionSet signatures. Both the outbound sync path and the
+ * inbound webhook handler must hash the same canonical form or echo
+ * detection fails silently.
+ *
+ * The canonical scalars are:
+ *   text, long_text → plain string (as stored in the DB)
+ *   numbers         → number
+ *   date            → YYYY-MM-DD string (10 chars)
+ *
+ * Returns null for undefined/null input.
+ */
+function toSignatureValue(field, value) {
+  if (value === undefined || value === null) return null;
+
+  const entry = FIELD_MAP[field];
+  if (!entry) return null;
+
+  switch (entry.type) {
+    case "text":
+    case "long_text":
+      return String(value);
+    case "numbers": {
+      const n = typeof value === "number" ? value : Number(value);
+      return Number.isFinite(n) ? n : null;
+    }
+    case "date": {
+      if (value instanceof Date) {
+        if (Number.isNaN(value.getTime())) return null;
+        return value.toISOString().slice(0, 10);
+      }
+      return String(value).slice(0, 10);
+    }
+    default:
+      return null;
+  }
+}
+
 module.exports = {
   FIELD_MAP,
   COLUMN_TO_FIELD,
   toMondayColumnValues,
   fromMondayColumnValues,
   fromWebhookPayload,
+  toSignatureValue,
 };

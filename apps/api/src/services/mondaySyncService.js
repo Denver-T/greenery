@@ -1,7 +1,53 @@
 const db = require("../db");
 const env = require("../lib/env");
 const mondayClient = require("../lib/mondayClient");
-const { toMondayColumnValues } = require("../lib/mondayColumnValues");
+const {
+  toMondayColumnValues,
+  toSignatureValue,
+  FIELD_MAP,
+} = require("../lib/mondayColumnValues");
+const loopPrevention = require("../utils/loopPreventionSet");
+
+// Sentinel columnId for delete signatures. Matches what the inbound
+// handler uses in handleDeletePulse so the two sides compute the same hash.
+const DELETE_SENTINEL_COLUMN = "__delete__";
+
+/**
+ * After a successful Monday push, remember the resulting webhook
+ * signatures so the inbound handler can silently skip the echoes.
+ *
+ * For create/update: one signature per non-null field we pushed, keyed
+ * on the field's Monday columnId and its canonical scalar value.
+ * For delete: one signature keyed on the sentinel columnId and null.
+ *
+ * Called AFTER the Monday API call succeeds — never before, so a failed
+ * push doesn't poison the set with signatures for changes that never
+ * actually reached Monday.
+ */
+function rememberOutboundColumnSignatures(mondayItemId, workReq) {
+  if (!mondayItemId) return;
+
+  for (const [field, { columnId }] of Object.entries(FIELD_MAP)) {
+    const value = toSignatureValue(field, workReq[field]);
+    if (value === null) continue;
+    const signature = loopPrevention.computeSignature(
+      mondayItemId,
+      columnId,
+      value,
+    );
+    loopPrevention.remember(signature);
+  }
+}
+
+function rememberOutboundDeleteSignature(mondayItemId) {
+  if (!mondayItemId) return;
+  const signature = loopPrevention.computeSignature(
+    mondayItemId,
+    DELETE_SENTINEL_COLUMN,
+    null,
+  );
+  loopPrevention.remember(signature);
+}
 
 const BOARD_ID = env.MONDAY_BOARD_ID;
 const MAX_ATTEMPTS = 10;
@@ -33,6 +79,8 @@ async function pushCreate(workReq) {
       columnValues,
     );
 
+    rememberOutboundColumnSignatures(itemId, workReq);
+
     await db.query(
       `UPDATE work_reqs SET monday_item_id = ?, monday_synced_at = NOW() WHERE id = ?`,
       [itemId, workReq.id],
@@ -52,7 +100,13 @@ async function pushUpdate(workReq) {
 
   try {
     const columnValues = toMondayColumnValues(workReq);
-    await mondayClient.updateItem(BOARD_ID, workReq.monday_item_id, columnValues);
+    await mondayClient.updateItem(
+      BOARD_ID,
+      workReq.monday_item_id,
+      columnValues,
+    );
+
+    rememberOutboundColumnSignatures(workReq.monday_item_id, workReq);
 
     await db.query(
       `UPDATE work_reqs SET monday_synced_at = NOW() WHERE id = ?`,
@@ -73,6 +127,7 @@ async function pushDelete(workReq) {
 
   try {
     await mondayClient.deleteItem(workReq.monday_item_id);
+    rememberOutboundDeleteSignature(workReq.monday_item_id);
   } catch (err) {
     console.error("[monday-sync] pushDelete failed:", err.message);
     await enqueue("delete", workReq.id, {
@@ -107,7 +162,8 @@ async function drainQueue() {
   );
 
   for (const row of rows) {
-    const payload = typeof row.payload === "string" ? JSON.parse(row.payload) : row.payload;
+    const payload =
+      typeof row.payload === "string" ? JSON.parse(row.payload) : row.payload;
 
     try {
       switch (row.operation) {
@@ -118,6 +174,7 @@ async function drainQueue() {
             payload.referenceNumber,
             columnValues,
           );
+          rememberOutboundColumnSignatures(itemId, payload);
           if (row.work_req_id) {
             await db.query(
               `UPDATE work_reqs SET monday_item_id = ?, monday_synced_at = NOW() WHERE id = ?`,
@@ -129,7 +186,12 @@ async function drainQueue() {
         case "update": {
           if (payload.monday_item_id) {
             const columnValues = toMondayColumnValues(payload);
-            await mondayClient.updateItem(BOARD_ID, payload.monday_item_id, columnValues);
+            await mondayClient.updateItem(
+              BOARD_ID,
+              payload.monday_item_id,
+              columnValues,
+            );
+            rememberOutboundColumnSignatures(payload.monday_item_id, payload);
             if (row.work_req_id) {
               await db.query(
                 `UPDATE work_reqs SET monday_synced_at = NOW() WHERE id = ?`,
@@ -142,6 +204,7 @@ async function drainQueue() {
         case "delete": {
           if (payload.monday_item_id) {
             await mondayClient.deleteItem(payload.monday_item_id);
+            rememberOutboundDeleteSignature(payload.monday_item_id);
           }
           break;
         }
