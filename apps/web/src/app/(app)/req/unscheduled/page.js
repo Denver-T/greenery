@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
 import { fetchApi } from "@/lib/api/api";
@@ -34,9 +34,20 @@ export default function UnscheduledRequestsPage() {
   const [assignedOnly, setAssignedOnly] = useState(false);
   const [includeOlder, setIncludeOlder] = useState(false);
 
-  // Inline schedule dialog — track which row is being scheduled
+  // Inline schedule dialog — track which row is being scheduled.
+  // `scheduleTargetRef` is a synchronous mirror used as a rapid-click gate:
+  // React state reads are stale within a single tick, so two back-to-back
+  // button clicks in the same microtask would both see `scheduleTarget ===
+  // null` and set the target to the second row. The ref catches that.
   const [scheduleTarget, setScheduleTarget] = useState(null);
+  const scheduleTargetRef = useRef(null);
   const [employees, setEmployees] = useState([]);
+
+  // Monotonic request id — every loadPage invocation tags itself with the
+  // next id and discards its own response if another loadPage has started
+  // in the meantime. Prevents out-of-order fetch responses (rapid filter
+  // toggles / keystrokes) from overwriting newer state with stale rows.
+  const requestIdRef = useRef(0);
 
   // Resolve current user once for the role gate
   useEffect(() => {
@@ -96,20 +107,25 @@ export default function UnscheduledRequestsPage() {
   }, [page, debouncedAccount, assignedOnly, includeOlder]);
 
   const loadPage = useCallback(async () => {
+    const myId = ++requestIdRef.current;
     setLoading(true);
     setError("");
     try {
       const response = await fetchApi(`/reqs/unscheduled?${queryString}`, {
         raw: true,
       });
+      if (myId !== requestIdRef.current) return; // stale — drop
       setRows(response?.data || []);
       setTotalCount(response?.totalCount ?? 0);
     } catch (err) {
+      if (myId !== requestIdRef.current) return; // stale — drop
       setError(err.message || "Failed to load unscheduled requests.");
       setRows([]);
       setTotalCount(0);
     } finally {
-      setLoading(false);
+      if (myId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [queryString]);
 
@@ -123,8 +139,12 @@ export default function UnscheduledRequestsPage() {
     loadPage();
   }, [authReady, isManagerPlus, loadPage]);
 
-  // Lazy-load employees the first time the schedule dialog opens
+  // Lazy-load employees the first time the schedule dialog opens.
+  // Guarded by the sync ref so a rapid double-click can't swap targets
+  // between the click and the commit.
   function openScheduleFor(row) {
+    if (scheduleTargetRef.current) return;
+    scheduleTargetRef.current = row;
     setScheduleTarget(row);
     if (employees.length === 0) {
       (async () => {
@@ -143,13 +163,24 @@ export default function UnscheduledRequestsPage() {
     }
   }
 
+  function closeSchedule() {
+    scheduleTargetRef.current = null;
+    setScheduleTarget(null);
+  }
+
   function handleScheduled() {
-    // Optimistic: drop the row from the list without a full reload
+    // Optimistic: drop the row from the list without a full reload.
+    // If this was the last row on a non-first page, step back one page so
+    // the user doesn't land on an empty "Page N of N-1".
     if (scheduleTarget) {
+      const wasLastOnPage = rows.length === 1 && page > 1;
       setRows((prev) => prev.filter((r) => r.id !== scheduleTarget.id));
       setTotalCount((c) => Math.max(0, c - 1));
+      if (wasLastOnPage) {
+        setPage((p) => Math.max(1, p - 1));
+      }
     }
-    setScheduleTarget(null);
+    closeSchedule();
   }
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -219,11 +250,6 @@ export default function UnscheduledRequestsPage() {
                       key={row.id}
                       row={row}
                       onSchedule={() => openScheduleFor(row)}
-                      // Disable every Schedule button while any dialog is
-                      // open. Otherwise clicking a second row while the
-                      // first dialog is open reuses the mounted component
-                      // and the form state carries over between rows.
-                      disabled={!!scheduleTarget}
                     />
                   ))}
                 </ul>
@@ -268,7 +294,7 @@ export default function UnscheduledRequestsPage() {
         <ScheduleRequestDialog
           workReq={scheduleTarget}
           employees={employees}
-          onClose={() => setScheduleTarget(null)}
+          onClose={closeSchedule}
           onScheduled={handleScheduled}
         />
       ) : null}
@@ -324,7 +350,8 @@ function FilterBar({
   );
 }
 
-function UnscheduledRow({ row, onSchedule, disabled }) {
+function UnscheduledRow({ row, onSchedule }) {
+  const rowLabel = row.referenceNumber || `work request ${row.id}`;
   return (
     <li className="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between">
       <div className="min-w-0 flex-1">
@@ -353,7 +380,7 @@ function UnscheduledRow({ row, onSchedule, disabled }) {
           variant="primary"
           size="sm"
           onClick={onSchedule}
-          disabled={disabled}
+          aria-label={`Schedule ${rowLabel}`}
         >
           Schedule →
         </Button>

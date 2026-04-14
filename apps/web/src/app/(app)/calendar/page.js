@@ -692,7 +692,7 @@ export default function Page() {
                             ) : null}
                           </div>
                           {entry.workReqReference ? (
-                            <div className="mt-1 inline-block rounded-full bg-surface-muted px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
+                            <div className="mt-1 inline-block rounded-full bg-surface-muted px-2 py-0.5 font-mono text-xs font-semibold uppercase tracking-wider text-foreground">
                               {entry.workReqReference}
                               {entry.workReqStatus
                                 ? ` · ${formatWorkReqStatus(entry.workReqStatus)}`
