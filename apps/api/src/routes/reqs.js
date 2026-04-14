@@ -351,15 +351,22 @@ function buildReqPayload(body = {}, file = null, existing = null) {
   };
 }
 
-const REQ_COLUMNS = `id, referenceNumber, requestDate, techName, account, accountContact,
-  accountAddress, actionRequired, numberOfPlants, plantWanted, plantReplaced, plantSize,
-  plantHeight, planterTypeSize, planterColour, stagingMaterial, lighting, method, location,
-  notes, picturePath, assignedTo, dueDate, status, monday_item_id, monday_synced_at,
-  created_at, updated_at`;
+// Column list for getReqById — prefixed with `wr.` so the LEFT JOIN
+// to employees doesn't collide with employees.id / employees.status.
+const REQ_COLUMNS_QUALIFIED = `wr.id, wr.referenceNumber, wr.requestDate, wr.techName,
+  wr.account, wr.accountContact, wr.accountAddress, wr.actionRequired, wr.numberOfPlants,
+  wr.plantWanted, wr.plantReplaced, wr.plantSize, wr.plantHeight, wr.planterTypeSize,
+  wr.planterColour, wr.stagingMaterial, wr.lighting, wr.method, wr.location, wr.notes,
+  wr.picturePath, wr.assignedTo, wr.dueDate, wr.status, wr.monday_item_id,
+  wr.monday_synced_at, wr.created_at, wr.updated_at`;
 
 async function getReqById(id) {
   const [rows] = await db.query(
-    `SELECT ${REQ_COLUMNS} FROM work_reqs WHERE id = ? LIMIT 1`,
+    `SELECT ${REQ_COLUMNS_QUALIFIED}, e.name AS assignedToName
+       FROM work_reqs wr
+       LEFT JOIN employees e ON e.id = wr.assignedTo
+      WHERE wr.id = ?
+      LIMIT 1`,
     [id],
   );
   return rows[0] || null;
