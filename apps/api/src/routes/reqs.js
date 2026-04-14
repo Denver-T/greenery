@@ -14,6 +14,8 @@ const { writeLimiter } = require("../middleware/rateLimiters");
 const { parsePagination, paginatedResponse } = require("../utils/pagination");
 const { nextReferenceNumber } = require("../services/reqSequenceService");
 const mondaySyncService = require("../services/mondaySyncService");
+const workReqScheduleService = require("../services/workReqScheduleService");
+const { httpError } = require("../utils/httpError");
 
 const router = express.Router();
 
@@ -386,8 +388,148 @@ router.get(
 );
 
 /**
+ * GET /reqs/unscheduled
+ * Inbox of work requests with no linked schedule_events row.
+ *
+ * MUST come BEFORE `GET /reqs/:id` so Express does not match "unscheduled"
+ * as an id parameter — verified by the workReqScheduleService test suite
+ * (`listUnscheduledWorkReqs` has dedicated coverage). Managers-only.
+ *
+ * Query params:
+ *   page, pageSize           — standard pagination (parsePagination)
+ *   account=<text>           — partial case-insensitive LIKE on account
+ *   assignedTo=<int>         — exact match on assignedTo
+ *   assignedToPresent=true   — filters out unassigned rows
+ *   includeOlder=true        — drops the default 30-day created_at filter
+ */
+router.get(
+  "/unscheduled",
+  verifyToken,
+  authorize("manager", "admin"),
+  async (req, res, next) => {
+    try {
+      const pagination = parsePagination(req.query) || {
+        page: 1,
+        pageSize: 25,
+        offset: 0,
+      };
+
+      const filters = {
+        account: req.query.account,
+        assignedTo: req.query.assignedTo,
+        assignedToPresent:
+          req.query.assignedToPresent === "true" ||
+          req.query.assignedToPresent === true,
+        includeOlder:
+          req.query.includeOlder === "true" || req.query.includeOlder === true,
+      };
+
+      const { rows, total } = await workReqScheduleService.listUnscheduledWorkReqs({
+        pageSize: pagination.pageSize,
+        offset: pagination.offset,
+        filters,
+      });
+
+      return res.json(
+        paginatedResponse(rows, total, pagination.page, pagination.pageSize),
+      );
+    } catch (err) {
+      return next(err);
+    }
+  },
+);
+
+/**
+ * GET /reqs/:id/schedule-events
+ * List every schedule_events row tied to the given work request. Readable by
+ * Technician+ per Decision H (no per-tech ownership gate in v1).
+ */
+router.get(
+  "/:id/schedule-events",
+  verifyToken,
+  authorize("technician", "manager", "admin"),
+  async (req, res, next) => {
+    try {
+      const id = parsePositiveInt(req.params.id);
+      if (!id) {
+        return next(httpError(400, "Invalid id", "VALIDATION_ERROR"));
+      }
+      const events = await workReqScheduleService.listLinkedEvents(id);
+      return res.json({ data: events });
+    } catch (err) {
+      return next(err);
+    }
+  },
+);
+
+/**
+ * POST /reqs/:id/schedule-events
+ * Schedule a work request — creates a schedule_events row with
+ * event_type='request' linked to this work_req. Manager+ only.
+ */
+router.post(
+  "/:id/schedule-events",
+  writeLimiter,
+  verifyToken,
+  authorize("manager", "admin"),
+  async (req, res, next) => {
+    try {
+      const id = parsePositiveInt(req.params.id);
+      if (!id) {
+        return next(httpError(400, "Invalid id", "VALIDATION_ERROR"));
+      }
+
+      const created = await workReqScheduleService.createLinkedEvent({
+        workReqId: id,
+        body: req.body,
+        req,
+      });
+
+      return res.status(201).json({ data: created });
+    } catch (err) {
+      // Service throws Errors with statusCode + code already set.
+      return next(err);
+    }
+  },
+);
+
+/**
+ * DELETE /reqs/:id/schedule-events/:eventId
+ * Unschedule a specific linked event. The service enforces the ownership
+ * guard (eventId must belong to the work_req in the URL). Manager+ only.
+ */
+router.delete(
+  "/:id/schedule-events/:eventId",
+  writeLimiter,
+  verifyToken,
+  authorize("manager", "admin"),
+  async (req, res, next) => {
+    try {
+      const id = parsePositiveInt(req.params.id);
+      const eventId = parsePositiveInt(req.params.eventId);
+      if (!id || !eventId) {
+        return next(httpError(400, "Invalid id", "VALIDATION_ERROR"));
+      }
+
+      await workReqScheduleService.deleteLinkedEvent({
+        workReqId: id,
+        eventId,
+        req,
+      });
+
+      return res.status(204).send();
+    } catch (err) {
+      return next(err);
+    }
+  },
+);
+
+/**
  * GET /reqs/:id
  * Returns the full row so detail views can render all optional request fields.
+ * The response includes a `scheduleEvents` array with any linked calendar
+ * events so the work request detail page can render them without a second
+ * round trip.
  */
 router.get(
   "/:id",
@@ -406,7 +548,9 @@ router.get(
         return res.status(404).json({ error: "REQ not found" });
       }
 
-      return res.json({ data: row });
+      const scheduleEvents = await workReqScheduleService.listLinkedEvents(id);
+
+      return res.json({ data: { ...row, scheduleEvents } });
     } catch (err) {
       return next(err);
     }
@@ -521,9 +665,41 @@ router.delete(
         return res.status(404).json({ error: "REQ not found" });
       }
 
-      await db.query(`DELETE FROM work_reqs WHERE id = ?`, [id]);
+      // Orphan cleanup: delete linked schedule_events BEFORE the work_req row.
+      // The schedule_events.work_req_id FK is ON DELETE SET NULL, so without
+      // this explicit pre-delete, deleting a work request would leave request-
+      // typed events with work_req_id = NULL, which render as broken cards on
+      // the calendar (no linked reference, no sync badge).
+      //
+      // Run both statements on a dedicated connection inside a transaction so
+      // a mid-sequence failure cannot leave behind a partial delete. The
+      // Monday sync push still fires only after commit — never inside the
+      // transaction, since it's an outbound HTTP call.
+      // Nested try/catch so rollback only runs if beginTransaction succeeded.
+      // mysql2's rollback() on an inactive txn is generally tolerant but the
+      // explicit nesting makes the intent obvious and avoids any subtle
+      // driver-version difference.
+      const conn = await db.getConnection();
+      try {
+        await conn.beginTransaction();
+        try {
+          await conn.query(
+            `DELETE FROM schedule_events WHERE work_req_id = ?`,
+            [id],
+          );
+          await conn.query(`DELETE FROM work_reqs WHERE id = ?`, [id]);
+          await conn.commit();
+        } catch (err) {
+          await conn.rollback();
+          throw err;
+        }
+      } finally {
+        conn.release();
+      }
 
-      // Fire-and-forget Monday sync
+      // Fire-and-forget Monday sync (runs AFTER commit — outbound HTTP must
+      // never run inside a DB transaction or a slow Monday response stalls
+      // the connection pool).
       if (existing.monday_item_id) {
         void (async () => {
           try { await mondaySyncService.pushDelete(existing); }

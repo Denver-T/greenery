@@ -119,6 +119,11 @@ router.get(
   async (req, res, next) => {
     try {
       const userRank = getAccessRank(req.user?.permissionLevel || req.user?.role || "technician");
+      // Unconditional LEFT JOIN to work_reqs so calendar events that link a
+      // work request carry the linked request's status + reference + sync
+      // metadata. Values are NULL for custom events (no work_req_id) — the
+      // calendar page treats null work_req_reference as "custom event".
+      // Strictly additive: existing consumers see every field they had before.
       const [rows] = await db.query(
         `
           SELECT
@@ -132,9 +137,14 @@ router.get(
             s.event_type,
             s.audience_level,
             s.created_by_email,
-            e.name AS employee_name
+            e.name AS employee_name,
+            wr.status AS work_req_status,
+            wr.referenceNumber AS work_req_reference,
+            wr.monday_item_id AS work_req_monday_item_id,
+            wr.monday_synced_at AS work_req_monday_synced_at
           FROM schedule_events s
           LEFT JOIN employees e ON s.employee_id = e.id
+          LEFT JOIN work_reqs wr ON s.work_req_id = wr.id
           WHERE
             CASE s.audience_level
               WHEN 'admin' THEN 3

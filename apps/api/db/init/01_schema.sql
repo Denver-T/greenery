@@ -106,6 +106,7 @@ CREATE TABLE schedule_events (
 
 CREATE INDEX idx_schedule_employee ON schedule_events (employee_id);
 CREATE INDEX idx_schedule_start ON schedule_events (start_time);
+CREATE INDEX idx_schedule_workreq ON schedule_events (work_req_id);
 
 -- Notifications
 CREATE TABLE notifications (
