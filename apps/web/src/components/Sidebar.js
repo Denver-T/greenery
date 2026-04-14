@@ -71,6 +71,8 @@ function normalizeLevel(user) {
   return user?.permissionLevel || user?.role || "Technician";
 }
 
+const MANAGER_PLUS = new Set(["Manager", "Administrator", "SuperAdmin"]);
+
 export default function Sidebar({ inDrawer = false, onNavigate }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [authUser, setAuthUser] = useState(null);
@@ -112,6 +114,28 @@ export default function Sidebar({ inDrawer = false, onNavigate }) {
       ...section,
       items: [...section.items],
     }));
+
+    // Manager+ — Unscheduled Requests inbox (work_reqs with no calendar event)
+    if (MANAGER_PLUS.has(currentUser?.permissionLevel)) {
+      const requestsSection = resolvedSections.find(
+        (section) => section.title === "Requests",
+      );
+      if (requestsSection) {
+        // Insert right after "Work Requests" so it groups with the directory.
+        // findIndex returns -1 if the anchor is missing; in that case fall back
+        // to appending (splice at length). The item should still appear.
+        const anchor = requestsSection.items.findIndex(
+          (item) => item.href === "/req/list",
+        );
+        const insertAt =
+          anchor >= 0 ? anchor + 1 : requestsSection.items.length;
+        requestsSection.items.splice(insertAt, 0, {
+          href: "/req/unscheduled",
+          label: "Not Yet Scheduled",
+          description: "Work requests waiting to be placed on the calendar",
+        });
+      }
+    }
 
     if (currentUser?.permissionLevel === "SuperAdmin") {
       const operationsSection = resolvedSections.find(

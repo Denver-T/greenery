@@ -5,6 +5,468 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-14 — feat: Mark Complete + PUT /reqs/:id transaction + auto-close
+
+**Commits:** `786febb` feat(api), `044715e` feat(web)
+
+### What changed
+
+Chunk D (Phase 6) of `work-request-schedule-coupling`. Ships the Mark Complete flow end-to-end plus the load-bearing API refactor underneath it.
+
+**API — PUT /reqs/:id transaction refactor.** Explicit `getConnection → beginTransaction → UPDATE → optional DELETE → commit/rollback/release`, mirroring the DELETE handler from Chunk A. PUT now writes the `status` column (it didn't before — status transitions went through `PATCH /tasks/:id/status` via `taskService`). `VALID_WORK_REQ_STATUSES` is built from `taskService.VALID_STATUSES` with an explicit `.filter((s) => s !== "unassigned")` so the one-way door (only the assign endpoint can un-assign because it also clears the FK) is enforced locally, not transitively via taskService's enum shape.
+
+**API — autoCloseScheduleEvents request-body hook.** When the client opts in AND the status transitions `→ completed`, linked `schedule_events` rows are deleted inside the **same transaction** as the status UPDATE. Rollback of the DELETE reverts the status change. `activityLogger.logActivity('schedule.request.autoclose', ...)` fires post-commit; Monday outbound `pushUpdate` also fires post-commit (outbound HTTP in a DB transaction would stall the pool). The guard is strict equality on `req.body.autoCloseScheduleEvents === true` so a multipart `"true"` string can't silently trigger auto-close — current UI is JSON-only so it doesn't matter today, but the intent is documented.
+
+**API — latent Date-object bug fixed in `buildReqPayload`.** mysql2 returns DATE columns as JS `Date` objects, and the old `normalizeString(existing.requestDate)` path stringified them to `"Tue Apr 14 2026 00:00:00 GMT-0600 (…)"` which MySQL rejected with `Incorrect date value`. The edit form masked this for the entire life of the codebase because that form always resends `body.requestDate`; Mark Complete's partial `{status, autoClose}` payload is the first caller that actually fell through to the `existing.requestDate` branch and would have 500'd on its first click in production. Introduced `toDateOnlyString` helper. Fix bundled with this chunk because Mark Complete depends on it.
+
+**API — new real-DB integration test harness.** `apps/api/src/routes/reqs.integration.test.js` is the first project example of a route-level test that connects to the dev docker-compose MySQL (`127.0.0.1:3307/greenery`), overrides env vars at file top before `require("../db")`, and skips gracefully with a console warning when MySQL is unreachable so `npm test` never fails on a machine without Docker. Four tests: happy path, counter-case, no-transition guard, invalid-enum rollback. This is the reference implementation for future integration tests — previous chunks planned but never shipped one.
+
+**Web — MarkCompleteDialog.** Accessible confirm dialog: `role="dialog"`, `aria-modal`, `aria-labelledby`/`describedby`, focus trap via shared `trapFocus`, Escape close, focus return on unmount, initial focus on Cancel, backdrop dismiss, inline error surface, submit spinner. Unchecked-by-default "Remove scheduled calendar events for this request" checkbox. Submits `{ status: 'completed', autoCloseScheduleEvents }` via JSON PUT.
+
+**Web — /req/[id] wiring.** New "Mark Complete" button leftmost in the actions row (most-common-action-first). Gated by `MARK_COMPLETABLE_STATUSES = new Set(["assigned", "in_progress"])` — hidden on `completed` (no-op), `cancelled` (terminal, shouldn't jump), and `unassigned` (shouldn't skip the assign/in-progress lifecycle in one click). Parent `handleMarkComplete` awaits `load()` **before** unmounting the dialog, so the dialog's submit spinner stays visible through the reload and the page re-renders with fresh status in the same tick the dialog disappears — the reverse ordering caused a stale-state flash in cycle 3. Dialog guards its post-success `setSubmitting(false)` with a `mountedRef` so it cleanly no-ops when the parent has already unmounted it.
+
+### Why
+
+Per the work-request-schedule-coupling plan's Decision D: when a manager marks a request complete via the web UI, they should have a one-click option to clear any linked calendar events in the same write so the calendar doesn't keep showing a completed event as a live appointment. The transaction wrapper is load-bearing — two separate writes without a transaction would leak partial state on a mid-sequence failure, and the operator would have to manually diagnose whether the status changed, whether the events cleared, or both. The `toDateOnlyString` fix is a prerequisite: Mark Complete sends a partial payload, which was the first caller that actually exercised the `existing.requestDate` fallback path and surfaced the latent Date-object bug.
+
+### Lessons learned
+
+- **Review cycles 3 and 4 caught a critical timezone regression that the cycle-2 test did not.** The first cut of `toDateOnlyString` (cycle 2) read `new Date("2026-04-14")` with local getters. ECMAScript parses bare ISO date strings as UTC midnight, so in America/Edmonton (UTC-6/-7) `getDate()` returned 13. The helper silently shifted every requestDate and dueDate backward by one day for POST /reqs (new creation) and PUT edit form (HTML date inputs emit YYYY-MM-DD strings). **The cycle-2 unit test "locked" the regression with a format-only assertion (`^\d{4}-\d{2}-\d{2}$`)** which passes on any shifted value — so the test was green while shipping a live bug. Fix: short-circuit YYYY-MM-DD through a real-date probe (rejects `"2026-02-30"`), only invoke `new Date()` for non-ISO input, use exact-value assertions in the test, and add a dedicated string-path test. Two follow-on lessons: (1) format regex assertions are worse than useless when they replace value assertions — they provide false confidence. (2) When writing a test fixture for "what mysql2 actually emits," verify empirically what mysql2 emits (`new Date(y, m-1, d)` local midnight) instead of guessing (`new Date("2026-04-01T00:00:00Z")` UTC midnight, which hides timezone bugs the test claims to catch).
+- **`isValidDateString("2026-02-30")` returns `true`** because V8 silently rolls the date to March 2. Any validator built on `!isNaN(new Date(x).getTime())` is broken for impossible days. The new `toDateOnlyString` probe (`new Date(y, m-1, d)` + post-check on getFullYear/getMonth/getDate) is stricter, which made the old `isValidDateString` branches in `buildReqPayload` dead code — removed in the same commit.
+- **Transitive invariants rot.** The cycle-2 comment said "`unassigned` is deliberately absent from the PUT enum" but only worked because `taskService.VALID_STATUSES` happened to not include it. A future dev adding `unassigned` to taskService would silently open the PUT /reqs/:id one-way door. The invariant has to be enforced at the boundary (`.filter((s) => s !== "unassigned")`) with a pinning test, not left as a documented coincidence.
+- **Dialog close ordering is subtle.** Closing a modal via `setXOpen(false)` BEFORE the reload finishes gives the user a flash of stale state — the dialog disappears, then a beat later the page re-renders with the new status. Reversing to `await load(); setXOpen(false);` keeps the submit spinner visible through the reload and the two state changes land in the same React tick. Small UX polish but very visible.
+- **`<input type="date">` always emits YYYY-MM-DD, but "valid ECMAScript date string" ≠ "string that round-trips through `new Date()` without timezone shift."** This is the core of the regression. Any helper that converts date strings to date strings should short-circuit the trivial case instead of bouncing through `new Date`.
+- **Real-DB integration tests belong in the same file tree as unit tests, with env override at file top.** Jest's per-file module registry means `process.env.DB_HOST = "127.0.0.1"` before the first `require("../db")` cleanly redirects that test file's pool to the dev docker-compose instance without touching other tests. The `checkDbAvailable` + `itIfDb` pattern in `reqs.integration.test.js` makes the suite skip gracefully when MySQL isn't running, so `npm test` stays green on CI and on fresh clones. Reference implementation for future integration tests.
+
+---
+
+## 2026-04-14 — fix(web): harden unscheduled inbox races and a11y per /review
+
+**Commit:** `76da046`
+
+### What changed
+
+Cycle-2 `/review` fixes against Chunk C (`f065de3`). Six findings — 3 🟡 Important + 3 🟢 Minor — all fixed inline, no deferrals.
+
+**Out-of-order fetch guard** — `loadPage` now tags every invocation with a monotonic `requestIdRef` counter and discards its own response in `try`/`catch`/`finally` if a newer call has started. Rapid filter toggles + keystrokes could otherwise let stale responses overwrite fresh rows. The commit message on `f065de3` claimed race-correctness but only addressed the page-reset race — out-of-order responses were untreated until now.
+
+**Page clamp on last-row schedule** — `handleScheduled` detects `rows.length === 1 && page > 1` before the optimistic removal and steps `page` back by one, which triggers a `queryString` refetch via the existing effect. Prior behavior: user scheduling the last row on page 2 got left staring at an empty "Page 2 of 1".
+
+**Ref-based rapid-click gate replaces `disabled` on row buttons** — the cycle-1 fix (`disabled={!!scheduleTarget}`) worked for the double-click race but broke dialog focus return: the row button was blurred mid-commit when `disabled` flipped to true, so `ScheduleRequestDialog`'s `previouslyFocusedRef = document.activeElement` captured `body` instead of the button, and focus on close dropped to document start. Replaced with a synchronous `scheduleTargetRef.current` guard in `openScheduleFor` that early-returns on a stale click without touching the button's DOM state. Focus now returns correctly to the opener on cancel/escape/backdrop. (Happy-path focus after a successful schedule still lands on `body` because the row unmounts — logged as a 🟢 minor for post-launch, strictly better than the cycle-1 state.)
+
+**Per-row `aria-label` on Schedule buttons** — every row now has `aria-label={`Schedule ${referenceNumber}`}` so screen-reader users can distinguish "Schedule WR-2026-0001" from "Schedule WR-2026-0002". Before this, all 25 row buttons had the same accessible name "Schedule →".
+
+**Calendar reference chip `text-[10px]` → `text-xs`** — the Chunk C diff introduced an arbitrary Tailwind font size in `calendar/page.js`, banned by `.claude/rules/components.md` ("zero arbitrary font sizes — all sizes from the defined type scale"). Swapped for the on-scale `text-xs`.
+
+**Locked-state test assertion was a no-op** — `expect(calls).not.toContain(expect.stringContaining("/reqs/unscheduled"))` never fails: `toContain` uses `Object.is` equality, which can never match an asymmetric matcher. The assertion passed regardless of whether the technician path fetched the inbox endpoint. Replaced with an explicit `.some()` check. This one is a reminder that tests can lie silently — a green check mark isn't always proof of coverage.
+
+**Two new regression tests** — one resolves two in-flight fetches in reverse order and asserts the stale payload doesn't overwrite the fresh rows; one pages to page 2, schedules the lonely row, and asserts the post-schedule refetch hits `page=1`. The cycle-1 "disables every row's Schedule button" test was replaced by a rapid-click regression test that fires two synchronous clicks and asserts only the first opens the dialog.
+
+### Why
+
+Every 🟡 Important finding fixed inline per the locked workflow rule. The out-of-order race and page-clamping bugs were real correctness issues — low-probability under normal use, but Friday is a live demo and "the inbox randomly shows stale rows under a fast click" is the kind of thing that gets noticed. The focus-return regression from the cycle-1 `disabled` fix was a new accessibility hole that the cycle-2 review caught before shipping.
+
+### Lessons learned
+
+- **A passing test isn't proof of coverage.** `expect(array).not.toContain(expect.stringContaining(...))` compiles, runs, and is always green, because `toContain` uses `Object.is` and asymmetric matchers never equal strings under `Object.is`. This is a Jest/Vitest API footgun. Rule of thumb: if an assertion mixes `toContain`/`toBe`/`toEqual` with an asymmetric matcher like `expect.stringContaining`, check the docs. For negative existence assertions on arrays of strings, prefer an explicit `.some()` or `.find()` with a manual predicate.
+- **`disabled` attribute is not a free defensive primitive.** Adding `disabled={busy}` to a button as a "just in case" race guard blurs the button mid-commit and silently breaks any focus-return logic that captures `document.activeElement` after the commit. Cycle-1 fix shipped with this bug because I only tested the click-through path, not the dialog-close-focus path. Lesson: when a button's `disabled` flips during the same commit that opens a modal, assume focus is lost and use a different gate (ref, early-return, aria-disabled). This now goes in the team feedback memory.
+- **React state reads are stale within a single handler tick.** `openScheduleFor` checking `scheduleTarget === null` before setting state doesn't actually guard rapid double-clicks — two back-to-back clicks both see the stale `null` because neither has committed yet. The synchronous `scheduleTargetRef.current` mirror is the idiomatic fix. This is a React 18 concurrent-mode-safe pattern — safer than reading from `useState` for deduplication purposes.
+- **Commit messages can overstate correctness.** Chunk C's original commit message said "filter changes reset page synchronously... to avoid a double-fetch race" — which was TRUE for the page-reset race it fixed but read like a general race-freeness claim. It wasn't. Out-of-order responses were a separate untreated race. Future lesson: when claiming race correctness, be specific about WHICH race and note which ones you did NOT address.
+- **Cycle-1 fixes can introduce cycle-2 bugs.** This is the first time this session a `/review` cycle 2 turned up a net-new finding (happy-path focus loss) that didn't exist in cycle 1 — the cycle-1 `disabled` fix improved the rapid-click guard but broke focus return. Cycle 2 caught it. The workflow rule "two cycles → stop and surface blocker" was tested and held: cycle 2 passed, so we proceed. Good guardrail.
+
+---
+
+## 2026-04-14 — feat(web): unscheduled requests inbox and calendar sync badges
+
+**Commit:** `f065de3`
+
+### What changed
+
+Phase 4-5 of the `work-request-schedule-coupling` plan. Manager+ users now have a single-screen inbox for "what needs to be scheduled?", and the calendar surfaces work-request status + Monday sync state directly on request-type events.
+
+**New `/req/unscheduled` inbox page** — lists work_reqs that have no linked `schedule_events` row. Paginated, filterable by account name (debounced 300ms), "Assigned only", and "Show older" (bypasses the default 30-day server-side window). Four empty-state variants with explicit recovery paths: unfiltered empty (everything's scheduled), filter-matched empty (clear filters button), locked (Technician) with "Back to work requests" button, and error state (retry). Per-row "Schedule →" button opens the existing `ScheduleRequestDialog` inline with optimistic row removal on successful schedule — no full reload.
+
+**Race-free filter changes** — filter toggles reset `page` to 1 synchronously in the change handlers, batched with the filter state update in the same render. The initial implementation reset via a post-commit effect which caused a double-fetch race: React's render order meant one fetch fired with the OLD page number and the new filter, then a second fetch fired with `page=1`. Out-of-order responses could leave stale rows on screen. Caught during `/review` cycle 1, fixed inline.
+
+**All Schedule buttons disable while a dialog is open** — clicking a second row's Schedule while the first dialog is still mounted would reuse the mounted component and leak its form state across rows (same `scheduleTarget` variable, no re-mount, no state reset). Disabling every row's button whenever `scheduleTarget != null` rules out the bug without needing a `key` prop hack.
+
+**Routes + Sidebar** — `/req/unscheduled` added to the static `ROUTES` list before `/req` so pathname resolution hits the exact match. Sidebar inserts a Manager+ "Not Yet Scheduled" nav item after "Work Requests" in the Requests section; description text matches the page subtitle ("Work requests waiting to be placed on the calendar") so nav hover and page header echo.
+
+**Calendar page enhancement** — `fetchScheduleRows` now carries Phase 1.6's joined `work_req_*` metadata through to the local entry shape. Request-type event cards render a `SyncStatusBadge` (size `sm`) and a monospace reference chip with the friendly-formatted work_req status (`in_progress` → "In progress" via a `WORK_REQ_STATUS_LABELS` map). Custom events render unchanged. The existing "Open request" button on the event modal already linked to `/req/:id` — Phase 5.1 verification only.
+
+**Tests** — 9 new inbox-page tests (locked state, row rendering, empty state, dialog opens from row click, all-row-button disable during dialog, filter forwarding, pagination visibility, pagination click refetches with `page=2`, debounced search). Web tests 84/84 (was 75), lint clean, build clean, 16 routes.
+
+### Why
+
+Phase 2-3 (Chunk B) gave managers the ability to schedule a work request from its detail page, but required them to already know which work request needed scheduling. The inbox closes that gap — it's the answer to "what's on my plate today?" in dispatch terms. Combined with the calendar card enhancement, a manager can now see at a glance both "what needs to be scheduled" and "what's scheduled but not yet synced to Monday," without visiting the detail page.
+
+### Lessons learned
+
+- **React effect chains hide race conditions easily.** The filter-change double-fetch race only surfaces on skeptical re-reading of the useEffect dependencies. Unit tests didn't catch it (each test mocks fetchApi statically, so out-of-order responses are invisible). Rule going forward: when a state update triggers another state update via an effect, AND both feed the same network query, reset synchronously in the handler — don't chain through effects.
+- **`/review` caught a second "lazy" deferral pattern.** I initially noted the double-fetch race as a 🟡 Important finding but would have been tempted to defer it because "the second fetch is always the correct one anyway." The principle locked in earlier this session (fix minor issues inline) extended naturally to this: "fix race conditions that might produce the right answer today but can't be relied on" — the right fix was the synchronous reset, not a rationalization about response ordering.
+- **Friendly labels belong in the display layer.** The first version of the reference chip rendered `work_req_status` directly: `WR-2026-0042 · in_progress`. Ugly. One-line fix (a label map + `formatWorkReqStatus` helper) and the UI stops leaking DB enum values at users. This pattern generalizes — anywhere a raw enum reaches the UI, there should be a label map in between.
+- **Manager+ sidebar gating reuses the existing SuperAdmin pattern cleanly.** The sidebar already had one role-gated item (SuperAdmin → Super Admin link). Extending it for Manager+ was symmetric: check the user's permissionLevel against a set, splice the item into the right section if it passes. No new "role-aware nav" abstraction needed. Sometimes the right pattern is the one that's already there.
+- **Optimistic row removal on successful schedule is tiny but feels instant.** When a manager clicks Schedule → submits the dialog → sees the row fade out immediately vs. waits for a re-fetch of the inbox. The optimistic path is 3 lines (`setRows(prev => prev.filter(...)); setTotalCount(c => c - 1)`) and transforms the feel of the inbox from "I'm filing paperwork" to "I'm working through a list." Small UX detail, large perceived-speed payoff.
+
+---
+
+## 2026-04-13 — feat(web): schedule dialog and linked schedule list on req detail
+
+**Commits:** `ccb4893` `5ccf5cf`
+
+### What changed
+
+Two commits shipping Phase 2-3 (UI) of the `work-request-schedule-coupling` plan. Manager+ users can now put a work request on the calendar from its detail page and see the linked schedule events inline.
+
+**`ccb4893` — refactor(web): extract shared trapFocus and SelectChevron**
+- `apps/web/src/lib/dialogA11y.js` — exports `trapFocus(event, container)`. Was inlined at the bottom of `DeleteWorkRequestDialog.js`; now imported by both that dialog and the new `ScheduleRequestDialog`. Tiny module, no external deps
+- `apps/web/src/components/SelectChevron.js` — decorative chevron SVG for `appearance-none` native selects, positioned absolutely inside a `relative` wrapper. Uses `currentColor` + `text-muted` so it inherits the muted token in light AND dark mode automatically
+- `WorkRequestForm.js` — drops the `SELECT_STYLE` constant (which had a hardcoded `data:image/svg+xml,...stroke='%236b7280'...` data URL). Each of the three selects now wraps in `<div class="relative">` with a `<SelectChevron />` sibling. Same visual result, but the chevron color follows the token cascade instead of being a hex literal
+- No behavioral changes. Web tests 75/75 still pass
+
+**`5ccf5cf` — feat(web): schedule dialog and linked schedule list on req detail**
+- New `ScheduleRequestDialog.js` — modal form with start/end `datetime-local` inputs, tech `<select>` (lazy-loaded from `/employees`, includes "Unassigned"), and an optional details textarea (max 500 chars). Inline validation: end must be after start, submit disabled until both times are set. Submits to `POST /reqs/:id/schedule-events`, fires `onScheduled` on success, parent reloads
+- Accessibility: `role="dialog"` + `aria-modal="true"`, focus trap via the shared `dialogA11y.trapFocus`, Escape close, backdrop close, focus return on unmount. **Initial focus on the Start time input** — not Cancel — because this is a form, not a confirm dialog (deliberate spec divergence from `DeleteWorkRequestDialog`)
+- New `LinkedScheduleList.js` — presentational list component. Empty state, time-range formatting, tech name with italic "Unassigned" fallback, details preview with a muted "No details" fallback. When the parent work_req `status === 'completed'`, rows render dimmed with a "Completed" pill and the Unschedule button is hidden. Per-row Unschedule button only renders when the parent passes a function for `onUnschedule` — role gating happens at the parent layer
+- `req/[id]/page.js` — new "Linked Schedule" section below the existing detail body, with an event count chip ("3 events") next to the heading when `scheduleEvents.length > 0`. "+ Schedule this request" button (Manager+ only) opens the dialog. `openScheduleDialog` opens immediately and fires the `/employees` fetch as a detached IIFE so cold page loads do not stall on the network roundtrip — the previous implementation awaited the fetch first, which created a visible ~200ms dead click. `handleUnschedule` uses a **separate `scheduleError` local state** instead of the page-level `error` state, so a transient unschedule failure shows inline next to the list and does NOT replace the entire detail view with `DetailErrorState`
+- 20 new tests (11 dialog + 9 list). Web tests 75/75 (was 52)
+
+### Why
+
+Phase 1 (backend) shipped a fully functional API for scheduling work requests but had no UI. Managers had to call the endpoints with curl. This phase puts the action behind a single button on the detail page so a manager looking at "WR-2026-0042" can click "Schedule this request", pick a date and a tech, and the work request appears on the calendar — closing half of the work-request ↔ schedule-events mental gap that the plan exists to fix.
+
+### Lessons learned
+
+- **Self-reflection caught the `openScheduleDialog` blocking bug.** First implementation awaited `/employees` BEFORE opening the dialog; the button felt dead for ~200ms on cold loads. Caught during `/reflect`, fixed inline by wrapping the fetch in a detached `(async () => { ... })()` IIFE. Lesson: when a button click triggers both a state change and a network fetch, do the state change first and the fetch second — never gate UI feedback on network latency.
+- **Self-review caught a worse bug: `setError` for unschedule failures replaces the entire page.** The detail page's `error` state drives `DetailErrorState`, which replaces the whole body. I initially called `setError(err.message)` inside `handleUnschedule`'s catch — meaning a single failed DELETE would nuke the user's view. Fixed by introducing a `scheduleError` local state for section-scoped errors. Lesson: shared state for "errors" is a smell — different error sources need different recovery paths and different visual treatments. Keep them separate.
+- **`/review` cycle caught me trying to defer 3 minor findings as a backlog.** User pushed back: "we should fix all the minor issues as well so we don't build a backlog of minor issues." The chevron hex was the biggest one — fixing it required extracting `SelectChevron` and refactoring 4 call sites (1 new in `ScheduleRequestDialog`, 3 pre-existing in `WorkRequestForm`). The result is cleaner than just fixing the new one would have been, AND retroactively fixed an existing token violation. Lesson: minor findings deferred at chunk boundaries become permanent technical debt — fix them at the moment they are identified.
+- **Vitest + React Testing Library is the web test pattern; Jest is API-only.** I almost wrote `import { describe, it } from "@jest/globals"` out of habit. The web tests use `import { describe, it, expect, vi } from "vitest"` and `vi.fn()` not `jest.fn()`. Worth noting in CLAUDE.md or similar — easy footgun for cross-app work.
+- **The `onUnschedule || null` pattern is the right way to role-gate an action button** without prop-drilling permission flags. The `LinkedScheduleList` component doesn't know what a Manager is; it just renders the button when handed a function. The parent decides. This kept the presentational component clean and made the test setup trivial (`onUnschedule={vi.fn()}` vs `onUnschedule={null}`).
+
+---
+
+## 2026-04-13 — feat(api): work request schedule coupling — Phase 1 backend
+
+**Commits:** `cde3c69` `b645b30`
+
+### What changed
+
+Two commits shipping Phase 1 (backend) of the `work-request-schedule-coupling` plan, plus a prior UI cleanup that had been sitting uncommitted.
+
+**`cde3c69` — fix(web): remove stub helper copy and truncate select chevrons**
+- Deleted the "Browser autofill works / Google Places…" stub helper text under the Account Address input on the work request form (Google Places activation is logged as a post-launch task since it requires a GCP billing account)
+- Deleted the "Pulled from the signed-in employee account" stub under Tech Name (the readOnly input is self-explanatory)
+- Extracted shared `SELECT_CLASS` + `SELECT_STYLE` constants for the three form selects (plantSize, plantHeight, lighting). Selects now use `appearance-none` + a custom inline SVG chevron at `right 0.875rem center` with `pr-10`, and `truncate` clips long option labels with an ellipsis instead of overlapping the arrow
+
+**`b645b30` — feat(api): work request schedule coupling — Phase 1 backend**
+- Migration 006 (up + down) plus `01_schema.sql` update adds `idx_schedule_workreq` on `schedule_events(work_req_id)` so the upcoming LEFT JOIN queries and linked-event lookups are indexed
+- New service `workReqScheduleService.js` owns all SQL for the feature. Public surface: `listLinkedEvents(workReqId)`, `createLinkedEvent({workReqId, body, req})`, `deleteLinkedEvent({workReqId, eventId, req})`, `listUnscheduledWorkReqs({pageSize, offset, filters})`. Private helpers: `validateRequestScheduleEventPayload`, `normalizeDateTime`, `buildEventTitle`, `getLinkedEventById`
+- Invariants enforced at the service layer (not the route): `event_type = 'request'` is hardcoded on insert; title is server-derived from the work request's `referenceNumber` + truncated `actionRequired`; employee_id (when provided) must reference an `Active` employees row, else 400 `EMPLOYEE_NOT_FOUND`; the unscheduled inbox hides work_reqs older than 30 days by default unless `includeOlder=true`
+- 4 new sub-resource routes on `/reqs`:
+  - `GET /reqs/unscheduled` (manager+) — paginated inbox with `account` LIKE, `assignedTo` exact, `assignedToPresent`, and `includeOlder` filters
+  - `GET /reqs/:id/schedule-events` (technician+) — list linked events
+  - `POST /reqs/:id/schedule-events` (manager+) — create
+  - `DELETE /reqs/:id/schedule-events/:eventId` (manager+) — unschedule with ownership guard
+- Route ordering is explicit: `/unscheduled` is registered BEFORE `/:id` so Express doesn't try to parse "unscheduled" as an id. Verified by the new route-level regression test
+- `GET /reqs/:id` now inlines a `scheduleEvents` array so the detail page renders linked events in one round trip
+- `GET /schedule` gains an unconditional LEFT JOIN to `work_reqs` that adds `work_req_status`, `work_req_reference`, `work_req_monday_item_id`, `work_req_monday_synced_at` to every event row (null for custom events). Strictly additive — no existing consumer sees a regression
+- `DELETE /reqs/:id` now wraps in a transaction and pre-deletes linked `schedule_events` rows BEFORE deleting the work_req. The FK is `ON DELETE SET NULL` — without this pre-delete, deleting a work request leaves orphaned calendar events with null `work_req_id` that render as broken request cards. Transaction uses `db.getConnection()` + nested try/catch so rollback only runs after a successful `beginTransaction`. Monday sync push still fires fire-and-forget AFTER commit (never inside a txn — outbound HTTP in a DB transaction is a classic footgun)
+- All new routes use `httpError(status, message, code)` via `next()` for the structured `{error: {code, message}}` error shape
+- 37 service unit tests + 11 route-level tests. The route-level file (`reqs.routes.test.js`) is new and establishes the supertest pattern for future route tests. 379/379 total API tests pass, lint clean
+
+### Why
+
+Schedule events (`schedule_events`) and work requests (`work_reqs`) have always shared a `work_req_id` FK in the schema, but nothing in the application ever used it end-to-end. Techs didn't know what they were scheduled to do; managers didn't know what had been put on the calendar. This phase wires the backend so the upcoming dialog + inbox UI has something to call. Target ship: Friday 2026-04-17 launch.
+
+### Lessons learned
+
+- **Three deferrals in the first /review were drift, not judgment.** Initial review cycle flagged error-shape inconsistency, no DELETE transaction test, and no route-ordering regression test. All three were deferred on thin reasoning ("matches pre-existing pattern", "would need new test infra"). The user pushed back and was correct — supertest was already a project dependency (used by `mondayWebhook.test.js`), the infra existed, and fixing all three inline took ~30 minutes. Rule going forward: defer only for genuine risk or scope, not because a fix is "additional work." Saved this as a feedback memory + global CLAUDE.md rule earlier this session.
+- **Route ordering under Express parameterized paths is a latent footgun.** `/reqs/unscheduled` vs `/reqs/:id` only works because the file happens to register `/unscheduled` first. A careless refactor could re-order the file and silently break the inbox. The new route-level regression test is the guardrail; visual review alone is not enough for ordering concerns.
+- **FK `ON DELETE SET NULL` creates orphans that look correct at the schema level but break the UI.** The schedule_events FK was defined years ago with `ON DELETE SET NULL`, which is a sensible default — until you have a type column like `event_type` that implies the linked row exists. The pre-delete-in-transaction pattern fixes the immediate bug without a schema migration (we didn't want to flip the FK to CASCADE during launch prep).
+- **Single-file transaction refactors compose.** Phase 1 only needed the DELETE side wrapped. Phase 6 will wrap PUT /reqs/:id similarly for the auto-close hook. The two plans (schedule-coupling and inventory-reconciliation) both need the PUT-side refactor — whichever ships first pays the cost, second inherits it. Plan explicitly documented this coordination point so neither execution run is surprised.
+- **`reqs.routes.test.js` is the first route-level test in the whole API.** Every prior test was either service-level (mock-DB) or middleware-level. This file establishes the pattern: mock `verifyToken` / `authorize` / `writeLimiter` / `mondaySyncService` at the module boundary, wire a synthetic Express app with the real router + errorHandler, drive it with supertest. Future route tests can copy this shape line-for-line.
+
+---
+
+## 2026-04-13 — fix(api): webhook rate limiter and board-id env invariant
+
+### What changed
+
+Two 🟡 Important findings from the Phase 4 `/review` applied as a single fix.
+
+- `apps/api/src/middleware/rateLimiters.js` — added `webhookLimiter`
+  (300 events/minute/IP, configurable via `RATE_LIMIT_WEBHOOK_*` env).
+  Cap is intentionally higher than `writeLimiter` so legitimate Monday
+  bursts (batch column edits, board imports) aren't throttled.
+- `apps/api/src/app.js` — mounted `webhookLimiter` on `/monday` ahead of
+  `createMondayWebhookRouter()`.
+- `apps/api/src/lib/env.js` — added a Zod `.refine()` requiring
+  `MONDAY_BOARD_ID` whenever `MONDAY_WEBHOOK_SECRET` is set. Boot fails
+  fast with a precise message if the pair is half-configured.
+
+### Why
+
+Both findings hardened defenses against a leaked URL secret. The secret
+was leaked once during the Phase 4 session (rotated immediately), so
+the threat model isn't theoretical.
+
+- Rate limiter caps blast radius on a leaked secret without changing
+  steady-state behavior. The route's primary auth is still the timing-
+  safe URL-path secret comparison.
+- The env invariant prevents a misconfigured prod (secret set, board id
+  empty) from silently disabling the inbound `boardId !== expected`
+  defense-in-depth filter inside `mondayWebhookHandler.js`.
+
+### Lessons learned
+
+- `express-rate-limit` ships with sensible defaults — wiring a third
+  limiter took two lines once the existing pattern was in place. Worth
+  investing in shared middleware modules early.
+- Zod `.refine()` cross-field invariants are the right fit for "if A
+  then B must be present" config rules. Catching this at boot time is
+  much better than discovering the misconfiguration via a stolen-secret
+  incident in production.
+- Tests already covered the surface area being touched — no new tests
+  were needed. The existing `mondayWebhook.test.js` route tests still
+  pass because `webhookLimiter` is mounted upstream of the synthetic
+  test app's router factory.
+
+
+
+**Commits:** `c6badc5` `543804f`
+
+### What changed
+
+Two commits closing out Phase 4 after a full end-to-end walkthrough of the
+web-UI-driven bidirectional sync path ("Path B"):
+
+**`c6badc5` — chore(api): consolidate Monday webhook scripts into node CLI**
+- Deleted four one-shot bash scripts from the Phase 4.2.0 capture work:
+  `monday-diag.sh`, `monday-introspect-webhook-events.sh`,
+  `monday-webhook-register-capture.sh`, `monday-webhook-teardown.sh`
+- Added `scripts/monday-register-webhook.js` — production-grade CLI that
+  handles `--register`, `--list`, `--delete <id>`, `--delete-all --yes`,
+  with partial-rollback on registration failure, existing-webhook detection,
+  secret-redacted logging, and a sanity guard that rejects a `--url` that
+  already contains the webhook path fragment
+- Added `scripts/monday-smoke-seed.js` — one-shot seed for smoke tests
+  (inserts a throwaway `work_req`, calls `pushCreate`, prints the resulting
+  `monday_item_id` for the driver to edit/delete on the Monday UI)
+- Rewrote the `.env.example` Monday section to explain that blank values
+  are fine but non-empty-short values crash boot, with a reference to the
+  `emptyToUndefined` preprocess in `env.js`
+
+**`543804f` — fix(api): Monday webhook decoder aliases + sentinel + review hardening**
+
+*Critical bug fixes caught during the Path B e2e walkthrough:*
+
+1. Monday sends `columnType="long-text"` (hyphen) in webhook bodies for
+   long_text columns, not `"long_text"` (underscore). The decoder's switch
+   case didn't match, fell through to `default`, returned `null`, and the
+   handler wrote `NULL` to the DB — silently clearing the field. Would
+   have broken every notes / accountAddress / actionRequired / method
+   edit from the Monday side.
+2. Monday sends `columnType="numeric"` for number columns, not `"numbers"`.
+   Same silent-clear failure mode for `numberOfPlants`.
+
+*Fixes:*
+- Added hyphen-to-underscore normalization at the top of `decodeWebhookValue`
+- Added `"numeric"` as an explicit case fall-through for `"numbers"`
+- **Introduced a `DECODE_UNSUPPORTED` sentinel** — previously unknown column
+  types returned `null` which the handler applied as a field clear. Now
+  unknown types return the sentinel and the handler explicitly skips the
+  `UPDATE` while logging loudly. Defense-in-depth against future alias drift.
+
+*Phase 4 review follow-ups (bundled with the decoder fixes since they
+all touch the same files):*
+- `env.js` — `emptyToUndefined` Zod preprocess on all three Monday env
+  vars so a blank `.env` copy of `.env.example` degrades to "Monday sync
+  disabled" instead of crashing validation on `z.string().min(32).optional()`
+  (which rejects empty string because `optional()` only allows undefined)
+- `loopPreventionSet.hashValue` — guards against `undefined` input by
+  normalizing to `null` before hashing (prevents a latent crash from a
+  future caller who forgets to pre-filter)
+- `mondaySyncService.pushCreate` — added a timing-rationale comment so a
+  future reader doesn't "fix" the remember-after-create call order into
+  remember-before-create (which would create orphan signatures on failure)
+- `mondayWebhookHandler.handleUpdateColumnValue` — added a DESIGN CONSTRAINT
+  comment at the UPDATE call site explaining why the handler writes via
+  direct SQL instead of going through `reqs.js` (avoiding an infinite
+  outbound-trigger loop) and what future maintainers must replicate here
+  if they add side-effects to `reqs.js`
+
+*5 new regression tests (326 → 331):*
+- `decodeWebhookValue` returns the `DECODE_UNSUPPORTED` sentinel (not null)
+  for unknown column types
+- `decodeWebhookValue` routes `long-text` (hyphen) to the same case as
+  `long_text` (underscore)
+- `decodeWebhookValue` routes `numeric` to the same case as `numbers`
+- `decodeWebhookValue` treats null/undefined columnType as unsupported
+- `handleUpdateColumnValue` skips the UPDATE when the decoder returns
+  the `DECODE_UNSUPPORTED` sentinel
+
+### Why
+
+Phase 4.5 earlier today validated the backend-driven flows (column edit
+Monday→DB, echo suppression via sync queue, delete round-trip) but left the
+web-UI-driven outbound path untested end-to-end. The Path B walkthrough was
+supposed to be a rubber-stamp validation; it caught two critical bugs that
+would have shipped on Friday and broken the live demo the first time anyone
+touched a long_text or number column from the Monday side.
+
+The two Monday-side column type naming divergences (`long-text` vs
+`long_text`, `numeric` vs `numbers`) are **undocumented** in Monday's
+public API reference — the GraphQL API uses one set of names for `column.type`
+and the webhook bodies use another. There's no way to catch this without an
+empirical round-trip test against a live board.
+
+The decoder sentinel is the actually-important fix. Without it, any future
+column type name drift from Monday would silently corrupt DB state. With it,
+any drift loudly refuses to write and logs a clear "unsupported columnType"
+warning. The codebase was one-webhook-format-change away from silently
+clearing production data.
+
+### Lessons learned
+
+- **Unit tests that mock Monday's webhook body shape are not a substitute
+  for live fixture samples.** The original Phase 4 tests used handcrafted
+  `columnType: "long_text"` strings everywhere because that's what Monday's
+  GraphQL enum says. The webhook body actually uses `"long-text"`. Both
+  bugs (long-text and numeric) would have been caught by a single captured
+  real webhook payload per column type. The SESSION.md open thread from
+  Phase 4.5 specifically flagged this gap: *"Text/long_text/numbers/date
+  column webhook shapes are unverified."* Phase 4.5 deferred it; Path B
+  paid for the deferral in live debugging time. Next time: capture
+  empirical fixture samples FIRST, then write the decoder against them.
+- **"Silent null on unknown type" is a dangerous default.** The original
+  decoder's `default:` returned `null` with a warning log, rationalized as
+  "safer than writing arbitrary shapes as a JSON string into a VARCHAR."
+  But `null` in SQL is not neutral — it **clears the field**. The sentinel
+  approach (caller must explicitly handle "I can't decode this") is the
+  correct default for any unknown-input decoder that feeds into a write.
+  Generalize: when a decoder's return type is also a valid "clear this"
+  value, you MUST disambiguate "unknown" from "intentional clear."
+- **The review-driven `.env.example` fix was also bootstrap-critical.**
+  The existing Zod schema (`z.string().min(32).optional()`) would have
+  crashed every fresh-install boot because `optional()` doesn't allow
+  empty string. The review caught it as a 🟡; the same class of bug as
+  the decoder sentinel (an "obvious" null vs undefined vs empty-string
+  distinction biting a validator).
+- **Two-layer fixes beat one-layer fixes.** The decoder fix has both
+  hyphen normalization AND the sentinel AND explicit case fall-throughs.
+  If any one layer breaks, the other two still prevent data corruption.
+- **Path B e2e walkthrough was worth 10x its cost.** 20 minutes of manual
+  clicking caught what 88 unit tests missed. When a code path crosses a
+  system boundary (in this case, our API ↔ Monday's webhook delivery),
+  unit tests with mocked shapes prove nothing about the real wire format.
+- **The fire-and-forget pattern in `reqs.js` works correctly in practice
+  under normal timing.** pushCreate/pushUpdate/pushDelete calls from the
+  route handlers reliably `remember` the loop-prevention signatures before
+  Monday echoes back. No race conditions observed in any of the 6 Path B
+  round-trips (3 create, 3 edit, 3 delete). The theoretical timing race
+  (documented in the new pushCreate comment) is genuinely theoretical.
+
+---
+
+## 2026-04-13 — feat(api): Phase 4.1–4.4 — Monday inbound webhook + loop prevention
+
+**Commits:** `b58a2b0` `1936e36` `f386ae4` `3e015d0` (this entry)
+
+### What changed
+
+Phase 4 of the Monday work-request sync plan — the inbound half of the
+two-way sync. Greenery now reacts to changes made directly on the Monday
+board and applies them to its own database, while suppressing echoes
+from its own outbound pushes via an in-memory deduplication set.
+
+**Phase 4.2.0 — Live webhook payload capture (`b58a2b0`)**
+- Five throwaway-but-reusable scripts under `apps/api/scripts/`:
+  - `monday-diag.sh` — three-step diagnostic (board read, webhook list, current user) so we can isolate auth/permission/shape issues independently
+  - `monday-introspect-webhook-events.sh` — queries Monday's `WebhookEventType` enum so we don't guess at registration enum names
+  - `monday-webhook-register-capture.sh` — registers webhooks via GraphQL variables (no string-interpolation brittleness)
+  - `monday-webhook-teardown.sh` — deletes webhooks by id
+  - `local-webhook-echo.js` — Express server that echoes Monday's registration challenge and logs every event body, used behind a cloudflared quick tunnel
+- `.gitignore` updated to exclude `.monday-webhook-samples.json` so captured Monday user/item IDs stay out of git.
+
+**Phase 4.1 — `loopPreventionSet.js` (`1936e36`)**
+- In-memory `Map<signature, expiryEpochMs>`, 15s TTL, 10k entry size cap with FIFO eviction
+- Lazy pruning on `has()` calls — no background timer, no test-hang risk
+- Stable signature: SHA-256 of `${itemId}:${columnId}:${stableStringify(value)}`
+- `stableStringify` recursively sorts object keys so equivalent payloads with different key order produce identical hashes (Monday responses don't guarantee key ordering)
+- Process-local — multi-process deployment would need Redis; accepted for current single-process API
+
+**Phase 4.2 — Webhook route (`f386ae4`)**
+- `POST /monday/webhook/:secret` mounted at `app.js`
+- URL-based secret authentication via `crypto.timingSafeEqual`. Fail-closed: missing or mismatched secret returns 404 with no body
+- Auth failures log `[monday-webhook] auth failure` with the source IP from `cf-connecting-ip` — never the URL or the secret
+- Boot-time warning when the route is mounted with no configured secret so production misconfiguration is impossible to miss
+- Monday registration challenge handshake runs BEFORE event dispatch (handlers assume `event.type` exists)
+- Always returns 200 after dispatch — even if the handler throws — to prevent Monday's retry-on-non-2xx from duplicating side effects
+- Factory pattern (`createMondayWebhookRouter`) so tests can inject their own secret and event handler without monkey-patching the env module cache
+- `MONDAY_WEBHOOK_SECRET` validated via Zod with `.min(32).optional()` — short secrets crash at boot, missing ones boot fine and the route fails closed
+- `.env.example` documents the placeholder plus the `openssl rand -hex 32` generation command
+
+**Phase 4.3 — Event handler (`f386ae4`)**
+- `mondayWebhookHandler.handleEvent(event)` dispatches on the runtime `event.type` string (NOT the registration enum — Monday renamed `change_column_value` → `update_column_value` and `item_deleted` → `delete_pulse` between API versions; we discovered this empirically in 4.2.0 capture)
+- `handleUpdateColumnValue` decodes the value into a canonical scalar, checks loop prevention via the matching signature, and runs a parameterized `UPDATE work_reqs SET <field> = ? WHERE monday_item_id = ?`
+- `<field>` is interpolated from a static whitelist (`SYNCED_FIELDS = new Set(Object.values(COLUMN_TO_FIELD))`) — defense-in-depth assertion against future refactors that might weaken the source-of-truth invariant
+- `handleDeletePulse` runs `DELETE FROM work_reqs WHERE monday_item_id = ?` with a `__delete__` sentinel signature for echo suppression
+- `handleCreatePulse` logs and ignores in v1 — items created directly on Monday have no required-field guarantees; deferred to v2
+- All DB writes are direct SQL — never through reqs.js controllers — so the inbound apply path doesn't re-trigger the outbound sync and create a different kind of loop
+- Defense in depth: events for an unexpected `boardId` are silently dropped before dispatch
+- Field-name normalizer (`resolveItemId`) handles Monday's `pulseId` vs `itemId` flip across event types
+- Decoder handles four column types empirically + defensively: text, long_text, numbers, date
+
+**Phase 4.4 — Outbound loop-prevention hooks (`3e015d0`)**
+- `mondaySyncService.pushCreate/pushUpdate/pushDelete` now call `rememberOutboundColumnSignatures(itemId, workReq)` after every successful Monday API call
+- `remember()` sits BETWEEN the Monday API call and the subsequent `db.query` bookkeeping — failed pushes don't poison the set
+- Both the primary push functions AND the `drainQueue` retry branches get the hooks, so retried items also seed the prevention set
+- Delete pushes remember a sentinel signature (`columnId="__delete__"`, `value=null`) matching what `handleDeletePulse` computes
+- `mondayColumnValues.js` gains `toSignatureValue(field, value)` — canonical scalar normalizer (dates → YYYY-MM-DD string, numbers → number, text → string). Both sides of the loop must hash the same canonical form or echo detection silently fails open.
+- Round-trip tests prove the suppression works end-to-end: `pushUpdate` → `handleEvent` skips the inbound DB write when the signature matches; counter-test with a different value confirms genuine edits still apply
+
+### Test additions (+82 tests, 243 → 326)
+
+- `loopPreventionSet.test.js` — 27 tests covering signature stability across object key order, TTL expiry, lazy pruning, FIFO eviction under cap, prune-before-evict path
+- `mondayWebhook.test.js` — 14 unit tests + 1 integration test against the real wired `app.js` (`jest.isolateModules` + `jest.doMock` to inject env without polluting the module cache)
+- `mondayWebhookHandler.test.js` — 33 tests across `resolveItemId`, `decodeWebhookValue` (text/long_text/numbers/date variants + null + unknown-type), dispatcher, `handleUpdateColumnValue` (mapped/unmapped column, missing fields, loop-prevention skip, zero-row warning, itemId/pulseId tolerance), `handleDeletePulse`, `handleCreatePulse`
+- `mondaySyncService.test.js` — 8 new tests for the outbound loop-prevention hooks (signature count after success, no signatures on failure, delete sentinel) and 3 round-trip echo-suppression scenarios
+
+### Why
+
+Phase 2 (Greenery → Monday outbound sync) shipped earlier in the sprint
+but is half a system. Phase 4 closes the loop: anything edited or
+deleted on the Monday board now flows back to Greenery within seconds.
+The headline value prop for the Friday demo is "two-way sync between
+the field-team app and the Monday board" — Phase 4 is what makes the
+"two-way" claim real instead of marketing.
+
+Loop prevention is the keystone — without it, the bidirectional sync
+would create infinite update loops every time anyone edited anything,
+because Greenery's outbound push would fire a webhook back into
+Greenery's inbound handler, which would write to the DB, which would
+fire another outbound push, and so on. The plan dedicated 30% of
+Phase 4's time budget to loop prevention specifically.
+
+### Lessons learned
+
+- **Empirical capture saves hours of guesswork.** Phase 4.2.0 was budgeted at 15 minutes for "capture one webhook payload." It took longer (~45 min including paste-mangling debug + a Monday API token rotation) but uncovered THREE plan-invalidating findings: (a) GraphQL-registered webhooks arrive with NO Authorization header — the plan's JWT auth strategy was wrong; (b) Monday's enum names (`change_column_value`, `item_deleted`) differ from the runtime `event.type` strings (`update_column_value`, `delete_pulse`) due to a rename between API versions; (c) `update_column_value` uses `pulseId`/`pulseName` but `delete_pulse` uses `itemId`/`itemName` for the same logical entity. **Takeaway:** never write a handler against documented payload shapes when you can capture a real one in 15 minutes.
+- **`grep -n` against `.env` is a secret leak waiting to happen.** This session had two accidental secret leaks via tool output — first the Monday API token (rotated via Developer Center), then the freshly minted webhook secret (rotated via second `sed` pass). Both were blast-radius-contained but indicate the wrong default. **Going forward:** never use `grep -n`, `cat`, or `head` on `.env` files in tool output. Verify with metadata only — `grep -c`, `awk '{print length}'`, `wc`-style aggregations.
+- **`set -euo pipefail` + macOS bash 3.2 + Unicode ellipsis = unbound-variable error.** macOS ships with bash 3.2 from 2007, which mis-parses the Unicode ellipsis (`…`) as part of an adjacent variable name under nounset. `echo "Deleting webhook $WEBHOOK_ID…"` exploded with `WEBHOOK_ID?: unbound variable`. Fix: use `${WEBHOOK_ID}...` with brace expansion + ASCII dots. **Takeaway:** if a shell script will run on macOS, stick to ASCII in identifier-adjacent strings.
+- **Express 5 deprecated bare `*` wildcards.** `app.post("*", handler)` in Express 5 throws `PathError [TypeError]: Missing parameter name at index 1: *`. Fix: use a regex (`app.post(/.*/, handler)`) or a named wildcard (`app.post("/*path", handler)`). Logged for any future Express 4 → 5 migration.
+- **Cache-warm `jest.mock` doesn't work for indirect transitive imports.** Adding `const env = require("../lib/env")` to `mondayWebhookHandler.js` for the new `boardId` defense-in-depth check broke two test files that `require` the handler indirectly. The auto-mock of `../db` triggers loading the real `db/index.js` to fingerprint its exports, which transitively loads `env.js`, which fails Zod validation before `setupFilesAfterEach` runs. Fix: explicitly `jest.mock("../lib/env", () => ({...}))` in any test file whose dependency chain reaches env.js. Same pattern as `analytics.test.js` and `mondaySyncService.test.js`. **Takeaway:** in a Zod-validated env.js codebase, env mocks have to be hoisted in any test file that touches a module that touches db that touches env.
+- **The signature canonicalization is the silent-failure failure mode.** Loop prevention works only if both sides hash the *same* canonical form. Outbound passes `String(workReq.field)`; inbound passes `decodeWebhookValue(event.value, columnType)`. Both have to converge to identical strings/numbers/dates. The very first version of Phase 4.3 hashed `event.value` directly (the raw Monday-shape wrapper object) — Phase 4.4 caught this during integration testing because the round-trip test failed. Fix was to decode BEFORE hashing on the inbound side. Without round-trip tests, this would have shipped silently broken and only manifested as occasional duplicate updates in production. **Takeaway:** any time two code paths must agree on a hash, write the integration test that hashes both sides and asserts equality.
+- **Two `/review` cycles is the right cadence even mid-phase.** Cycle 1 caught 7 important findings (4 fixable in code, 3 deferred). Cycle 2 wasn't needed because all 7 got addressed in the same fix pass. Holding the line on "fix everything the review flagged before commit" prevents the deferred items from accumulating into a Phase 5 backlog.
+
+### Out of scope for this entry (post-launch open threads)
+
+- Text/long_text/numbers/date column webhook shapes are unverified. Phase 4.2.0 only captured a `color`/status column change — `decodeWebhookValue` defensively handles three plausible text shapes but if Monday wraps text values in a shape we haven't anticipated, echo suppression silently fails. **After Phase 4.5 registers the real long-lived webhook**, capture one text edit, one number edit, one date edit and verify against the decoder.
+- Loop-prevention signature inefficiency — `rememberOutboundColumnSignatures` remembers signatures for ALL non-null fields on every push, not just the ones that changed. Self-healing via TTL but worth optimizing post-launch.
+- Bash diagnostic scripts under `apps/api/scripts/` will be superseded by Phase 4.5's Node CLI. Delete in a cleanup commit after 4.5 ships.
+- Phase 4.5 itself — the `monday-register-webhook.js` Node CLI is the only remaining Phase 4 task. Then Phases 5 (admin endpoint + backfill) and 6 (perf audit + demo polish).
+
+---
+
 ## 2026-04-12 — feat(web): work request routes (list/detail/edit) + login contrast fix
 
 **Commits:** `34ad54a` `5a46d74` (this entry)

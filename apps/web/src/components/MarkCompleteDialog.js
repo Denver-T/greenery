@@ -6,45 +6,41 @@ import Button from "@/components/Button";
 import { trapFocus } from "@/lib/dialogA11y";
 
 /**
- * Accessible confirm dialog for deleting a work request.
+ * Accessible confirm dialog for marking a work request complete.
  *
  * Props:
- * - workReq:      the row being deleted (used for the title)
- * - onConfirm:    async () => void — parent performs the DELETE + navigates
- * - onClose:      () => void
+ * - workReq:   the row being completed (used for the title)
+ * - onConfirm: async ({ autoCloseScheduleEvents }) => void — parent performs
+ *              the PUT (the dialog does NOT call onClose after success; the
+ *              parent closes via its own state once the reload settles, so
+ *              the dialog stays visible while the PUT is in flight and
+ *              disappears in a single render with the refreshed data).
+ * - onClose:   () => void
  *
- * Parent controls mount/unmount — pass null or conditionally render to
- * close. Do not pass an `open` prop; render the component only when it
- * should be visible, so useState resets on each open.
- *
- * Accessibility:
- * - role="dialog" + aria-modal="true"
- * - Initial focus on the Cancel button (safer default than Confirm)
- * - Focus trap: Tab/Shift+Tab cycle within the dialog
- * - Escape closes
- * - Click on backdrop closes
- * - Focus returns to the element that was focused before open
+ * Parent controls mount/unmount — render only when visible so useState
+ * resets on each open. Initial focus lands on Cancel (safer default).
  */
-export default function DeleteWorkRequestDialog({
-  workReq,
-  onConfirm,
-  onClose,
-}) {
+export default function MarkCompleteDialog({ workReq, onConfirm, onClose }) {
   const dialogRef = useRef(null);
   const cancelButtonRef = useRef(null);
   const previouslyFocusedRef = useRef(null);
+  const mountedRef = useRef(true);
+  const [autoClose, setAutoClose] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Save / restore focus on mount/unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     previouslyFocusedRef.current = document.activeElement;
-
-    // Defer focus so the dialog is mounted
     const timer = setTimeout(() => {
       cancelButtonRef.current?.focus();
     }, 0);
-
     return () => {
       clearTimeout(timer);
       if (
@@ -56,7 +52,6 @@ export default function DeleteWorkRequestDialog({
     };
   }, []);
 
-  // Escape to close + Tab focus trap
   useEffect(() => {
     function onKeyDown(e) {
       if (e.key === "Escape") {
@@ -75,10 +70,18 @@ export default function DeleteWorkRequestDialog({
     setSubmitting(true);
     setError("");
     try {
-      await onConfirm();
+      await onConfirm({ autoCloseScheduleEvents: autoClose });
     } catch (err) {
-      setError(err?.message || "Failed to delete the work request.");
-    } finally {
+      if (mountedRef.current) {
+        setError(err?.message || "Failed to mark this work request complete.");
+        setSubmitting(false);
+      }
+      return;
+    }
+    // Success path: the parent will unmount us after its reload resolves.
+    // Only clear `submitting` if we're still mounted — skipping the
+    // setState on an unmounted component.
+    if (mountedRef.current) {
       setSubmitting(false);
     }
   }
@@ -94,27 +97,42 @@ export default function DeleteWorkRequestDialog({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="delete-dialog-title"
-        aria-describedby="delete-dialog-body"
+        aria-labelledby="mark-complete-dialog-title"
+        aria-describedby="mark-complete-dialog-body"
         className="w-full max-w-md rounded-card border border-border-soft bg-surface p-6 shadow-elevated-lg"
       >
         <h2
-          id="delete-dialog-title"
+          id="mark-complete-dialog-title"
           className="text-lg font-black tracking-tight text-foreground"
         >
-          Delete work request?
+          Mark complete?
         </h2>
         <p
-          id="delete-dialog-body"
+          id="mark-complete-dialog-body"
           className="theme-copy mt-3 text-sm leading-6"
         >
-          This will remove{" "}
+          This will mark{" "}
           <span className="font-mono font-semibold text-foreground">
             {workReq?.referenceNumber || "this request"}
           </span>{" "}
-          from Greenery and its matching Monday.com item. This cannot be
-          undone.
+          as completed. The change will sync to Monday.com.
         </p>
+
+        <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-border-soft bg-surface-warm p-3">
+          <input
+            type="checkbox"
+            checked={autoClose}
+            onChange={(e) => setAutoClose(e.target.checked)}
+            disabled={submitting}
+            className="mt-0.5 h-4 w-4 cursor-pointer accent-[var(--brand-700)]"
+          />
+          <span className="text-sm leading-5 text-foreground">
+            Remove scheduled calendar events for this request
+            <span className="theme-copy block text-xs">
+              Default keeps the event on the calendar as a completed receipt.
+            </span>
+          </span>
+        </label>
 
         {error ? (
           <p
@@ -136,19 +154,16 @@ export default function DeleteWorkRequestDialog({
             Cancel
           </Button>
           <Button
-            variant="danger"
+            variant="primary"
             size="md"
             onClick={handleConfirm}
             loading={submitting}
             disabled={submitting}
           >
-            {submitting ? "Deleting…" : "Delete"}
+            {submitting ? "Marking…" : "Mark Complete"}
           </Button>
         </div>
       </div>
     </div>
   );
 }
-
-// trapFocus moved to @/lib/dialogA11y so ScheduleRequestDialog and other
-// dialogs can reuse the same implementation.

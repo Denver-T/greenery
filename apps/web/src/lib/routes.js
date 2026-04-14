@@ -10,6 +10,11 @@ export const ROUTES = [
     topBarTitle: "Work Request Directory",
     sidebarLabel: "Work Requests",
   },
+  {
+    href: "/req/unscheduled",
+    topBarTitle: "Unscheduled Requests",
+    sidebarLabel: "Not Yet Scheduled",
+  },
   { href: "/req", topBarTitle: "Create Work REQ", sidebarLabel: "New Request" },
   {
     href: "/calendar",

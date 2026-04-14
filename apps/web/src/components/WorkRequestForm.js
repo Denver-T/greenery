@@ -6,6 +6,7 @@ import {
   sanitizeObjectStrings,
 } from "@/lib/inputSafety";
 import Button from "@/components/Button";
+import SelectChevron from "@/components/SelectChevron";
 
 const REQ_LIMITS = {
   referenceNumber: 100,
@@ -25,6 +26,14 @@ const REQ_LIMITS = {
 };
 
 const EMPTY_INITIAL = {};
+
+// Shared select styling — native browser arrow is hidden and replaced with a
+// `<SelectChevron>` overlay so text can be truncated cleanly on narrow columns.
+// `truncate` + `appearance-none` + `pr-10` reserves room so long option labels
+// (e.g. "Shorter than 2 feet") get an ellipsis instead of overlapping the arrow.
+// Wrap usage like: <div className="relative"><select className={SELECT_CLASS}>…</select><SelectChevron /></div>
+const SELECT_CLASS =
+  "w-full truncate appearance-none rounded-xl border border-border-soft bg-white py-2.5 pl-3 pr-10 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40";
 
 /**
  * Shared work request form used by both the create page and the edit page.
@@ -279,11 +288,6 @@ export default function WorkRequestForm({
                   className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
                   required
                 />
-                {mode === "create" ? (
-                  <span className="theme-copy mt-1 text-xs">
-                    Pulled from the signed-in employee account.
-                  </span>
-                ) : null}
               </Field>
               <Field label="Account" required>
                 <input
@@ -313,16 +317,8 @@ export default function WorkRequestForm({
                   placeholder="123 Sesame St."
                   className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
                 />
-                <span className="theme-copy mt-1 text-xs">
-                  Browser autofill works now. Google Places autocomplete will
-                  turn on when `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set.
-                </span>
               </Field>
-              <Field
-                label="Action Required"
-                required
-                className="md:col-span-2"
-              >
+              <Field label="Action Required" required className="md:col-span-2">
                 <input
                   name="actionRequired"
                   defaultValue={initialValues.actionRequired || ""}
@@ -371,42 +367,48 @@ export default function WorkRequestForm({
                 />
               </Field>
               <Field label="Plant Size">
-                <select
-                  name="plantSize"
-                  defaultValue={
-                    mode === "edit"
-                      ? initialValues.plantSize || ""
-                      : initialValues.plantSize || "3 Gal"
-                  }
-                  className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
-                >
-                  {mode === "edit" && !initialValues.plantSize ? (
-                    <option value="">— not set —</option>
-                  ) : null}
-                  <option>1 Gal</option>
-                  <option>2 Gal</option>
-                  <option>3 Gal</option>
-                  <option>5 Gal</option>
-                </select>
+                <div className="relative">
+                  <select
+                    name="plantSize"
+                    defaultValue={
+                      mode === "edit"
+                        ? initialValues.plantSize || ""
+                        : initialValues.plantSize || "3 Gal"
+                    }
+                    className={SELECT_CLASS}
+                  >
+                    {mode === "edit" && !initialValues.plantSize ? (
+                      <option value="">— not set —</option>
+                    ) : null}
+                    <option>1 Gal</option>
+                    <option>2 Gal</option>
+                    <option>3 Gal</option>
+                    <option>5 Gal</option>
+                  </select>
+                  <SelectChevron />
+                </div>
               </Field>
               <Field label="Plant Height">
-                <select
-                  name="plantHeight"
-                  defaultValue={
-                    mode === "edit"
-                      ? initialValues.plantHeight || ""
-                      : initialValues.plantHeight || "Shorter than 2 feet"
-                  }
-                  className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
-                >
-                  {mode === "edit" && !initialValues.plantHeight ? (
-                    <option value="">— not set —</option>
-                  ) : null}
-                  <option>Shorter than 2 feet</option>
-                  <option>2-4 feet</option>
-                  <option>4-6 feet</option>
-                  <option>Taller than 6 feet</option>
-                </select>
+                <div className="relative">
+                  <select
+                    name="plantHeight"
+                    defaultValue={
+                      mode === "edit"
+                        ? initialValues.plantHeight || ""
+                        : initialValues.plantHeight || "Shorter than 2 feet"
+                    }
+                    className={SELECT_CLASS}
+                  >
+                    {mode === "edit" && !initialValues.plantHeight ? (
+                      <option value="">— not set —</option>
+                    ) : null}
+                    <option>Shorter than 2 feet</option>
+                    <option>2-4 feet</option>
+                    <option>4-6 feet</option>
+                    <option>Taller than 6 feet</option>
+                  </select>
+                  <SelectChevron />
+                </div>
               </Field>
               <Field label="Planter Type and Size">
                 <input
@@ -443,22 +445,25 @@ export default function WorkRequestForm({
           >
             <div className="grid grid-cols-1 gap-4">
               <Field label="Lighting">
-                <select
-                  name="lighting"
-                  defaultValue={
-                    mode === "edit"
-                      ? initialValues.lighting || ""
-                      : initialValues.lighting || "Medium"
-                  }
-                  className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
-                >
-                  {mode === "edit" && !initialValues.lighting ? (
-                    <option value="">— not set —</option>
-                  ) : null}
-                  <option>Low</option>
-                  <option>Medium</option>
-                  <option>High</option>
-                </select>
+                <div className="relative">
+                  <select
+                    name="lighting"
+                    defaultValue={
+                      mode === "edit"
+                        ? initialValues.lighting || ""
+                        : initialValues.lighting || "Medium"
+                    }
+                    className={SELECT_CLASS}
+                  >
+                    {mode === "edit" && !initialValues.lighting ? (
+                      <option value="">— not set —</option>
+                    ) : null}
+                    <option>Low</option>
+                    <option>Medium</option>
+                    <option>High</option>
+                  </select>
+                  <SelectChevron />
+                </div>
               </Field>
               <Field label="Method">
                 <input
@@ -529,7 +534,9 @@ export default function WorkRequestForm({
                 <>
                   <li>1. Confirm the account and work type.</li>
                   <li>2. Add plant details only when they affect execution.</li>
-                  <li>3. Include notes or a photo when extra context matters.</li>
+                  <li>
+                    3. Include notes or a photo when extra context matters.
+                  </li>
                 </>
               )}
             </ul>
@@ -572,7 +579,8 @@ export default function WorkRequestForm({
               ? mode === "edit"
                 ? "Saving..."
                 : "Submitting..."
-              : submitLabel || (mode === "edit" ? "Save Changes" : "Submit REQ")}
+              : submitLabel ||
+                (mode === "edit" ? "Save Changes" : "Submit REQ")}
           </Button>
         </div>
       </div>
