@@ -91,7 +91,10 @@ export default function Dashboard() {
       await updateTaskStatus(taskId, "completed");
       await loadDashboard();
     } catch (err) {
-      Alert.alert("Update failed", err?.message || "Could not mark task as complete.");
+      Alert.alert(
+        "Update failed",
+        err?.message || "Could not mark task as complete.",
+      );
     }
   }
 
@@ -101,18 +104,33 @@ export default function Dashboard() {
 
   const summary = useMemo(() => {
     const today = new Date();
-    const myName = String(payload.me?.name || "").trim().toLowerCase();
+    const myName = String(payload.me?.name || "")
+      .trim()
+      .toLowerCase();
 
     const mySchedule = payload.schedule
-      .filter((event) => String(event.employee_name || "").trim().toLowerCase() === myName)
+      .filter(
+        (event) =>
+          String(event.employee_name || "")
+            .trim()
+            .toLowerCase() === myName,
+      )
       .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
 
-    const todaysStops = mySchedule.filter((event) => sameDay(new Date(event.start_time), today));
-    const mySubmittedReqs = payload.reqs.filter(
-      (req) => String(req.techName || "").trim().toLowerCase() === myName
+    const todaysStops = mySchedule.filter((event) =>
+      sameDay(new Date(event.start_time), today),
     );
-    const activeReqs = mySubmittedReqs.filter(
-      (req) => !["completed", "cancelled"].includes(String(req.status || "").toLowerCase())
+    const mySubmissions = payload.reqs.filter(
+      (req) =>
+        String(req.techName || "")
+          .trim()
+          .toLowerCase() === myName,
+    );
+    const activeSubmissions = mySubmissions.filter(
+      (req) =>
+        !["completed", "cancelled"].includes(
+          String(req.status || "").toLowerCase(),
+        ),
     );
     const dueSoonTasks = payload.tasks.filter((task) => {
       if (!task.dueDate && !task.due_date) {
@@ -125,14 +143,14 @@ export default function Dashboard() {
     });
 
     const activeTasks = payload.tasks.filter(
-      (t) => t.status !== "completed" && t.status !== "cancelled"
+      (t) => t.status !== "completed" && t.status !== "cancelled",
     );
 
     return {
       nextStop: todaysStops[0] || mySchedule[0] || null,
       todaysStops,
-      activeReqs,
-      mySubmittedReqs,
+      activeSubmissions,
+      mySubmissions,
       dueSoonTasks,
       activeTasks,
     };
@@ -144,7 +162,13 @@ export default function Dashboard() {
       title={`Ready for the field${payload.me?.name ? `, ${payload.me.name.split(" ")[0]}` : ""}`}
       subtitle="See what needs attention next and move straight into the field workflow."
     >
-      {loading ? <ActivityIndicator size="large" color={COLORS.moss} style={styles.loader} /> : null}
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color={COLORS.moss}
+          style={styles.loader}
+        />
+      ) : null}
 
       {!loading && error ? (
         <View style={styles.errorCard}>
@@ -177,17 +201,35 @@ export default function Dashboard() {
 
           <View style={styles.kpiRow}>
             <KpiCard
-              icon={<MaterialCommunityIcons name="calendar-check-outline" size={18} color={COLORS.forestDeep} />}
+              icon={
+                <MaterialCommunityIcons
+                  name="calendar-check-outline"
+                  size={18}
+                  color={COLORS.forestDeep}
+                />
+              }
               label="Stops today"
               value={String(summary.todaysStops.length)}
             />
             <KpiCard
-              icon={<MaterialIcons name="assignment-late" size={18} color={COLORS.forestDeep} />}
+              icon={
+                <MaterialIcons
+                  name="assignment-late"
+                  size={18}
+                  color={COLORS.forestDeep}
+                />
+              }
               label="Active requests"
-              value={String(summary.activeReqs.length)}
+              value={String(summary.activeSubmissions.length)}
             />
             <KpiCard
-              icon={<MaterialCommunityIcons name="timer-sand" size={18} color={COLORS.forestDeep} />}
+              icon={
+                <MaterialCommunityIcons
+                  name="timer-sand"
+                  size={18}
+                  color={COLORS.forestDeep}
+                />
+              }
               label="Due soon"
               value={String(summary.dueSoonTasks.length)}
             />
@@ -196,7 +238,9 @@ export default function Dashboard() {
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>My assignments</Text>
             {summary.activeTasks.length === 0 ? (
-              <Text style={styles.emptyText}>No tasks assigned to you right now.</Text>
+              <Text style={styles.emptyText}>
+                No tasks assigned to you right now.
+              </Text>
             ) : (
               <View style={styles.stack}>
                 {summary.activeTasks.slice(0, 5).map((task) => (
@@ -204,7 +248,10 @@ export default function Dashboard() {
                     <View style={styles.assignmentCopy}>
                       <Text style={styles.planTitle}>{task.title}</Text>
                       <Text style={styles.planMeta}>
-                        {task.account || "Internal"}{task.dueDate ? ` • Due ${formatDate(task.dueDate)}` : ""}
+                        {task.account || "Internal"}
+                        {task.dueDate
+                          ? ` • Due ${formatDate(task.dueDate)}`
+                          : ""}
                       </Text>
                     </View>
                     <Pressable
@@ -213,7 +260,11 @@ export default function Dashboard() {
                       accessibilityRole="button"
                       accessibilityLabel={`Mark ${task.title} as complete`}
                     >
-                      <MaterialCommunityIcons name="check-circle-outline" size={22} color={COLORS.moss} />
+                      <MaterialCommunityIcons
+                        name="check-circle-outline"
+                        size={22}
+                        color={COLORS.moss}
+                      />
                     </Pressable>
                   </View>
                 ))}
@@ -228,7 +279,9 @@ export default function Dashboard() {
               onPress={() => navigation.navigate("WeeklySchedule")}
             />
             {summary.todaysStops.length === 0 ? (
-              <Text style={styles.emptyText}>No events are assigned to you for today.</Text>
+              <Text style={styles.emptyText}>
+                No events are assigned to you for today.
+              </Text>
             ) : (
               <View style={styles.stack}>
                 {summary.todaysStops.slice(0, 3).map((event) => (
@@ -236,7 +289,9 @@ export default function Dashboard() {
                     <View style={styles.planDot} />
                     <View style={styles.planCopy}>
                       <Text style={styles.planTitle}>{event.title}</Text>
-                      <Text style={styles.planMeta}>{formatDateTime(event.start_time)}</Text>
+                      <Text style={styles.planMeta}>
+                        {formatDateTime(event.start_time)}
+                      </Text>
                     </View>
                   </View>
                 ))}
@@ -245,23 +300,30 @@ export default function Dashboard() {
           </View>
 
           <View style={styles.sectionCard}>
-            <SectionHeader title="Requests you created" />
-            {summary.activeReqs.length === 0 ? (
-              <Text style={styles.emptyText}>You have no active submitted requests right now.</Text>
+            <SectionHeader title="Your submissions" />
+            {summary.activeSubmissions.length === 0 ? (
+              <Text style={styles.emptyText}>
+                You haven’t submitted any requests from this device.
+              </Text>
             ) : (
               <View style={styles.stack}>
-                {summary.activeReqs.slice(0, 3).map((req) => (
+                {summary.activeSubmissions.slice(0, 3).map((req) => (
                   <Pressable
                     key={req.id}
-                    onPress={() => navigation.navigate("WorkRequestDetails", { id: req.id })}
+                    onPress={() =>
+                      navigation.navigate("WorkRequestDetails", { id: req.id })
+                    }
                     style={styles.requestCard}
                     accessibilityRole="button"
                     accessibilityLabel={`View request ${req.referenceNumber}`}
                   >
                     <Text style={styles.requestRef}>{req.referenceNumber}</Text>
-                    <Text style={styles.requestTitle}>{req.actionRequired}</Text>
+                    <Text style={styles.requestTitle}>
+                      {req.actionRequired}
+                    </Text>
                     <Text style={styles.requestMeta}>
-                      {req.account || "Unknown account"} • {String(req.status || "unassigned").replace("_", " ")}
+                      {req.account || "Unknown account"} •{" "}
+                      {String(req.status || "unassigned").replace("_", " ")}
                     </Text>
                   </Pressable>
                 ))}
@@ -270,7 +332,12 @@ export default function Dashboard() {
           </View>
 
           <View style={styles.actionStrip}>
-            <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("WorkRequestSubmit")} accessibilityRole="button" accessibilityLabel="Create new request">
+            <Pressable
+              style={styles.primaryButton}
+              onPress={() => navigation.navigate("WorkRequestSubmit")}
+              accessibilityRole="button"
+              accessibilityLabel="Create new request"
+            >
               <Text style={styles.primaryButtonText}>Create request</Text>
             </Pressable>
           </View>
@@ -285,7 +352,11 @@ function SectionHeader({ title, actionLabel, onPress }) {
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {actionLabel ? (
-        <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={actionLabel}>
+        <Pressable
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel}
+        >
           <Text style={styles.sectionLink}>{actionLabel}</Text>
         </Pressable>
       ) : null}
