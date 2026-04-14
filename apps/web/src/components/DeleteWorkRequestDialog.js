@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import Button from "@/components/Button";
+import { trapFocus } from "@/lib/dialogA11y";
 
 /**
  * Accessible confirm dialog for deleting a work request.
@@ -149,22 +150,5 @@ export default function DeleteWorkRequestDialog({
   );
 }
 
-// Keep Tab/Shift+Tab focus within the dialog.
-function trapFocus(event, container) {
-  if (!container) return;
-  const focusable = container.querySelectorAll(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-  );
-  if (focusable.length === 0) return;
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-  const active = document.activeElement;
-
-  if (event.shiftKey && active === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && active === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
+// trapFocus moved to @/lib/dialogA11y so ScheduleRequestDialog and other
+// dialogs can reuse the same implementation.
