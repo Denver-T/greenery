@@ -5,6 +5,41 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-13 — feat(web): schedule dialog and linked schedule list on req detail
+
+**Commits:** `ccb4893` `5ccf5cf`
+
+### What changed
+
+Two commits shipping Phase 2-3 (UI) of the `work-request-schedule-coupling` plan. Manager+ users can now put a work request on the calendar from its detail page and see the linked schedule events inline.
+
+**`ccb4893` — refactor(web): extract shared trapFocus and SelectChevron**
+- `apps/web/src/lib/dialogA11y.js` — exports `trapFocus(event, container)`. Was inlined at the bottom of `DeleteWorkRequestDialog.js`; now imported by both that dialog and the new `ScheduleRequestDialog`. Tiny module, no external deps
+- `apps/web/src/components/SelectChevron.js` — decorative chevron SVG for `appearance-none` native selects, positioned absolutely inside a `relative` wrapper. Uses `currentColor` + `text-muted` so it inherits the muted token in light AND dark mode automatically
+- `WorkRequestForm.js` — drops the `SELECT_STYLE` constant (which had a hardcoded `data:image/svg+xml,...stroke='%236b7280'...` data URL). Each of the three selects now wraps in `<div class="relative">` with a `<SelectChevron />` sibling. Same visual result, but the chevron color follows the token cascade instead of being a hex literal
+- No behavioral changes. Web tests 75/75 still pass
+
+**`5ccf5cf` — feat(web): schedule dialog and linked schedule list on req detail**
+- New `ScheduleRequestDialog.js` — modal form with start/end `datetime-local` inputs, tech `<select>` (lazy-loaded from `/employees`, includes "Unassigned"), and an optional details textarea (max 500 chars). Inline validation: end must be after start, submit disabled until both times are set. Submits to `POST /reqs/:id/schedule-events`, fires `onScheduled` on success, parent reloads
+- Accessibility: `role="dialog"` + `aria-modal="true"`, focus trap via the shared `dialogA11y.trapFocus`, Escape close, backdrop close, focus return on unmount. **Initial focus on the Start time input** — not Cancel — because this is a form, not a confirm dialog (deliberate spec divergence from `DeleteWorkRequestDialog`)
+- New `LinkedScheduleList.js` — presentational list component. Empty state, time-range formatting, tech name with italic "Unassigned" fallback, details preview with a muted "No details" fallback. When the parent work_req `status === 'completed'`, rows render dimmed with a "Completed" pill and the Unschedule button is hidden. Per-row Unschedule button only renders when the parent passes a function for `onUnschedule` — role gating happens at the parent layer
+- `req/[id]/page.js` — new "Linked Schedule" section below the existing detail body, with an event count chip ("3 events") next to the heading when `scheduleEvents.length > 0`. "+ Schedule this request" button (Manager+ only) opens the dialog. `openScheduleDialog` opens immediately and fires the `/employees` fetch as a detached IIFE so cold page loads do not stall on the network roundtrip — the previous implementation awaited the fetch first, which created a visible ~200ms dead click. `handleUnschedule` uses a **separate `scheduleError` local state** instead of the page-level `error` state, so a transient unschedule failure shows inline next to the list and does NOT replace the entire detail view with `DetailErrorState`
+- 20 new tests (11 dialog + 9 list). Web tests 75/75 (was 52)
+
+### Why
+
+Phase 1 (backend) shipped a fully functional API for scheduling work requests but had no UI. Managers had to call the endpoints with curl. This phase puts the action behind a single button on the detail page so a manager looking at "WR-2026-0042" can click "Schedule this request", pick a date and a tech, and the work request appears on the calendar — closing half of the work-request ↔ schedule-events mental gap that the plan exists to fix.
+
+### Lessons learned
+
+- **Self-reflection caught the `openScheduleDialog` blocking bug.** First implementation awaited `/employees` BEFORE opening the dialog; the button felt dead for ~200ms on cold loads. Caught during `/reflect`, fixed inline by wrapping the fetch in a detached `(async () => { ... })()` IIFE. Lesson: when a button click triggers both a state change and a network fetch, do the state change first and the fetch second — never gate UI feedback on network latency.
+- **Self-review caught a worse bug: `setError` for unschedule failures replaces the entire page.** The detail page's `error` state drives `DetailErrorState`, which replaces the whole body. I initially called `setError(err.message)` inside `handleUnschedule`'s catch — meaning a single failed DELETE would nuke the user's view. Fixed by introducing a `scheduleError` local state for section-scoped errors. Lesson: shared state for "errors" is a smell — different error sources need different recovery paths and different visual treatments. Keep them separate.
+- **`/review` cycle caught me trying to defer 3 minor findings as a backlog.** User pushed back: "we should fix all the minor issues as well so we don't build a backlog of minor issues." The chevron hex was the biggest one — fixing it required extracting `SelectChevron` and refactoring 4 call sites (1 new in `ScheduleRequestDialog`, 3 pre-existing in `WorkRequestForm`). The result is cleaner than just fixing the new one would have been, AND retroactively fixed an existing token violation. Lesson: minor findings deferred at chunk boundaries become permanent technical debt — fix them at the moment they are identified.
+- **Vitest + React Testing Library is the web test pattern; Jest is API-only.** I almost wrote `import { describe, it } from "@jest/globals"` out of habit. The web tests use `import { describe, it, expect, vi } from "vitest"` and `vi.fn()` not `jest.fn()`. Worth noting in CLAUDE.md or similar — easy footgun for cross-app work.
+- **The `onUnschedule || null` pattern is the right way to role-gate an action button** without prop-drilling permission flags. The `LinkedScheduleList` component doesn't know what a Manager is; it just renders the button when handed a function. The parent decides. This kept the presentational component clean and made the test setup trivial (`onUnschedule={vi.fn()}` vs `onUnschedule={null}`).
+
+---
+
 ## 2026-04-13 — feat(api): work request schedule coupling — Phase 1 backend
 
 **Commits:** `cde3c69` `b645b30`
