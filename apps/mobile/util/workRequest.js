@@ -22,3 +22,14 @@ export const updateTaskStatus = async (id, status) => {
     body: { status },
   });
 };
+
+// Alias of updateTaskStatus for callers operating on a work-request detail
+// surface rather than a Dashboard assignment card. Both write work_reqs.status
+// via PATCH /tasks/:id/status — the endpoint treats task ids and work_req ids
+// as the same number because tasks ARE work_reqs.
+export const updateWorkRequestStatus = async (id, status) => {
+  return await apiFetch(`/tasks/${id}/status`, {
+    method: "PATCH",
+    body: { status },
+  });
+};
