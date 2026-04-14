@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import WorkspaceHeader from "@/components/WorkspaceHeader";
 import WorkspaceToolbar from "@/components/WorkspaceToolbar";
+import SyncStatusBadge from "@/components/SyncStatusBadge";
 import { fetchApi } from "@/lib/api/api";
 import { formatDateLabel } from "@/lib/inputSafety";
 
@@ -96,6 +97,21 @@ function formatEventTimeLabel(value) {
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
+// Friendly labels for work_reqs.status values displayed on calendar cards.
+// Keeps raw DB values (unassigned, in_progress, etc.) out of the UI.
+const WORK_REQ_STATUS_LABELS = {
+  unassigned: "Unassigned",
+  assigned: "Assigned",
+  in_progress: "In progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+function formatWorkReqStatus(raw) {
+  if (!raw) return "";
+  return WORK_REQ_STATUS_LABELS[raw] || raw;
+}
+
 function buildEventForm(event) {
   return {
     id: event?.id || null,
@@ -147,6 +163,12 @@ async function fetchScheduleRows(from, to) {
           kind,
           start_time: row.start_time,
           end_time: row.end_time,
+          // Joined work_req metadata from the schedule.js LEFT JOIN.
+          // Null for custom events (no work_req_id).
+          workReqReference: row.work_req_reference || null,
+          workReqStatus: row.work_req_status || null,
+          workReqMondayItemId: row.work_req_monday_item_id || null,
+          workReqMondaySyncedAt: row.work_req_monday_synced_at || null,
         };
       });
   } catch (err) {
@@ -657,9 +679,26 @@ export default function Page() {
                           key={entry.id}
                           className="rounded-xl border border-border-soft bg-white px-4 py-3"
                         >
-                          <div className="font-semibold text-foreground">
-                            {entry.title}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 font-semibold text-foreground">
+                              {entry.title}
+                            </div>
+                            {entry.workReqId ? (
+                              <SyncStatusBadge
+                                mondayItemId={entry.workReqMondayItemId}
+                                mondaySyncedAt={entry.workReqMondaySyncedAt}
+                                size="sm"
+                              />
+                            ) : null}
                           </div>
+                          {entry.workReqReference ? (
+                            <div className="mt-1 inline-block rounded-full bg-surface-muted px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-foreground">
+                              {entry.workReqReference}
+                              {entry.workReqStatus
+                                ? ` · ${formatWorkReqStatus(entry.workReqStatus)}`
+                                : ""}
+                            </div>
+                          ) : null}
                           <div className="mt-1 text-sm text-gray-600">
                             {entry.startLabel} - {entry.endLabel}
                             {entry.account ? ` • ${entry.account}` : ""}
