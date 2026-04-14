@@ -369,7 +369,10 @@ function DetailBody({ workReq }) {
             />
             <MetaRow
               label="Assigned to employee"
-              value={workReq.assignedTo ? `#${workReq.assignedTo}` : "—"}
+              value={
+                workReq.assignedToName ||
+                (workReq.assignedTo ? `#${workReq.assignedTo}` : "—")
+              }
             />
           </dl>
         </section>

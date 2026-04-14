@@ -5,13 +5,11 @@ import {
   getTodayDateInputValue,
   sanitizeObjectStrings,
 } from "@/lib/inputSafety";
-import { fetchApi } from "@/lib/api/api";
 import Button from "@/components/Button";
 import SelectChevron from "@/components/SelectChevron";
 
 const REQ_LIMITS = {
   referenceNumber: 100,
-  techName: 120,
   account: 150,
   accountContact: 150,
   accountAddress: 255,
@@ -65,33 +63,6 @@ export default function WorkRequestForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [formDirty, setFormDirty] = useState(false);
-  const [employees, setEmployees] = useState([]);
-  const [employeesError, setEmployeesError] = useState("");
-
-  // Load the employee roster once so the Tech Name dropdown can populate.
-  // Non-fatal: if the fetch fails we surface a small note and the field is
-  // left empty rather than blocking the whole form.
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const list = await fetchApi("/employees", { cache: "no-store" });
-        const arr = Array.isArray(list) ? list : list?.data || [];
-        if (!active) return;
-        setEmployees(
-          arr
-            .filter((e) => e && e.name)
-            .map((e) => ({ id: e.id, name: e.name })),
-        );
-      } catch (err) {
-        if (active)
-          setEmployeesError(err?.message || "Could not load employees.");
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const today = getTodayDateInputValue();
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -191,7 +162,6 @@ export default function WorkRequestForm({
 
       const cleaned = sanitizeObjectStrings(
         {
-          techName: fd.get("techName"),
           account: fd.get("account"),
           accountContact: fd.get("accountContact"),
           accountAddress: fd.get("accountAddress"),
@@ -206,7 +176,6 @@ export default function WorkRequestForm({
           notes: fd.get("notes"),
         },
         {
-          techName: { maxLength: REQ_LIMITS.techName },
           account: { maxLength: REQ_LIMITS.account },
           accountContact: { maxLength: REQ_LIMITS.accountContact },
           accountAddress: { maxLength: REQ_LIMITS.accountAddress },
@@ -288,40 +257,6 @@ export default function WorkRequestForm({
                   className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
                   required
                 />
-              </Field>
-              <Field label="Tech Name" required>
-                <div className="relative">
-                  <select
-                    name="techName"
-                    defaultValue={
-                      mode === "edit" ? initialValues.techName || "" : ""
-                    }
-                    className={SELECT_CLASS}
-                    required
-                  >
-                    <option value="">Select a technician…</option>
-                    {mode === "edit" &&
-                    initialValues.techName &&
-                    !employees.some(
-                      (e) => e.name === initialValues.techName,
-                    ) ? (
-                      <option value={initialValues.techName}>
-                        {initialValues.techName}
-                      </option>
-                    ) : null}
-                    {employees.map((e) => (
-                      <option key={e.id ?? e.name} value={e.name}>
-                        {e.name}
-                      </option>
-                    ))}
-                  </select>
-                  <SelectChevron />
-                </div>
-                {employeesError ? (
-                  <span className="mt-1 text-xs text-danger">
-                    {employeesError}
-                  </span>
-                ) : null}
               </Field>
               <Field label="Account" required>
                 <input
