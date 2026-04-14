@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { fetchApi } from "@/lib/api/api";
@@ -8,31 +7,6 @@ import WorkRequestForm from "@/components/WorkRequestForm";
 
 export default function ReqPage() {
   const router = useRouter();
-  const [currentEmployeeName, setCurrentEmployeeName] = useState("");
-  const [loadError, setLoadError] = useState("");
-
-  useEffect(() => {
-    let active = true;
-
-    (async () => {
-      try {
-        const me = await fetchApi("/auth/me", { cache: "no-store" });
-        if (active) {
-          setCurrentEmployeeName(me?.name || "");
-        }
-      } catch (err) {
-        if (active) {
-          setLoadError(
-            err?.message || "Failed to load the signed-in employee.",
-          );
-        }
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   async function handleCreate(formData) {
     await fetchApi("/reqs", {
@@ -78,17 +52,8 @@ export default function ReqPage() {
       </section>
 
       <section className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
-        {loadError ? (
-          <p
-            role="alert"
-            className="mb-4 rounded-xl border border-danger-border bg-danger-soft px-4 py-3 text-sm font-medium text-danger"
-          >
-            {loadError}
-          </p>
-        ) : null}
         <WorkRequestForm
           mode="create"
-          currentEmployeeName={currentEmployeeName}
           onSubmit={handleCreate}
           onCancel={handleCancel}
           submitLabel="Submit REQ"

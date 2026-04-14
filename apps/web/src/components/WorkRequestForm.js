@@ -5,6 +5,7 @@ import {
   getTodayDateInputValue,
   sanitizeObjectStrings,
 } from "@/lib/inputSafety";
+import { fetchApi } from "@/lib/api/api";
 import Button from "@/components/Button";
 import SelectChevron from "@/components/SelectChevron";
 
@@ -42,8 +43,6 @@ const SELECT_CLASS =
  * - mode: "create" | "edit"
  * - initialValues: object with existing work_req fields (required for edit,
  *   optional for create — create uses defaults)
- * - currentEmployeeName: only used in create mode to prefill techName from
- *   the signed-in employee
  * - onSubmit: async (cleanedPayloadFormData) => void. Parent performs the
  *   API call (POST or PUT) and handles navigation on success. If it throws,
  *   the error message is displayed inline.
@@ -57,7 +56,6 @@ const SELECT_CLASS =
 export default function WorkRequestForm({
   mode,
   initialValues = EMPTY_INITIAL,
-  currentEmployeeName = "",
   onSubmit,
   onCancel,
   submitLabel,
@@ -67,6 +65,33 @@ export default function WorkRequestForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [formDirty, setFormDirty] = useState(false);
+  const [employees, setEmployees] = useState([]);
+  const [employeesError, setEmployeesError] = useState("");
+
+  // Load the employee roster once so the Tech Name dropdown can populate.
+  // Non-fatal: if the fetch fails we surface a small note and the field is
+  // left empty rather than blocking the whole form.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const list = await fetchApi("/employees", { cache: "no-store" });
+        const arr = Array.isArray(list) ? list : list?.data || [];
+        if (!active) return;
+        setEmployees(
+          arr
+            .filter((e) => e && e.name)
+            .map((e) => ({ id: e.id, name: e.name })),
+        );
+      } catch (err) {
+        if (active)
+          setEmployeesError(err?.message || "Could not load employees.");
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const today = getTodayDateInputValue();
   const mapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -164,20 +189,9 @@ export default function WorkRequestForm({
     try {
       const fd = new FormData(e.currentTarget);
 
-      // In create mode, techName is pulled from the signed-in user.
-      // In edit mode, the form field carries the existing techName.
-      if (mode === "create" && !currentEmployeeName) {
-        throw new Error(
-          "Your employee account could not be resolved. Please sign in again.",
-        );
-      }
-
-      const techNameForSubmit =
-        mode === "create" ? currentEmployeeName : fd.get("techName");
-
       const cleaned = sanitizeObjectStrings(
         {
-          techName: techNameForSubmit,
+          techName: fd.get("techName"),
           account: fd.get("account"),
           accountContact: fd.get("accountContact"),
           accountAddress: fd.get("accountAddress"),
@@ -276,18 +290,38 @@ export default function WorkRequestForm({
                 />
               </Field>
               <Field label="Tech Name" required>
-                <input
-                  name="techName"
-                  defaultValue={
-                    mode === "edit"
-                      ? initialValues.techName || ""
-                      : currentEmployeeName
-                  }
-                  placeholder="Magnus"
-                  readOnly={mode === "create"}
-                  className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
-                  required
-                />
+                <div className="relative">
+                  <select
+                    name="techName"
+                    defaultValue={
+                      mode === "edit" ? initialValues.techName || "" : ""
+                    }
+                    className={SELECT_CLASS}
+                    required
+                  >
+                    <option value="">Select a technician…</option>
+                    {mode === "edit" &&
+                    initialValues.techName &&
+                    !employees.some(
+                      (e) => e.name === initialValues.techName,
+                    ) ? (
+                      <option value={initialValues.techName}>
+                        {initialValues.techName}
+                      </option>
+                    ) : null}
+                    {employees.map((e) => (
+                      <option key={e.id ?? e.name} value={e.name}>
+                        {e.name}
+                      </option>
+                    ))}
+                  </select>
+                  <SelectChevron />
+                </div>
+                {employeesError ? (
+                  <span className="mt-1 text-xs text-danger">
+                    {employeesError}
+                  </span>
+                ) : null}
               </Field>
               <Field label="Account" required>
                 <input
