@@ -5,6 +5,49 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-13 — feat(api): work request schedule coupling — Phase 1 backend
+
+**Commits:** `cde3c69` `b645b30`
+
+### What changed
+
+Two commits shipping Phase 1 (backend) of the `work-request-schedule-coupling` plan, plus a prior UI cleanup that had been sitting uncommitted.
+
+**`cde3c69` — fix(web): remove stub helper copy and truncate select chevrons**
+- Deleted the "Browser autofill works / Google Places…" stub helper text under the Account Address input on the work request form (Google Places activation is logged as a post-launch task since it requires a GCP billing account)
+- Deleted the "Pulled from the signed-in employee account" stub under Tech Name (the readOnly input is self-explanatory)
+- Extracted shared `SELECT_CLASS` + `SELECT_STYLE` constants for the three form selects (plantSize, plantHeight, lighting). Selects now use `appearance-none` + a custom inline SVG chevron at `right 0.875rem center` with `pr-10`, and `truncate` clips long option labels with an ellipsis instead of overlapping the arrow
+
+**`b645b30` — feat(api): work request schedule coupling — Phase 1 backend**
+- Migration 006 (up + down) plus `01_schema.sql` update adds `idx_schedule_workreq` on `schedule_events(work_req_id)` so the upcoming LEFT JOIN queries and linked-event lookups are indexed
+- New service `workReqScheduleService.js` owns all SQL for the feature. Public surface: `listLinkedEvents(workReqId)`, `createLinkedEvent({workReqId, body, req})`, `deleteLinkedEvent({workReqId, eventId, req})`, `listUnscheduledWorkReqs({pageSize, offset, filters})`. Private helpers: `validateRequestScheduleEventPayload`, `normalizeDateTime`, `buildEventTitle`, `getLinkedEventById`
+- Invariants enforced at the service layer (not the route): `event_type = 'request'` is hardcoded on insert; title is server-derived from the work request's `referenceNumber` + truncated `actionRequired`; employee_id (when provided) must reference an `Active` employees row, else 400 `EMPLOYEE_NOT_FOUND`; the unscheduled inbox hides work_reqs older than 30 days by default unless `includeOlder=true`
+- 4 new sub-resource routes on `/reqs`:
+  - `GET /reqs/unscheduled` (manager+) — paginated inbox with `account` LIKE, `assignedTo` exact, `assignedToPresent`, and `includeOlder` filters
+  - `GET /reqs/:id/schedule-events` (technician+) — list linked events
+  - `POST /reqs/:id/schedule-events` (manager+) — create
+  - `DELETE /reqs/:id/schedule-events/:eventId` (manager+) — unschedule with ownership guard
+- Route ordering is explicit: `/unscheduled` is registered BEFORE `/:id` so Express doesn't try to parse "unscheduled" as an id. Verified by the new route-level regression test
+- `GET /reqs/:id` now inlines a `scheduleEvents` array so the detail page renders linked events in one round trip
+- `GET /schedule` gains an unconditional LEFT JOIN to `work_reqs` that adds `work_req_status`, `work_req_reference`, `work_req_monday_item_id`, `work_req_monday_synced_at` to every event row (null for custom events). Strictly additive — no existing consumer sees a regression
+- `DELETE /reqs/:id` now wraps in a transaction and pre-deletes linked `schedule_events` rows BEFORE deleting the work_req. The FK is `ON DELETE SET NULL` — without this pre-delete, deleting a work request leaves orphaned calendar events with null `work_req_id` that render as broken request cards. Transaction uses `db.getConnection()` + nested try/catch so rollback only runs after a successful `beginTransaction`. Monday sync push still fires fire-and-forget AFTER commit (never inside a txn — outbound HTTP in a DB transaction is a classic footgun)
+- All new routes use `httpError(status, message, code)` via `next()` for the structured `{error: {code, message}}` error shape
+- 37 service unit tests + 11 route-level tests. The route-level file (`reqs.routes.test.js`) is new and establishes the supertest pattern for future route tests. 379/379 total API tests pass, lint clean
+
+### Why
+
+Schedule events (`schedule_events`) and work requests (`work_reqs`) have always shared a `work_req_id` FK in the schema, but nothing in the application ever used it end-to-end. Techs didn't know what they were scheduled to do; managers didn't know what had been put on the calendar. This phase wires the backend so the upcoming dialog + inbox UI has something to call. Target ship: Friday 2026-04-17 launch.
+
+### Lessons learned
+
+- **Three deferrals in the first /review were drift, not judgment.** Initial review cycle flagged error-shape inconsistency, no DELETE transaction test, and no route-ordering regression test. All three were deferred on thin reasoning ("matches pre-existing pattern", "would need new test infra"). The user pushed back and was correct — supertest was already a project dependency (used by `mondayWebhook.test.js`), the infra existed, and fixing all three inline took ~30 minutes. Rule going forward: defer only for genuine risk or scope, not because a fix is "additional work." Saved this as a feedback memory + global CLAUDE.md rule earlier this session.
+- **Route ordering under Express parameterized paths is a latent footgun.** `/reqs/unscheduled` vs `/reqs/:id` only works because the file happens to register `/unscheduled` first. A careless refactor could re-order the file and silently break the inbox. The new route-level regression test is the guardrail; visual review alone is not enough for ordering concerns.
+- **FK `ON DELETE SET NULL` creates orphans that look correct at the schema level but break the UI.** The schedule_events FK was defined years ago with `ON DELETE SET NULL`, which is a sensible default — until you have a type column like `event_type` that implies the linked row exists. The pre-delete-in-transaction pattern fixes the immediate bug without a schema migration (we didn't want to flip the FK to CASCADE during launch prep).
+- **Single-file transaction refactors compose.** Phase 1 only needed the DELETE side wrapped. Phase 6 will wrap PUT /reqs/:id similarly for the auto-close hook. The two plans (schedule-coupling and inventory-reconciliation) both need the PUT-side refactor — whichever ships first pays the cost, second inherits it. Plan explicitly documented this coordination point so neither execution run is surprised.
+- **`reqs.routes.test.js` is the first route-level test in the whole API.** Every prior test was either service-level (mock-DB) or middleware-level. This file establishes the pattern: mock `verifyToken` / `authorize` / `writeLimiter` / `mondaySyncService` at the module boundary, wire a synthetic Express app with the real router + errorHandler, drive it with supertest. Future route tests can copy this shape line-for-line.
+
+---
+
 ## 2026-04-13 — fix(api): webhook rate limiter and board-id env invariant
 
 ### What changed
