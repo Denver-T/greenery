@@ -5,6 +5,40 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-14 — schedule-assign-unify (auto-assign on schedule + Tech Name field removal)
+
+**Commits:** `e1746d8` feat(api) auto-assign + assignedToName join, `f3ee0a8` feat(web) drop Tech Name field + render assignedToName
+
+### What changed
+
+Collapsed the three-step "pick a tech" friction surfaced during the Chunk E walkthrough into a single flow. Two coordinated changes.
+
+**`e1746d8` — API.** `createLinkedEvent` is now transactional (BEGIN/COMMIT on a dedicated pool connection, mirroring `reqSequenceService.js`). The initial work_req SELECT is upgraded to `SELECT ... FOR UPDATE` so concurrent schedule-create POSTs against the same WR serialize behind the row lock — without it, two managers scheduling within milliseconds would both observe `assignedTo=NULL` and both run the auto-assign UPDATE, with the second silently winning. When a schedule event is created with a non-null `employee_id` against a WR that is still `status='unassigned' AND assignedTo IS NULL`, the same transaction promotes the WR to `status='assigned' + assignedTo=<employee_id>`. Never clobbers an existing assignment; never regresses a status. A second `work_req.auto_assigned` activity log entry fires after commit so `/superadmin` can trace automated transitions back to the triggering schedule event. When the WR has a `monday_item_id`, a fire-and-forget `mondaySyncService.pushUpdate` mirrors the status transition to Monday so the board doesn't drift until the next PUT touches the row — the partial-row path works because `toMondayColumnValues` skips null fields. `getReqById` now `LEFT JOIN`s `employees` and returns `assignedToName` alongside the FK so the detail page can render the technician's name.
+
+Test coverage is heavy for a plan marked Low complexity:
+- 8 new unit tests in `workReqScheduleService.test.js` covering promote, no-clobber, null-employee skip, rollback, `FOR UPDATE` pinning, and all three Monday-push cases
+- 3 new `itIfDb` integration tests in `reqs.integration.test.js` against real MySQL: promote + activity log row assertion, no-clobber, and Mark Complete preserves `assignedTo` after PUT to `completed`
+- The existing `createLinkedEvent` unit tests were restructured around a new `setupConnMock()` canonical shape (mirrors `reqs.routes.test.js`) so future services that need transactional mocks have a reference implementation
+
+**`f3ee0a8` — Web.** The `<Field label="Tech Name">` block is removed from `WorkRequestForm` in both create and edit modes. Server guarantees keep this safe: POST /reqs resolves `techName: authenticatedTechName || req.body?.techName` so the authenticated user's name wins when the form omits the field; PUT /reqs/:id's `buildReqPayload` uses `normalizeString(body.techName ?? existing?.techName, 120)` so edit mode preserves the existing value byte-for-byte. The `employees`/`employeesError` state, the `/employees` fetch effect, the `techName` sanitization entry, `REQ_LIMITS.techName`, and the unused `fetchApi` import all went with the field. The detail page's "Assigned to employee" row now renders `workReq.assignedToName` with a `#<id>` fallback.
+
+The net result: create a work request, schedule it with a technician, and the Mark Complete button is immediately visible. Three clicks instead of nine. The previous 11:22 AM quick fix that turned Tech Name into an employees dropdown was a stepping-stone — this supersedes it.
+
+### Why
+
+The Chunk E walkthrough surfaced a real usability problem: even though the Chunk D work made Mark Complete functional, the user flow forced a detour through `/assigntasks` to flip the status from `unassigned` to `assigned` before the button would appear. The create form's Tech Name field confused users into thinking they were picking the assignee when they were actually just writing their own name into a text field. One flow, one form, one click per meaningful action.
+
+### Lessons learned
+
+- **Integration tests caught a pre-existing latent bug during Chunk D; this chunk's integration tests caught a Monday-sync drift during `/review`.** Pattern holds: `/review` is where behavioral gaps surface that unit tests don't. The locked "never defer 🟡 Important findings" rule paid off — fixing the drift inline was ~30 lines of code and 3 tests, well under the 15-minute budget. Deferring would have shipped a visible-but-contained bug.
+- **The `setupConnMock()` canonical shape was worth writing.** The plan called for "grep for an existing pattern, reuse it exactly, else establish a new one" and the new helper mirrors the `reqs.routes.test.js` DELETE handler's pattern. Future services that need multi-statement txn mocks now have two reference implementations pointing at the same shape.
+- **Display-layer gaps hide behind untested assumptions.** The `getReqById` returning a raw FK for `assignedTo` was invisible as long as `techName` was a separate text field carrying the identity. Removing `techName` from the form promoted `assignedTo` to the primary identity surface and immediately exposed the `#42` display bug. Lesson: when removing redundant data, check what other fields were silently compensating for the redundancy.
+- **Scope discipline vs. "it's right there".** The `getReqById` LEFT JOIN wasn't in the original plan — it was added reactively during the manual walkthrough. Should have been in the plan from the start because removing `techName` from the form was always going to surface `assignedTo` as the identity field. Add a "what else does this field quietly cover for?" check to future field-removal plans.
+- **Single DB fixture != single plan fixture.** The integration test helpers had to grow `seedEmployee` and `countAutoAssignLogs`, and cleanup had to learn about `activity_logs` scrubbing (no FK, orphans would accumulate). The `TEST_PREFIX` approach scales but requires discipline every time a new table is touched by tests.
+- **`toMondayColumnValues` tolerates partial rows.** That's not documented anywhere but is load-bearing for the minimal `{id, monday_item_id, status}` push after auto-assign. Worth a comment in `mondayColumnValues.js` — flagged as post-launch tech debt.
+
+---
+
 ## 2026-04-14 — chunk E walkthrough polish (tech-name dropdown + calendar/unschedule fixes)
 
 **Commits:** `14c53bc` feat(web) tech-name dropdown, `2127d44` fix(web) calendar weekday keys / today overflow / unschedule button
