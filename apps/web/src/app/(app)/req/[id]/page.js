@@ -8,6 +8,8 @@ import { fetchApi } from "@/lib/api/api";
 import Button from "@/components/Button";
 import SyncStatusBadge from "@/components/SyncStatusBadge";
 import DeleteWorkRequestDialog from "@/components/DeleteWorkRequestDialog";
+import ScheduleRequestDialog from "@/components/ScheduleRequestDialog";
+import LinkedScheduleList from "@/components/LinkedScheduleList";
 
 const EDITOR_LEVELS = new Set(["Manager", "Administrator", "SuperAdmin"]);
 const DELETER_LEVELS = new Set(["Administrator", "SuperAdmin"]);
@@ -22,6 +24,15 @@ export default function WorkRequestDetailPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [employees, setEmployees] = useState([]);
+  const [unscheduling, setUnscheduling] = useState(null);
+  // Schedule-section errors are kept separate from the page-level `error`
+  // state. Page-level errors replace the entire detail view with
+  // DetailErrorState, which is correct for "failed to load the work req"
+  // but wrong for "failed to unschedule one event" — that should show
+  // inline next to the schedule list without nuking the rest of the page.
+  const [scheduleError, setScheduleError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,6 +74,53 @@ export default function WorkRequestDetailPage({ params }) {
   async function handleDelete() {
     await fetchApi(`/reqs/${id}`, { method: "DELETE" });
     router.push("/req/list");
+  }
+
+  // Open the dialog immediately, fire the /employees fetch in the background
+  // on first open. The dialog renders "Unassigned" as the only option until
+  // the fetch resolves, then React re-renders the select with the real list.
+  // Previous implementation awaited the fetch before opening the dialog,
+  // which created a visible ~200ms dead click on cold page loads.
+  function openScheduleDialog() {
+    setScheduleOpen(true);
+    if (employees.length === 0) {
+      (async () => {
+        try {
+          const list = await fetchApi("/employees");
+          const rows = Array.isArray(list) ? list : list?.data || [];
+          setEmployees(
+            rows
+              .filter((e) => e && e.id && e.name)
+              .map((e) => ({ id: e.id, name: e.name })),
+          );
+        } catch {
+          // Non-fatal — dialog stays open with just "Unassigned" if the fetch fails.
+        }
+      })();
+    }
+  }
+
+  async function handleScheduled() {
+    setScheduleOpen(false);
+    setScheduleError("");
+    await load();
+  }
+
+  async function handleUnschedule(eventId) {
+    setUnscheduling(eventId);
+    setScheduleError("");
+    try {
+      await fetchApi(`/reqs/${id}/schedule-events/${eventId}`, {
+        method: "DELETE",
+      });
+      await load();
+    } catch (err) {
+      // Inline, section-local error — do NOT touch the page-level `error`
+      // state, which would replace the whole detail view with DetailErrorState.
+      setScheduleError(err?.message || "Failed to unschedule this event.");
+    } finally {
+      setUnscheduling(null);
+    }
   }
 
   return (
@@ -126,7 +184,53 @@ export default function WorkRequestDetailPage({ params }) {
       ) : !workReq ? (
         <DetailNotFound />
       ) : (
-        <DetailBody workReq={workReq} />
+        <>
+          <DetailBody workReq={workReq} />
+          <section className="mt-8 rounded-card border border-border-soft bg-surface p-6 shadow-soft">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-black uppercase tracking-[0.16em] text-foreground">
+                    Linked Schedule
+                  </h3>
+                  {workReq.scheduleEvents && workReq.scheduleEvents.length > 0 ? (
+                    <span className="theme-tag rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                      {workReq.scheduleEvents.length === 1
+                        ? "1 event"
+                        : `${workReq.scheduleEvents.length} events`}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="theme-copy mt-1 text-sm">
+                  When this work will happen on the calendar
+                </p>
+              </div>
+              {canEdit ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={openScheduleDialog}
+                >
+                  + Schedule this request
+                </Button>
+              ) : null}
+            </div>
+            {scheduleError ? (
+              <p
+                role="alert"
+                className="mt-4 rounded-xl border border-danger-border bg-danger-soft px-4 py-3 text-sm font-medium text-danger"
+              >
+                {scheduleError}
+              </p>
+            ) : null}
+            <LinkedScheduleList
+              events={workReq.scheduleEvents || []}
+              workReqStatus={workReq.status}
+              onUnschedule={canEdit ? handleUnschedule : null}
+              unscheduling={unscheduling}
+            />
+          </section>
+        </>
       )}
 
       {deleteOpen && workReq ? (
@@ -134,6 +238,15 @@ export default function WorkRequestDetailPage({ params }) {
           workReq={workReq}
           onConfirm={handleDelete}
           onClose={() => setDeleteOpen(false)}
+        />
+      ) : null}
+
+      {scheduleOpen && workReq ? (
+        <ScheduleRequestDialog
+          workReq={workReq}
+          employees={employees}
+          onClose={() => setScheduleOpen(false)}
+          onScheduled={handleScheduled}
         />
       ) : null}
     </>
