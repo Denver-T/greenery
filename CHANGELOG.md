@@ -5,6 +5,47 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-14 — mobile-friday-slice (technician status actions on work request detail)
+
+**Commit:** `aca05b1` feat(mobile): add technician status actions on work request detail
+
+### What changed
+
+Closed the two 🔴 blockers surfaced by a full `/design-review` + `/ux-review` pass on `apps/mobile` earlier in the session:
+
+1. **`WorkRequestDetails` is no longer read-only.** New action strip above the Back button shows Start work (secondary style, left) and Mark complete (primary style, right) buttons, gated on both status (`assigned` → Start available; `assigned` or `in_progress` → Complete available) AND ownership (`detailData.assignedTo === me.id` with explicit `Number()` coercion + NaN guards on both sides). Both call `PATCH /tasks/:id/status` via a new `updateWorkRequestStatus` helper in `util/workRequest.js` — thin alias over the same endpoint Dashboard already uses for its Check button. Button shows inline `ActivityIndicator` during the mutation; errors surface as a red `<Text>` below the strip with `accessibilityLiveRegion="polite"` + `accessibilityRole="alert"` so TalkBack and VoiceOver announce failures. On success, the detail silently refetches with no spinner flash.
+
+2. **Dashboard "Requests you created" renamed to "Your submissions."** Variable renames: `mySubmittedReqs → mySubmissions`, `activeReqs → activeSubmissions`. Filter logic unchanged (still `techName === myName`, which `POST /reqs` sets authoritatively from the authenticated user). The old label invited users to read it as "my work queue" which duplicated "My assignments" above it — the rename makes the semantic explicit. KPI card label intentionally left unchanged as cosmetic post-launch polish.
+
+3. **Under the hood on `WorkRequestDetails`:**
+   - `fetchDetails` extracted to a `useCallback` keyed on `id` with an explicit `{ silent: false }` parameter. `silent:true` skips `setLoading(true)`, preserves existing `detailData` + `me` state on failure, and is used by post-mutation refetches to update status in place without flashing a spinner.
+   - `/auth/me` fetched in parallel with the work request via `Promise.allSettled` (deliberate deviation from the Dashboard's `Promise.all`) so a transient `/auth/me` failure never masks a successful WR fetch. Action strip hides gracefully when `me` is `null` — tech can still SEE the request, just can't act until `/auth/me` recovers.
+   - Staleness fix: every `fetchDetails` call claims a unique `Symbol` in `latestRequestRef` and checks identity after the await resolves. Covers both the rapid-id-change race on initial load AND the mutation-silent-refetch race when the user navigates away mid-mutation. Replaces the original per-effect `let cancelled` pattern because the silent refetch from `handleStatusChange` also needs to participate in cancellation.
+   - `handleStatusChange` is a plain async function (intentionally NOT `useCallback` — nothing memoized consumes it).
+   - `mountedRef` retained for the `setMutating(false)` finally-block guard, which is a different concern from fetch staleness.
+
+4. **New mobile component registry entries** in `.claude/design/tokens/components.md`: `MobilePrimaryButton`, `MobileSecondaryButton`, `MobileActionStrip`, `MobileInlineError`. All four reference mobile tokens from `apps/mobile/theme.js`.
+
+### Why
+
+For the 2026-04-17 launch, mobile ships as a local Expo Go demo (web is the hard deadline). Before this commit, mobile's `WorkRequestDetails` was read-only — a technician could view a request but not mark it `in_progress` or `completed` from mobile; they had to return to web. Combined with the visually duplicative "Requests you created" section on Dashboard, mobile had two UX paper cuts that would land badly in the demo. This slice closes both with a narrow, mobile-only change and absorbs every non-blocker finding into `mobile-post-launch-sprint.md` rather than letting scope creep into the Friday window.
+
+### Process notes
+
+- **Narrow-slice discipline held.** Full audit (`/design-review` + `/ux-review`) surfaced 2 🔴 blockers + 14 other findings. Only the 2 🔴 landed in this slice; the other 14 are tracked in `mobile-post-launch-sprint.md` (9 chunks spanning push notifications, invite flow, dark mode, form hygiene, store readiness, polish, web follow-ups) for the post-launch mobile sprint.
+- **Plan survived 2 `/review` cycles** before `/execute`: v1 had 5 🟡 Important findings (ownership type coercion, `Promise.allSettled`, `silent` semantics specification, live-region on error, two-technician preconditions), v2 resolved all 5 but introduced 7 drift errors from the revision (stale label references, standards-bullet contradiction, false Test A expectations, too-aggressive fetch-start spec), v3 fixed all drift and was approved.
+- **Implementation `/review` cycle 1 caught one real regression:** the refactor from `let cancelled = false` to `useRef(true)` weakened staleness protection from per-effect to mount-only, introducing a stale-response race on rapid navigation between detail screens. The fix — token-based staleness via `latestRequestRef = useRef(Symbol)` — covers both the original scenario and the mutation-silent-refetch-during-navigation case that the original `cancelled` pattern didn't cover either. `/review` cycle 2 on the fix passed.
+
+### Lessons learned
+
+- **Audits over-call "blockers."** The `/ux-review` flagged the Dashboard `techName` filter as 🔴 "tech sees wrong data." Investigation showed the filter is still functionally correct for mobile-created records — the backend (`POST /reqs`) authoritatively sets `techName` from the authenticated user. The real bug was semantic: the section was labeled in a way that implied it was "my assignments" when it was actually "my submissions." A label rename fixed it; no filter rewrite was needed. **Always verify the audit finding against the code before designing the fix** — a 15-minute trace through the relevant routes would have cut the original plan's scope estimate in half.
+- **`useRef` for mount tracking is not the same as `useRef` for fetch-staleness tracking.** The original code used `let cancelled = false` inside a `useEffect` closure; the closure was reset per-effect-run which correctly invalidated stale fetches on `id` change. My initial refactor replaced this with a mount-only `mountedRef`, which looks equivalent but silently dropped the id-change protection. The implementation `/review` caught it. Takeaway: **if a refactor replaces a "cancelled on id change" closure with a component-scoped ref, the ref must also track id-relevance, not just mount-relevance.**
+- **Plan revisions drift.** v2 of the plan correctly updated the Step 2 body and acceptance criteria but missed the stale references in the Files summary, the Standards Applied bullet, and the Test A steps. A careful second-pass `/review` caught 6 text-drift errors plus 1 semantic spec bug. Takeaway: **when revising a plan, grep for every instance of the old text, not just the canonical section.** A pre-revision checklist of "where does this phrase appear" would have caught all 6 in one pass.
+- **The /design-review gate caught a real scope decision early.** The `/execute` skill's "no UI work without a design spec" rule initially felt like ceremony — we'd already run `/design-review` and `/ux-review`, and the plan was highly prescriptive. Writing the spec anyway surfaced a spec-vs-plan inconsistency (raw `14` in the plan's Step 6 should have been `SPACING.md` to match the scale-discipline rule) that would otherwise have landed in the code. Takeaway: **design specs are cheap when the plan is already prescriptive, and they still catch things the plan misses.**
+- **"Manager-oriented" is a real product critique the audits missed.** Late in the session, the user flagged that mobile feels like a data-entry tool (submit 20-field work requests) rather than a field-operative tool (navigate, call, mark complete with photos). The audits caught missing features individually; they did not catch the overall persona drift. Post-launch `/brainstorm` titled "technician-first mobile redesign" queued as the first mobile planning task after the web deploy lands.
+
+---
+
 ## 2026-04-14 — schedule-assign-unify (auto-assign on schedule + Tech Name field removal)
 
 **Commits:** `e1746d8` feat(api) auto-assign + assignedToName join, `f3ee0a8` feat(web) drop Tech Name field + render assignedToName
