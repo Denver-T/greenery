@@ -103,9 +103,12 @@ function normalizeStatus(value, required = false) {
   }
 
   if (typeof value !== "string") {
-    throw httpError(400, "Field 'status' must be a string", "VALIDATION_ERROR", [
-      { field: "status", issue: "must be a string" },
-    ]);
+    throw httpError(
+      400,
+      "Field 'status' must be a string",
+      "VALIDATION_ERROR",
+      [{ field: "status", issue: "must be a string" }],
+    );
   }
 
   const normalized = value.trim().toLowerCase();
@@ -135,9 +138,12 @@ function normalizeDueDate(value) {
   }
 
   if (typeof value !== "string") {
-    throw httpError(400, "Field 'due_date' must be a string", "VALIDATION_ERROR", [
-      { field: "due_date", issue: "must be a valid date string" },
-    ]);
+    throw httpError(
+      400,
+      "Field 'due_date' must be a string",
+      "VALIDATION_ERROR",
+      [{ field: "due_date", issue: "must be a valid date string" }],
+    );
   }
 
   const parsed = new Date(value);
@@ -172,9 +178,12 @@ async function ensureEmployeeExists(employeeId) {
   const [rows] = await db.query(sql, [employeeId]);
 
   if (!rows.length) {
-    throw httpError(404, "Assigned employee does not exist", "EMPLOYEE_NOT_FOUND", [
-      { field: "assigned_to", issue: "no such employee" },
-    ]);
+    throw httpError(
+      404,
+      "Assigned employee does not exist",
+      "EMPLOYEE_NOT_FOUND",
+      [{ field: "assigned_to", issue: "no such employee" }],
+    );
   }
 }
 
@@ -288,7 +297,11 @@ async function createTask(taskData) {
     ]);
   }
 
-  if (rawNotes !== undefined && rawNotes !== null && typeof rawNotes !== "string") {
+  if (
+    rawNotes !== undefined &&
+    rawNotes !== null &&
+    typeof rawNotes !== "string"
+  ) {
     throw httpError(400, "Field 'notes' must be a string", "VALIDATION_ERROR", [
       { field: "notes", issue: "must be a string" },
     ]);
@@ -405,7 +418,10 @@ async function assignTask(id, assignment) {
     ]);
   }
 
-  const employeeId = normalizeOptionalId(assignment?.assigned_to, "assigned_to");
+  const employeeId = normalizeOptionalId(
+    assignment?.assigned_to,
+    "assigned_to",
+  );
   const dueDate = normalizeDueDate(assignment?.due_date);
 
   await ensureEmployeeExists(employeeId);
@@ -424,7 +440,12 @@ async function assignTask(id, assignment) {
     WHERE id = ?
   `;
 
-  const [result] = await db.query(sql, [employeeId, dueDate, employeeId, taskId]);
+  const [result] = await db.query(sql, [
+    employeeId,
+    dueDate,
+    employeeId,
+    taskId,
+  ]);
 
   if (result.affectedRows === 0) {
     return null;
@@ -433,7 +454,12 @@ async function assignTask(id, assignment) {
   return getTaskById(taskId);
 }
 
-async function getTasksPaginated(scope = null, employeeId = null, limit, offset) {
+async function getTasksPaginated(
+  scope = null,
+  employeeId = null,
+  limit,
+  offset,
+) {
   const includeUnassigned = scope === "assignment";
   const statusClause = includeUnassigned
     ? "status IN ('unassigned', 'assigned', 'in_progress', 'completed', 'cancelled')"
@@ -475,4 +501,5 @@ module.exports = {
   createTask,
   updateTaskStatus,
   assignTask,
+  VALID_STATUSES,
 };
