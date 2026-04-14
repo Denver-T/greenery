@@ -5,6 +5,69 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-14 — schedule-assign-unify (auto-assign on schedule + Tech Name field removal)
+
+**Commits:** `e1746d8` feat(api) auto-assign + assignedToName join, `f3ee0a8` feat(web) drop Tech Name field + render assignedToName
+
+### What changed
+
+Collapsed the three-step "pick a tech" friction surfaced during the Chunk E walkthrough into a single flow. Two coordinated changes.
+
+**`e1746d8` — API.** `createLinkedEvent` is now transactional (BEGIN/COMMIT on a dedicated pool connection, mirroring `reqSequenceService.js`). The initial work_req SELECT is upgraded to `SELECT ... FOR UPDATE` so concurrent schedule-create POSTs against the same WR serialize behind the row lock — without it, two managers scheduling within milliseconds would both observe `assignedTo=NULL` and both run the auto-assign UPDATE, with the second silently winning. When a schedule event is created with a non-null `employee_id` against a WR that is still `status='unassigned' AND assignedTo IS NULL`, the same transaction promotes the WR to `status='assigned' + assignedTo=<employee_id>`. Never clobbers an existing assignment; never regresses a status. A second `work_req.auto_assigned` activity log entry fires after commit so `/superadmin` can trace automated transitions back to the triggering schedule event. When the WR has a `monday_item_id`, a fire-and-forget `mondaySyncService.pushUpdate` mirrors the status transition to Monday so the board doesn't drift until the next PUT touches the row — the partial-row path works because `toMondayColumnValues` skips null fields. `getReqById` now `LEFT JOIN`s `employees` and returns `assignedToName` alongside the FK so the detail page can render the technician's name.
+
+Test coverage is heavy for a plan marked Low complexity:
+- 8 new unit tests in `workReqScheduleService.test.js` covering promote, no-clobber, null-employee skip, rollback, `FOR UPDATE` pinning, and all three Monday-push cases
+- 3 new `itIfDb` integration tests in `reqs.integration.test.js` against real MySQL: promote + activity log row assertion, no-clobber, and Mark Complete preserves `assignedTo` after PUT to `completed`
+- The existing `createLinkedEvent` unit tests were restructured around a new `setupConnMock()` canonical shape (mirrors `reqs.routes.test.js`) so future services that need transactional mocks have a reference implementation
+
+**`f3ee0a8` — Web.** The `<Field label="Tech Name">` block is removed from `WorkRequestForm` in both create and edit modes. Server guarantees keep this safe: POST /reqs resolves `techName: authenticatedTechName || req.body?.techName` so the authenticated user's name wins when the form omits the field; PUT /reqs/:id's `buildReqPayload` uses `normalizeString(body.techName ?? existing?.techName, 120)` so edit mode preserves the existing value byte-for-byte. The `employees`/`employeesError` state, the `/employees` fetch effect, the `techName` sanitization entry, `REQ_LIMITS.techName`, and the unused `fetchApi` import all went with the field. The detail page's "Assigned to employee" row now renders `workReq.assignedToName` with a `#<id>` fallback.
+
+The net result: create a work request, schedule it with a technician, and the Mark Complete button is immediately visible. Three clicks instead of nine. The previous 11:22 AM quick fix that turned Tech Name into an employees dropdown was a stepping-stone — this supersedes it.
+
+### Why
+
+The Chunk E walkthrough surfaced a real usability problem: even though the Chunk D work made Mark Complete functional, the user flow forced a detour through `/assigntasks` to flip the status from `unassigned` to `assigned` before the button would appear. The create form's Tech Name field confused users into thinking they were picking the assignee when they were actually just writing their own name into a text field. One flow, one form, one click per meaningful action.
+
+### Lessons learned
+
+- **Integration tests caught a pre-existing latent bug during Chunk D; this chunk's integration tests caught a Monday-sync drift during `/review`.** Pattern holds: `/review` is where behavioral gaps surface that unit tests don't. The locked "never defer 🟡 Important findings" rule paid off — fixing the drift inline was ~30 lines of code and 3 tests, well under the 15-minute budget. Deferring would have shipped a visible-but-contained bug.
+- **The `setupConnMock()` canonical shape was worth writing.** The plan called for "grep for an existing pattern, reuse it exactly, else establish a new one" and the new helper mirrors the `reqs.routes.test.js` DELETE handler's pattern. Future services that need multi-statement txn mocks now have two reference implementations pointing at the same shape.
+- **Display-layer gaps hide behind untested assumptions.** The `getReqById` returning a raw FK for `assignedTo` was invisible as long as `techName` was a separate text field carrying the identity. Removing `techName` from the form promoted `assignedTo` to the primary identity surface and immediately exposed the `#42` display bug. Lesson: when removing redundant data, check what other fields were silently compensating for the redundancy.
+- **Scope discipline vs. "it's right there".** The `getReqById` LEFT JOIN wasn't in the original plan — it was added reactively during the manual walkthrough. Should have been in the plan from the start because removing `techName` from the form was always going to surface `assignedTo` as the identity field. Add a "what else does this field quietly cover for?" check to future field-removal plans.
+- **Single DB fixture != single plan fixture.** The integration test helpers had to grow `seedEmployee` and `countAutoAssignLogs`, and cleanup had to learn about `activity_logs` scrubbing (no FK, orphans would accumulate). The `TEST_PREFIX` approach scales but requires discipline every time a new table is touched by tests.
+- **`toMondayColumnValues` tolerates partial rows.** That's not documented anywhere but is load-bearing for the minimal `{id, monday_item_id, status}` push after auto-assign. Worth a comment in `mondayColumnValues.js` — flagged as post-launch tech debt.
+
+---
+
+## 2026-04-14 — chunk E walkthrough polish (tech-name dropdown + calendar/unschedule fixes)
+
+**Commits:** `14c53bc` feat(web) tech-name dropdown, `2127d44` fix(web) calendar weekday keys / today overflow / unschedule button
+
+### What changed
+
+Two small but visible commits that landed during the Chunk E walkthrough of `work-request-schedule-coupling`. Both were driven by real problems the user hit while driving the feature in a browser — not speculative polish.
+
+**`14c53bc` — Tech Name is now an editable `<select>`.** The create-page field was a readonly text input prefilled from the signed-in user, and the edit-page field was an editable plain text input with a placeholder of "Magnus". Both read like duplicate assignee pickers. The field now fetches `/employees` once on mount and renders a required dropdown defaulting to blank in create mode. Edit mode preserves legacy `techName` values that are no longer in the active roster by surfacing them as a synthetic `<option>` at the top of the list, so a round-trip save can't silently clobber a historical value. Dropped the `currentEmployeeName` / `/auth/me` fetch from `req/page.js` since the signed-in-name prefill is gone.
+
+**`2127d44` — Three separate calendar/LinkedScheduleList fixes bundled.**
+- Calendar day cells were rendering a "Today" pill (`px-1.5 text-[10px]`) that overflowed the `aspect-square` cell at `md` viewports because the cell had no `overflow-hidden`. The pill was also duplicated information (the date digit already tells you "today"). Removed the indicator entirely — no dot, no pill — and kept `overflow-hidden` on the cell as defense-in-depth for any future absolute-positioned child.
+- Console was warning `Encountered two children with the same key, \`T\`` because the weekday header `["S","M","T","W","T","F","S"].map(d => <div key={d}>)` reuses letters. Keyed by stable day abbreviations (`sun`/`mon`/`tue`/…) with a `label` field for the displayed character.
+- `LinkedScheduleList`'s per-row Unschedule control was `variant="ghost"` with a `→` glyph. Read as clickable text, not a button. Upgraded to `variant="secondary"` (outlined brand) and dropped the glyph — now reads as a proper affordance.
+
+### Why
+
+Chunk E is the final VALIDATE pass of the work-request-schedule-coupling plan — manual browser walkthrough against a real MySQL + running API/web. Every issue in this commit was surfaced there by the user, not by running tests. The pre-commit review gate caught each before they could compound; fixing them inline (rather than deferring) kept the walkthrough productive.
+
+### Lessons learned
+
+- **A "readonly prefilled input" is a UX anti-pattern when the user mental-models it as editable.** The Tech Name field showed the signed-in user's name in a text box that looked editable but wasn't, and the submit path silently ignored any edits anyway (create mode pulled `currentEmployeeName` out of React state, never `fd.get("techName")`). Users don't trust silent fields. The dropdown fix surfaces the real shape — "pick from the roster" — and the field now reflects what actually gets persisted.
+- **`overflow-hidden` on `aspect-square` cells is cheap insurance.** The Today pill wasn't the only thing that could escape the cell — any future child with `px` padding on a narrow viewport would have the same bug. Setting `overflow-hidden` at the container level forecloses the whole class. This is one of the rare cases where "be defensive by default" beats "trust your layout math."
+- **`key={letter}` on `["S","M","T","W","T","F","S"]` is a bug trap that reads as clean code.** Static data → stable keys → looks fine. But React uses the key for reconciliation, and the double-T + double-S caused silent children duplication in dev mode (React warned but still rendered). Moral: key on *identity*, not *display value*. Even for seven constant cells.
+- **"Ghost" button variants read as links, not buttons.** The pre-launch convention of using `variant="ghost"` for tertiary/row-local actions made sense when the actions were nav-like ("View", "Details"). For a destructive-ish action like Unschedule, ghost was under-affording. The secondary variant is visually heavier and matches the user's mental model of "this is a button that does something to the row."
+- **Chunk E is doing real work.** The walkthrough wasn't a formality — it caught three visible defects in under 20 minutes that unit/integration tests would not have caught because they were all visual/interaction issues. Manual validation against a real browser remains load-bearing, even on a feature with 400+ automated tests.
+
+---
+
 ## 2026-04-14 — feat: Mark Complete + PUT /reqs/:id transaction + auto-close
 
 **Commits:** `786febb` feat(api), `044715e` feat(web)

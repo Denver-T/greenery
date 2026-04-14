@@ -12,8 +12,26 @@
 // - unscheduled inbox hides work_reqs older than 30 days by default
 //
 // Transaction handling:
-// - createLinkedEvent uses a single atomic INSERT — no multi-statement txn
-//   needed because there's only one write
+// - createLinkedEvent runs inside an explicit BEGIN/COMMIT transaction on a
+//   dedicated pool connection. The work_req row is read with SELECT ... FOR
+//   UPDATE to serialize concurrent schedule creates against the same WR —
+//   otherwise two managers scheduling within milliseconds both observe
+//   assignedTo=NULL and both run the auto-assign UPDATE, with the second
+//   silently winning the "who owns this WR" decision. Contention cost is
+//   negligible at our write rate; correctness is non-negotiable.
+//   The transaction wraps the work_req SELECT, the schedule_events INSERT,
+//   and the conditional work_reqs auto-assign UPDATE, so any failure after
+//   the INSERT rolls back the event as well.
+// - Auto-assign coupling: when a request-typed event is created with a
+//   non-null employee_id against a WR that is still status='unassigned'
+//   AND assignedTo IS NULL, the same transaction promotes the WR to
+//   status='assigned' + assignedTo=<event's employee_id>. Never clobbers an
+//   existing assignment, never regresses a status. Emits a
+//   work_req.auto_assigned activity log entry after commit so the /superadmin
+//   audit trail captures the automated transition. When the WR has a
+//   monday_item_id, a fire-and-forget mondaySyncService.pushUpdate mirrors
+//   the status transition to Monday so the board does not drift until the
+//   next PUT /reqs/:id touches the row.
 // - listUnscheduledWorkReqs uses a LEFT JOIN ... IS NULL query per Decision E
 // - deleteLinkedEvent's ownership guard runs in a two-step (SELECT then
 //   DELETE) on a SHARED connection so a concurrent delete can't race past
@@ -21,6 +39,7 @@
 
 const db = require("../db");
 const { logActivity } = require("../utils/activityLogger");
+const mondaySyncService = require("./mondaySyncService");
 
 // Sentinel used when audienceLevel is not explicitly passed to createLinkedEvent.
 // Matches the default in schedule.js's normalizeAudienceLevel so the UI can
@@ -59,7 +78,9 @@ function validateRequestScheduleEventPayload(body) {
 
   const rawEmployeeId = body?.employee_id;
   const employeeId =
-    rawEmployeeId === undefined || rawEmployeeId === null || rawEmployeeId === ""
+    rawEmployeeId === undefined ||
+    rawEmployeeId === null ||
+    rawEmployeeId === ""
       ? null
       : Number(rawEmployeeId);
 
@@ -72,7 +93,10 @@ function validateRequestScheduleEventPayload(body) {
   if (startTime >= endTime) {
     return { error: "end_time must be after start_time." };
   }
-  if (employeeId !== null && (!Number.isInteger(employeeId) || employeeId <= 0)) {
+  if (
+    employeeId !== null &&
+    (!Number.isInteger(employeeId) || employeeId <= 0)
+  ) {
     return { error: "employee_id must be a positive integer when provided." };
   }
 
@@ -140,11 +164,7 @@ async function listLinkedEvents(workReqId) {
  * Throws a plain Error subclass with .statusCode / .code properties that the
  * global error handler formats into the standard {error:{code,message}} shape.
  */
-async function createLinkedEvent({
-  workReqId,
-  body,
-  req = null,
-}) {
+async function createLinkedEvent({ workReqId, body, req = null }) {
   const validation = validateRequestScheduleEventPayload(body);
   if (validation.error) {
     const err = new Error(validation.error);
@@ -156,78 +176,166 @@ async function createLinkedEvent({
   const { startTime, endTime, employeeId, audienceLevel, details } =
     validation.data;
 
-  // Confirm the work request exists and pull the reference + action for the title
-  const [workReqRows] = await db.query(
-    `SELECT id, referenceNumber, actionRequired FROM work_reqs WHERE id = ? LIMIT 1`,
-    [workReqId],
-  );
-  const workReq = workReqRows[0];
-  if (!workReq) {
-    const err = new Error("Work request not found.");
-    err.statusCode = 404;
-    err.code = "WORK_REQ_NOT_FOUND";
-    throw err;
-  }
+  const conn = await db.getConnection();
+  let insertId;
+  let referenceNumber;
+  let autoAssigned = false;
+  let mondayItemId = null;
+  try {
+    await conn.beginTransaction();
 
-  // Employee existence + Active check (only when explicitly provided)
-  if (employeeId !== null) {
-    const [empRows] = await db.query(
-      `SELECT id FROM employees WHERE id = ? AND status = 'Active' LIMIT 1`,
-      [employeeId],
+    // Confirm the work request exists and pull the reference + action for the
+    // title, plus status/assignedTo for the auto-assign decision and
+    // monday_item_id so we can drive the post-commit Monday sync. FOR UPDATE
+    // locks the row so a concurrent schedule-create POST against the same WR
+    // serializes behind us — without the lock, two managers scheduling within
+    // milliseconds both see assignedTo=NULL and both run the UPDATE.
+    const [workReqRows] = await conn.query(
+      `SELECT id, referenceNumber, actionRequired, status, assignedTo, monday_item_id
+         FROM work_reqs
+        WHERE id = ?
+        LIMIT 1
+        FOR UPDATE`,
+      [workReqId],
     );
-    if (empRows.length === 0) {
-      const err = new Error(
-        "The selected technician is not available — they may be inactive or removed.",
-      );
-      err.statusCode = 400;
-      err.code = "EMPLOYEE_NOT_FOUND";
+    const workReq = workReqRows[0];
+    if (!workReq) {
+      const err = new Error("Work request not found.");
+      err.statusCode = 404;
+      err.code = "WORK_REQ_NOT_FOUND";
       throw err;
     }
+
+    // Employee existence + Active check (only when explicitly provided)
+    if (employeeId !== null) {
+      const [empRows] = await conn.query(
+        `SELECT id FROM employees WHERE id = ? AND status = 'Active' LIMIT 1`,
+        [employeeId],
+      );
+      if (empRows.length === 0) {
+        const err = new Error(
+          "The selected technician is not available — they may be inactive or removed.",
+        );
+        err.statusCode = 400;
+        err.code = "EMPLOYEE_NOT_FOUND";
+        throw err;
+      }
+    }
+
+    const title = buildEventTitle(workReq);
+    const createdByEmail = req?.user?.email || null;
+
+    const [result] = await conn.query(
+      `INSERT INTO schedule_events (
+         title,
+         start_time,
+         end_time,
+         employee_id,
+         work_req_id,
+         event_type,
+         audience_level,
+         details,
+         created_by_email
+       ) VALUES (?, ?, ?, ?, ?, 'request', ?, ?, ?)`,
+      [
+        title,
+        startTime,
+        endTime,
+        employeeId,
+        workReqId,
+        audienceLevel,
+        details,
+        createdByEmail,
+      ],
+    );
+    insertId = result.insertId;
+    referenceNumber = workReq.referenceNumber;
+
+    // Auto-assign coupling: only when the caller attached a technician to the
+    // event AND the parent WR is still genuinely unassigned. Never clobber an
+    // existing assignment, never regress a status. Strict equality on
+    // `=== true` is intentional — a future multipart/form-data path must not
+    // accidentally trigger auto-assign via a string "true".
+    const shouldAutoAssign =
+      employeeId !== null &&
+      workReq.assignedTo === null &&
+      workReq.status === "unassigned";
+    if (shouldAutoAssign) {
+      await conn.query(
+        `UPDATE work_reqs SET assignedTo = ?, status = 'assigned' WHERE id = ?`,
+        [employeeId, workReqId],
+      );
+      autoAssigned = true;
+      mondayItemId = workReq.monday_item_id || null;
+    }
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
 
-  const title = buildEventTitle(workReq);
-  const createdByEmail = req?.user?.email || null;
+  // Post-commit reads and activity log emissions run on the pool — the txn is
+  // closed and the rows are durable.
+  const created = await getLinkedEventById(insertId);
 
-  const [result] = await db.query(
-    `INSERT INTO schedule_events (
-       title,
-       start_time,
-       end_time,
-       employee_id,
-       work_req_id,
-       event_type,
-       audience_level,
-       details,
-       created_by_email
-     ) VALUES (?, ?, ?, ?, ?, 'request', ?, ?, ?)`,
-    [
-      title,
-      startTime,
-      endTime,
-      employeeId,
-      workReqId,
-      audienceLevel,
-      details,
-      createdByEmail,
-    ],
-  );
-
-  const created = await getLinkedEventById(result.insertId);
-
-  // Fire-and-forget audit log
+  // Fire-and-forget audit log — primary create entry
   void logActivity({
     req,
     action: "schedule.request.create",
     targetType: "schedule_event",
-    targetId: result.insertId,
+    targetId: insertId,
     metadata: {
       work_req_id: workReqId,
-      reference_number: workReq.referenceNumber,
+      reference_number: referenceNumber,
       start_time: startTime,
       end_time: endTime,
       employee_id: employeeId,
     },
   });
+
+  // Second audit entry — only when auto-assign actually fired. Captures the
+  // WHY of a WR's status transition so /superadmin can trace automated
+  // assignments back to the triggering schedule event.
+  if (autoAssigned) {
+    void logActivity({
+      req,
+      action: "work_req.auto_assigned",
+      targetType: "work_req",
+      targetId: workReqId,
+      metadata: {
+        from_status: "unassigned",
+        to_status: "assigned",
+        assigned_to: employeeId,
+        trigger: "schedule_event_create",
+        schedule_event_id: insertId,
+      },
+    });
+
+    // Mirror the status transition to Monday. Without this, the board drifts
+    // (shows "unassigned") until the next PUT /reqs/:id touches the same row.
+    // We only need to push the single changed column — toMondayColumnValues
+    // skips null/undefined fields, so a minimal partial row is sufficient.
+    // Guarded by monday_item_id because unlinked rows have no Monday mirror.
+    if (mondayItemId) {
+      void (async () => {
+        try {
+          await mondaySyncService.pushUpdate({
+            id: workReqId,
+            monday_item_id: mondayItemId,
+            status: "assigned",
+          });
+        } catch (err) {
+          console.error(
+            "[monday-sync] schedule auto-assign pushUpdate failed",
+            err?.message || err,
+          );
+        }
+      })();
+    }
+  }
 
   return created;
 }
@@ -340,7 +448,9 @@ async function listUnscheduledWorkReqs({
   const params = [];
 
   if (!filters.includeOlder) {
-    where.push(`wr.created_at >= (NOW() - INTERVAL ${DEFAULT_UNSCHEDULED_WINDOW_DAYS} DAY)`);
+    where.push(
+      `wr.created_at >= (NOW() - INTERVAL ${DEFAULT_UNSCHEDULED_WINDOW_DAYS} DAY)`,
+    );
   }
 
   if (filters.assignedToPresent) {

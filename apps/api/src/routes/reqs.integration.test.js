@@ -80,16 +80,21 @@ async function checkDbAvailable() {
   }
 }
 
-async function seedWorkReq({ refSuffix, status = "in_progress" }) {
+async function seedWorkReq({
+  refSuffix,
+  status = "in_progress",
+  assignedTo = null,
+}) {
   const [result] = await db.query(
     `INSERT INTO work_reqs (
-       referenceNumber, requestDate, account, actionRequired, status
-     ) VALUES (?, CURDATE(), ?, ?, ?)`,
+       referenceNumber, requestDate, account, actionRequired, status, assignedTo
+     ) VALUES (?, CURDATE(), ?, ?, ?, ?)`,
     [
       `${TEST_PREFIX}-${refSuffix}`,
       "Integration Test Co",
       "Seeded for auto-close integration test",
       status,
+      assignedTo,
     ],
   );
   return result.insertId;
@@ -110,6 +115,54 @@ async function seedScheduleEvent(workReqId) {
   return result.insertId;
 }
 
+async function seedEmployee(nameSuffix) {
+  const [result] = await db.query(
+    `INSERT INTO employees (name, role, email, status, permissionLevel)
+     VALUES (?, 'Technician', NULL, 'Active', 'Technician')`,
+    [`${TEST_PREFIX}-emp-${nameSuffix}`],
+  );
+  return result.insertId;
+}
+
+async function getWorkReq(workReqId) {
+  const [rows] = await db.query(
+    `SELECT id, status, assignedTo FROM work_reqs WHERE id = ?`,
+    [workReqId],
+  );
+  return rows[0] || null;
+}
+
+async function countAutoAssignLogs(workReqId) {
+  const [rows] = await db.query(
+    `SELECT COUNT(*) AS c FROM activity_logs
+      WHERE action = 'work_req.auto_assigned'
+        AND target_type = 'work_req'
+        AND target_id = ?`,
+    [workReqId],
+  );
+  return rows[0].c;
+}
+
+// logActivity is fire-and-forget — the INSERT races the HTTP response. Poll
+// for up to 500ms so positive assertions stay reliable under CI load
+// without permanently pessimising the happy path.
+async function waitForAutoAssignLogCount(workReqId, expected) {
+  const deadline = Date.now() + 500;
+  let last = -1;
+  while (Date.now() < deadline) {
+    last = await countAutoAssignLogs(workReqId);
+    if (last === expected) return last;
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  return last;
+}
+
+// For the negative case (no log expected), wait the full window so a
+// delayed INSERT would still be caught before the assertion runs.
+async function settleAutoAssignLogs() {
+  await new Promise((r) => setTimeout(r, 200));
+}
+
 async function countEventsFor(workReqId) {
   const [rows] = await db.query(
     `SELECT COUNT(*) AS c FROM schedule_events WHERE work_req_id = ?`,
@@ -119,16 +172,31 @@ async function countEventsFor(workReqId) {
 }
 
 async function statusOf(workReqId) {
-  const [rows] = await db.query(
-    `SELECT status FROM work_reqs WHERE id = ?`,
-    [workReqId],
-  );
+  const [rows] = await db.query(`SELECT status FROM work_reqs WHERE id = ?`, [
+    workReqId,
+  ]);
   return rows[0]?.status;
 }
 
 async function cleanup() {
-  // Delete schedule_events first to satisfy the FK constraint, even though
-  // it's ON DELETE SET NULL. Faster than the trigger path.
+  // 1. Scrub activity_logs tied to test WRs BEFORE the WRs are deleted —
+  //    target_id has no FK, so orphaned rows would just accumulate.
+  await db.query(
+    `DELETE al FROM activity_logs al
+       JOIN work_reqs wr ON al.target_type = 'work_req' AND al.target_id = wr.id
+      WHERE wr.referenceNumber LIKE ?`,
+    [`${TEST_PREFIX}-%`],
+  );
+  await db.query(
+    `DELETE al FROM activity_logs al
+       JOIN schedule_events se ON al.target_type = 'schedule_event' AND al.target_id = se.id
+       JOIN work_reqs wr ON se.work_req_id = wr.id
+      WHERE wr.referenceNumber LIKE ?`,
+    [`${TEST_PREFIX}-%`],
+  );
+
+  // 2. Delete schedule_events first to satisfy the FK constraint, even though
+  //    it's ON DELETE SET NULL. Faster than the trigger path.
   await db.query(
     `DELETE se FROM schedule_events se
        JOIN work_reqs wr ON se.work_req_id = wr.id
@@ -140,6 +208,11 @@ async function cleanup() {
   );
   await db.query(`DELETE FROM work_reqs WHERE referenceNumber LIKE ?`, [
     `${TEST_PREFIX}-%`,
+  ]);
+
+  // 3. Test employees (fk on activity_logs.actor_employee_id is ON DELETE SET NULL)
+  await db.query(`DELETE FROM employees WHERE name LIKE ?`, [
+    `${TEST_PREFIX}-emp-%`,
   ]);
 }
 
@@ -254,6 +327,109 @@ describe("PUT /reqs/:id — integration against real MySQL", () => {
 
       expect(response.status).toBe(400);
       expect(await statusOf(wrId)).toBe(originalStatus);
+    },
+  );
+});
+
+describe("POST /reqs/:id/schedule-events — auto-assign integration", () => {
+  afterEach(async () => {
+    if (dbAvailable) await cleanup();
+  });
+
+  itIfDb(
+    "flips an unassigned WR to assigned with the event's employee_id",
+    async () => {
+      const empId = await seedEmployee("promote");
+      const wrId = await seedWorkReq({
+        refSuffix: "promote",
+        status: "unassigned",
+        assignedTo: null,
+      });
+
+      const response = await request(makeApp())
+        .post(`/reqs/${wrId}/schedule-events`)
+        .send({
+          start_time: "2030-02-01T09:00",
+          end_time: "2030-02-01T11:00",
+          employee_id: empId,
+        });
+
+      expect(response.status).toBe(201);
+
+      const wr = await getWorkReq(wrId);
+      expect(wr.status).toBe("assigned");
+      expect(wr.assignedTo).toBe(empId);
+
+      expect(await waitForAutoAssignLogCount(wrId, 1)).toBe(1);
+    },
+  );
+
+  itIfDb("does not clobber an already-assigned WR", async () => {
+    const ownerId = await seedEmployee("owner");
+    const schedulerEmpId = await seedEmployee("scheduler");
+    const wrId = await seedWorkReq({
+      refSuffix: "no-clobber",
+      status: "assigned",
+      assignedTo: ownerId,
+    });
+
+    const response = await request(makeApp())
+      .post(`/reqs/${wrId}/schedule-events`)
+      .send({
+        start_time: "2030-02-01T09:00",
+        end_time: "2030-02-01T11:00",
+        employee_id: schedulerEmpId,
+      });
+
+    expect(response.status).toBe(201);
+
+    const wr = await getWorkReq(wrId);
+    expect(wr.status).toBe("assigned");
+    expect(wr.assignedTo).toBe(ownerId);
+
+    // Event was still created with the scheduler's employee_id
+    expect(response.body?.data?.employee_id ?? response.body?.employee_id).toBe(
+      schedulerEmpId,
+    );
+
+    // No auto-assign log should ever appear. Wait long enough that a late
+    // fire-and-forget INSERT would still be caught before we assert.
+    await settleAutoAssignLogs();
+    expect(await countAutoAssignLogs(wrId)).toBe(0);
+  });
+
+  itIfDb(
+    "Mark Complete preserves assignedTo after PUT to status=completed",
+    async () => {
+      const empId = await seedEmployee("preserve");
+      const wrId = await seedWorkReq({
+        refSuffix: "preserve",
+        status: "unassigned",
+        assignedTo: null,
+      });
+
+      // Step 1: schedule event → auto-assigns the WR
+      const scheduleResponse = await request(makeApp())
+        .post(`/reqs/${wrId}/schedule-events`)
+        .send({
+          start_time: "2030-02-01T09:00",
+          end_time: "2030-02-01T11:00",
+          employee_id: empId,
+        });
+      expect(scheduleResponse.status).toBe(201);
+      const afterSchedule = await getWorkReq(wrId);
+      expect(afterSchedule.assignedTo).toBe(empId);
+      expect(afterSchedule.status).toBe("assigned");
+
+      // Step 2: Mark Complete (without auto-close) — sends a partial payload
+      const completeResponse = await request(makeApp())
+        .put(`/reqs/${wrId}`)
+        .send({ status: "completed", autoCloseScheduleEvents: false });
+      expect(completeResponse.status).toBe(200);
+
+      const afterComplete = await getWorkReq(wrId);
+      expect(afterComplete.status).toBe("completed");
+      expect(afterComplete.assignedTo).toBe(empId);
     },
   );
 });

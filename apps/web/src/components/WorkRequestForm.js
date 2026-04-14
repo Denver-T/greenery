@@ -10,7 +10,6 @@ import SelectChevron from "@/components/SelectChevron";
 
 const REQ_LIMITS = {
   referenceNumber: 100,
-  techName: 120,
   account: 150,
   accountContact: 150,
   accountAddress: 255,
@@ -42,8 +41,6 @@ const SELECT_CLASS =
  * - mode: "create" | "edit"
  * - initialValues: object with existing work_req fields (required for edit,
  *   optional for create — create uses defaults)
- * - currentEmployeeName: only used in create mode to prefill techName from
- *   the signed-in employee
  * - onSubmit: async (cleanedPayloadFormData) => void. Parent performs the
  *   API call (POST or PUT) and handles navigation on success. If it throws,
  *   the error message is displayed inline.
@@ -57,7 +54,6 @@ const SELECT_CLASS =
 export default function WorkRequestForm({
   mode,
   initialValues = EMPTY_INITIAL,
-  currentEmployeeName = "",
   onSubmit,
   onCancel,
   submitLabel,
@@ -164,20 +160,8 @@ export default function WorkRequestForm({
     try {
       const fd = new FormData(e.currentTarget);
 
-      // In create mode, techName is pulled from the signed-in user.
-      // In edit mode, the form field carries the existing techName.
-      if (mode === "create" && !currentEmployeeName) {
-        throw new Error(
-          "Your employee account could not be resolved. Please sign in again.",
-        );
-      }
-
-      const techNameForSubmit =
-        mode === "create" ? currentEmployeeName : fd.get("techName");
-
       const cleaned = sanitizeObjectStrings(
         {
-          techName: techNameForSubmit,
           account: fd.get("account"),
           accountContact: fd.get("accountContact"),
           accountAddress: fd.get("accountAddress"),
@@ -192,7 +176,6 @@ export default function WorkRequestForm({
           notes: fd.get("notes"),
         },
         {
-          techName: { maxLength: REQ_LIMITS.techName },
           account: { maxLength: REQ_LIMITS.account },
           accountContact: { maxLength: REQ_LIMITS.accountContact },
           accountAddress: { maxLength: REQ_LIMITS.accountAddress },
@@ -272,20 +255,6 @@ export default function WorkRequestForm({
                       : today
                   }
                   className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
-                  required
-                />
-              </Field>
-              <Field label="Tech Name" required>
-                <input
-                  name="techName"
-                  defaultValue={
-                    mode === "edit"
-                      ? initialValues.techName || ""
-                      : currentEmployeeName
-                  }
-                  placeholder="Magnus"
-                  readOnly={mode === "create"}
-                  className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
                   required
                 />
               </Field>

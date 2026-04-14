@@ -570,16 +570,23 @@ export default function Page() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr_1fr]">
         <section className="rounded-card border border-border-soft bg-surface p-3 md:p-5 shadow-soft">
           <div className="grid grid-cols-7 gap-1 px-1 pb-2 text-center text-xs md:text-sm font-medium theme-copy">
-            {["S", "M", "T", "W", "T", "F", "S"].map((d) => (
-              <div key={d} className="py-1">
-                {d}
+            {[
+              { key: "sun", label: "S" },
+              { key: "mon", label: "M" },
+              { key: "tue", label: "T" },
+              { key: "wed", label: "W" },
+              { key: "thu", label: "T" },
+              { key: "fri", label: "F" },
+              { key: "sat", label: "S" },
+            ].map((d) => (
+              <div key={d.key} className="py-1">
+                {d.label}
               </div>
             ))}
           </div>
 
           <div className="grid grid-cols-7 gap-px md:gap-1">
             {grid.map((cell) => {
-              const isToday = cell.key === todayKey;
               const isSelected = cell.key === selectedDayKey;
               const count = tasksByDay[cell.key]?.length ?? 0;
 
@@ -588,7 +595,7 @@ export default function Page() {
                   key={cell.key}
                   onClick={() => handleDaySelect(cell)}
                   className={[
-                    "relative aspect-square rounded-md p-1 md:p-2 text-left outline-none ring-brand/40 transition",
+                    "relative aspect-square overflow-hidden rounded-md p-1 md:p-2 text-left outline-none ring-brand/40 transition",
                     cell.inMonth
                       ? "bg-surface-warm hover:bg-surface-muted"
                       : "bg-surface-warm-alt text-gray-600",
@@ -604,14 +611,6 @@ export default function Page() {
                     >
                       {cell.date.getDate()}
                     </span>
-                    {isToday ? (
-                      <>
-                        <span className="md:hidden h-1.5 w-1.5 rounded-full bg-brand-600" />
-                        <span className="hidden md:inline rounded-full bg-brand-600 px-1.5 text-[10px] font-medium text-white">
-                          Today
-                        </span>
-                      </>
-                    ) : null}
                   </div>
 
                   {count > 0 ? (

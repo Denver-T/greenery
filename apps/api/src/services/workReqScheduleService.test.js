@@ -2,20 +2,34 @@ jest.mock("../db");
 jest.mock("../utils/activityLogger", () => ({
   logActivity: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("./mondaySyncService", () => ({
+  pushUpdate: jest.fn().mockResolvedValue(undefined),
+  isMondayConfigured: () => false,
+}));
 
 const db = require("../db");
 const { logActivity } = require("../utils/activityLogger");
+const mondaySyncService = require("./mondaySyncService");
 const {
   selectResult,
   insertResult,
+  updateResult,
   deleteResult,
 } = require("../test/mockDb");
 const service = require("./workReqScheduleService");
 
+// Base work_req fixture. Default shape is `unassigned` + `assignedTo=null` so
+// the createLinkedEvent happy path triggers the auto-assign branch by default.
+// monday_item_id defaults to null so the happy path does NOT also fire Monday
+// sync by default — the dedicated auto-assign-with-monday test overrides it.
+// Override status/assignedTo per-test for the no-clobber cases.
 const WORK_REQ_ROW = {
   id: 42,
   referenceNumber: "WR-2026-0042",
   actionRequired: "Replace fern",
+  status: "unassigned",
+  assignedTo: null,
+  monday_item_id: null,
 };
 
 const ACTIVE_EMPLOYEE = { id: 7 };
@@ -157,33 +171,51 @@ describe("createLinkedEvent", () => {
     details: "Bring the soil.",
   };
 
-  function mockSuccessfulCreate() {
-    db.query
-      // 1. work req lookup
-      .mockResolvedValueOnce(selectResult([WORK_REQ_ROW]))
-      // 2. employee lookup
+  // Canonical connection mock for this project — mirrors the pattern in
+  // apps/api/src/routes/reqs.routes.test.js (DELETE /reqs/:id txn tests).
+  // conn.query is the transactional spy; the post-commit getLinkedEventById
+  // read stays on db.query (the pool).
+  function setupConnMock() {
+    const conn = {
+      beginTransaction: jest.fn().mockResolvedValue(undefined),
+      commit: jest.fn().mockResolvedValue(undefined),
+      rollback: jest.fn().mockResolvedValue(undefined),
+      release: jest.fn(),
+      query: jest.fn(),
+    };
+    db.getConnection = jest.fn().mockResolvedValue(conn);
+    return conn;
+  }
+
+  // Full happy auto-assign path:
+  //   conn.query: [SELECT work_req FOR UPDATE, SELECT employee, INSERT event, UPDATE work_req]
+  //   db.query  : [SELECT getLinkedEventById]
+  function mockSuccessfulCreate({ workReqRow = WORK_REQ_ROW } = {}) {
+    const conn = setupConnMock();
+    conn.query
+      .mockResolvedValueOnce(selectResult([workReqRow]))
       .mockResolvedValueOnce(selectResult([ACTIVE_EMPLOYEE]))
-      // 3. INSERT
       .mockResolvedValueOnce(insertResult(101))
-      // 4. getLinkedEventById
-      .mockResolvedValueOnce(
-        selectResult([
-          {
-            id: 101,
-            title: "WR-2026-0042 — Replace fern",
-            start_time: "2026-04-15 09:00:00",
-            end_time: "2026-04-15 11:00:00",
-            employee_id: 7,
-            work_req_id: 42,
-            event_type: "request",
-            employee_name: "Magnus",
-          },
-        ]),
-      );
+      .mockResolvedValueOnce(updateResult(1));
+    db.query.mockResolvedValueOnce(
+      selectResult([
+        {
+          id: 101,
+          title: "WR-2026-0042 — Replace fern",
+          start_time: "2026-04-15 09:00:00",
+          end_time: "2026-04-15 11:00:00",
+          employee_id: 7,
+          work_req_id: 42,
+          event_type: "request",
+          employee_name: "Magnus",
+        },
+      ]),
+    );
+    return conn;
   }
 
   it("creates the event on a happy path", async () => {
-    mockSuccessfulCreate();
+    const conn = mockSuccessfulCreate();
 
     const result = await service.createLinkedEvent({
       workReqId: 42,
@@ -197,15 +229,19 @@ describe("createLinkedEvent", () => {
       work_req_id: 42,
     });
 
-    // Verify the INSERT query hardcoded event_type='request'
-    const insertCall = db.query.mock.calls[2];
+    // Verify the INSERT query hardcoded event_type='request' (conn.query call #3)
+    const insertCall = conn.query.mock.calls[2];
     expect(insertCall[0]).toMatch(
       /INSERT INTO schedule_events[\s\S]+VALUES.*'request'/,
     );
-    // Title derived from reference + action
     expect(insertCall[1][0]).toBe("WR-2026-0042 — Replace fern");
-    // work_req_id bound correctly
     expect(insertCall[1][4]).toBe(42);
+
+    // Transaction lifecycle
+    expect(conn.beginTransaction).toHaveBeenCalledTimes(1);
+    expect(conn.commit).toHaveBeenCalledTimes(1);
+    expect(conn.rollback).not.toHaveBeenCalled();
+    expect(conn.release).toHaveBeenCalledTimes(1);
   });
 
   it("fires the activity log on success", async () => {
@@ -233,6 +269,9 @@ describe("createLinkedEvent", () => {
   });
 
   it("rejects invalid payload with VALIDATION_ERROR", async () => {
+    // Validation errors short-circuit before opening a connection
+    db.getConnection = jest.fn();
+
     await expect(
       service.createLinkedEvent({
         workReqId: 42,
@@ -242,22 +281,29 @@ describe("createLinkedEvent", () => {
       statusCode: 400,
       code: "VALIDATION_ERROR",
     });
-    // Did not touch the DB
+    expect(db.getConnection).not.toHaveBeenCalled();
     expect(db.query).not.toHaveBeenCalled();
   });
 
   it("returns 404 WORK_REQ_NOT_FOUND when the work request does not exist", async () => {
-    db.query.mockResolvedValueOnce(selectResult([]));
+    const conn = setupConnMock();
+    conn.query.mockResolvedValueOnce(selectResult([]));
+
     await expect(
       service.createLinkedEvent({ workReqId: 999, body: validBody }),
     ).rejects.toMatchObject({
       statusCode: 404,
       code: "WORK_REQ_NOT_FOUND",
     });
+
+    expect(conn.rollback).toHaveBeenCalledTimes(1);
+    expect(conn.commit).not.toHaveBeenCalled();
+    expect(conn.release).toHaveBeenCalledTimes(1);
   });
 
   it("returns 400 EMPLOYEE_NOT_FOUND when the employee does not exist", async () => {
-    db.query
+    const conn = setupConnMock();
+    conn.query
       .mockResolvedValueOnce(selectResult([WORK_REQ_ROW]))
       .mockResolvedValueOnce(selectResult([])); // employee lookup returns zero
 
@@ -270,12 +316,16 @@ describe("createLinkedEvent", () => {
       statusCode: 400,
       code: "EMPLOYEE_NOT_FOUND",
     });
+
+    expect(conn.rollback).toHaveBeenCalledTimes(1);
+    expect(conn.commit).not.toHaveBeenCalled();
   });
 
   it("returns 400 EMPLOYEE_NOT_FOUND when the employee is inactive", async () => {
     // Inactive employee is filtered out by "AND status = 'Active'" in the
     // SELECT — the service sees an empty result set, same as 'not found'.
-    db.query
+    const conn = setupConnMock();
+    conn.query
       .mockResolvedValueOnce(selectResult([WORK_REQ_ROW]))
       .mockResolvedValueOnce(selectResult([]));
 
@@ -291,20 +341,21 @@ describe("createLinkedEvent", () => {
   });
 
   it("skips the employee check when employee_id is null", async () => {
-    db.query
+    const conn = setupConnMock();
+    conn.query
       .mockResolvedValueOnce(selectResult([WORK_REQ_ROW]))
-      // NO employee lookup
-      .mockResolvedValueOnce(insertResult(102))
-      .mockResolvedValueOnce(
-        selectResult([
-          {
-            id: 102,
-            employee_id: null,
-            work_req_id: 42,
-            event_type: "request",
-          },
-        ]),
-      );
+      // NO employee lookup, NO auto-assign (employee_id is null)
+      .mockResolvedValueOnce(insertResult(102));
+    db.query.mockResolvedValueOnce(
+      selectResult([
+        {
+          id: 102,
+          employee_id: null,
+          work_req_id: 42,
+          event_type: "request",
+        },
+      ]),
+    );
 
     const result = await service.createLinkedEvent({
       workReqId: 42,
@@ -312,17 +363,20 @@ describe("createLinkedEvent", () => {
     });
 
     expect(result.employee_id).toBeNull();
-    // work req lookup + INSERT + getLinkedEventById = 3 calls, no employee lookup
-    expect(db.query).toHaveBeenCalledTimes(3);
+    // conn: SELECT work_req + INSERT = 2 calls (no employee lookup, no UPDATE)
+    expect(conn.query).toHaveBeenCalledTimes(2);
+    // pool: getLinkedEventById = 1 call
+    expect(db.query).toHaveBeenCalledTimes(1);
+    expect(conn.commit).toHaveBeenCalledTimes(1);
   });
 
   it("derives the title from the reference and action", async () => {
-    mockSuccessfulCreate();
+    const conn = mockSuccessfulCreate();
     await service.createLinkedEvent({
       workReqId: 42,
       body: validBody,
     });
-    const insertCall = db.query.mock.calls[2];
+    const insertCall = conn.query.mock.calls[2];
     expect(insertCall[1][0]).toBe("WR-2026-0042 — Replace fern");
   });
 
@@ -334,6 +388,237 @@ describe("createLinkedEvent", () => {
     });
     // 60-char slice + ellipsis
     expect(title).toMatch(/^WR-2026-0042 — a{59}…$/);
+  });
+
+  // =========================================================================
+  // Auto-assign coupling (schedule-assign-unify plan — Step 4)
+  // =========================================================================
+
+  it("auto-assigns the work request when employee provided and WR is unassigned", async () => {
+    const conn = mockSuccessfulCreate();
+
+    await service.createLinkedEvent({
+      workReqId: 42,
+      body: validBody,
+      req: reqFor(),
+    });
+
+    // The UPDATE is conn.query call #4 (after work_req SELECT, employee SELECT, INSERT)
+    const updateCall = conn.query.mock.calls[3];
+    expect(updateCall[0]).toMatch(
+      /UPDATE work_reqs SET assignedTo = \?, status = 'assigned'/,
+    );
+    expect(updateCall[1]).toEqual([7, 42]);
+    expect(conn.commit).toHaveBeenCalledTimes(1);
+    expect(conn.rollback).not.toHaveBeenCalled();
+
+    // Flush the fire-and-forget activity log
+    await Promise.resolve();
+
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "work_req.auto_assigned",
+        targetType: "work_req",
+        targetId: 42,
+        metadata: expect.objectContaining({
+          from_status: "unassigned",
+          to_status: "assigned",
+          assigned_to: 7,
+          trigger: "schedule_event_create",
+          schedule_event_id: 101,
+        }),
+      }),
+    );
+  });
+
+  it("does NOT auto-assign when the work request is already assigned", async () => {
+    const alreadyAssigned = {
+      ...WORK_REQ_ROW,
+      status: "assigned",
+      assignedTo: 5,
+    };
+    const conn = setupConnMock();
+    conn.query
+      .mockResolvedValueOnce(selectResult([alreadyAssigned]))
+      .mockResolvedValueOnce(selectResult([ACTIVE_EMPLOYEE]))
+      .mockResolvedValueOnce(insertResult(101));
+    db.query.mockResolvedValueOnce(
+      selectResult([
+        { id: 101, employee_id: 7, work_req_id: 42, event_type: "request" },
+      ]),
+    );
+
+    await service.createLinkedEvent({
+      workReqId: 42,
+      body: validBody,
+      req: reqFor(),
+    });
+
+    // No UPDATE — only 3 conn.query invocations (SELECT wr, SELECT emp, INSERT)
+    expect(conn.query).toHaveBeenCalledTimes(3);
+    expect(
+      conn.query.mock.calls.every((c) => !/UPDATE work_reqs/.test(c[0])),
+    ).toBe(true);
+    expect(conn.commit).toHaveBeenCalledTimes(1);
+
+    await Promise.resolve();
+
+    const calls = logActivity.mock.calls;
+    expect(calls.some((c) => c[0].action === "schedule.request.create")).toBe(
+      true,
+    );
+    expect(calls.some((c) => c[0].action === "work_req.auto_assigned")).toBe(
+      false,
+    );
+  });
+
+  it("does NOT auto-assign when employee_id is null on the event", async () => {
+    const conn = setupConnMock();
+    conn.query
+      .mockResolvedValueOnce(selectResult([WORK_REQ_ROW]))
+      .mockResolvedValueOnce(insertResult(102));
+    db.query.mockResolvedValueOnce(
+      selectResult([
+        { id: 102, employee_id: null, work_req_id: 42, event_type: "request" },
+      ]),
+    );
+
+    await service.createLinkedEvent({
+      workReqId: 42,
+      body: { ...validBody, employee_id: null },
+      req: reqFor(),
+    });
+
+    expect(conn.query).toHaveBeenCalledTimes(2);
+    expect(
+      conn.query.mock.calls.every((c) => !/UPDATE work_reqs/.test(c[0])),
+    ).toBe(true);
+
+    await Promise.resolve();
+
+    const calls = logActivity.mock.calls;
+    expect(calls.some((c) => c[0].action === "work_req.auto_assigned")).toBe(
+      false,
+    );
+  });
+
+  it("rolls back the transaction when the auto-assign UPDATE fails", async () => {
+    const conn = setupConnMock();
+    conn.query
+      .mockResolvedValueOnce(selectResult([WORK_REQ_ROW]))
+      .mockResolvedValueOnce(selectResult([ACTIVE_EMPLOYEE]))
+      .mockResolvedValueOnce(insertResult(101))
+      .mockRejectedValueOnce(new Error("simulated UPDATE failure"));
+
+    await expect(
+      service.createLinkedEvent({
+        workReqId: 42,
+        body: validBody,
+        req: reqFor(),
+      }),
+    ).rejects.toThrow("simulated UPDATE failure");
+
+    expect(conn.rollback).toHaveBeenCalledTimes(1);
+    expect(conn.commit).not.toHaveBeenCalled();
+    expect(conn.release).toHaveBeenCalledTimes(1);
+
+    await Promise.resolve();
+
+    // Both activity logs fire AFTER commit — neither should have been emitted
+    expect(logActivity).not.toHaveBeenCalled();
+  });
+
+  it("mirrors the status transition to Monday when auto-assign fires on a linked WR", async () => {
+    const linkedRow = { ...WORK_REQ_ROW, monday_item_id: "999888" };
+    mockSuccessfulCreate({ workReqRow: linkedRow });
+
+    await service.createLinkedEvent({
+      workReqId: 42,
+      body: validBody,
+      req: reqFor(),
+    });
+
+    // Flush the fire-and-forget IIFE
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mondaySyncService.pushUpdate).toHaveBeenCalledTimes(1);
+    expect(mondaySyncService.pushUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 42,
+        monday_item_id: "999888",
+        status: "assigned",
+      }),
+    );
+  });
+
+  it("does NOT call Monday pushUpdate when the WR has no monday_item_id", async () => {
+    mockSuccessfulCreate();
+
+    await service.createLinkedEvent({
+      workReqId: 42,
+      body: validBody,
+      req: reqFor(),
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mondaySyncService.pushUpdate).not.toHaveBeenCalled();
+  });
+
+  it("does NOT call Monday pushUpdate when auto-assign did not fire", async () => {
+    // Already-assigned WR — no auto-assign, so no Monday push even if linked
+    const alreadyAssigned = {
+      ...WORK_REQ_ROW,
+      status: "assigned",
+      assignedTo: 5,
+      monday_item_id: "999888",
+    };
+    const connAlreadyAssigned = setupConnMock();
+    connAlreadyAssigned.query
+      .mockResolvedValueOnce(selectResult([alreadyAssigned]))
+      .mockResolvedValueOnce(selectResult([ACTIVE_EMPLOYEE]))
+      .mockResolvedValueOnce(insertResult(101));
+    db.query.mockResolvedValueOnce(
+      selectResult([
+        { id: 101, employee_id: 7, work_req_id: 42, event_type: "request" },
+      ]),
+    );
+
+    await service.createLinkedEvent({
+      workReqId: 42,
+      body: validBody,
+      req: reqFor(),
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mondaySyncService.pushUpdate).not.toHaveBeenCalled();
+  });
+
+  it("locks the work_req row with FOR UPDATE inside the transaction", async () => {
+    const conn = mockSuccessfulCreate();
+
+    await service.createLinkedEvent({
+      workReqId: 42,
+      body: validBody,
+      req: reqFor(),
+    });
+
+    // The first conn.query call is the work_req SELECT, and it must include
+    // FOR UPDATE. Running this on the pool (db.query) instead would lose the
+    // row lock — the test must also confirm the call happened on conn.
+    const workReqSelectCall = conn.query.mock.calls[0];
+    expect(workReqSelectCall[0]).toMatch(/FOR UPDATE/);
+    expect(workReqSelectCall[1]).toEqual([42]);
+
+    // The pool is only used for the post-commit getLinkedEventById read
+    expect(db.query).toHaveBeenCalledTimes(1);
+    expect(db.query.mock.calls[0][0]).toMatch(
+      /SELECT[\s\S]+FROM schedule_events/,
+    );
   });
 });
 

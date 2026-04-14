@@ -64,20 +64,18 @@ export default function LinkedScheduleList({
           </div>
           <div className="mt-3 border-t border-border-soft/60" />
           <p className="mt-3 line-clamp-2 text-sm theme-copy">
-            {event.details || (
-              <span className="italic">No details</span>
-            )}
+            {event.details || <span className="italic">No details</span>}
           </p>
           {!isCompleted && onUnschedule ? (
             <div className="mt-3 flex justify-end">
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
                 onClick={() => onUnschedule(event.id)}
                 disabled={unscheduling === event.id}
                 aria-label={buildUnscheduleLabel(event)}
               >
-                {unscheduling === event.id ? "Unscheduling…" : "Unschedule →"}
+                {unscheduling === event.id ? "Unscheduling…" : "Unschedule"}
               </Button>
             </div>
           ) : null}
