@@ -26,6 +26,20 @@ const REQ_LIMITS = {
 
 const EMPTY_INITIAL = {};
 
+// Shared select styling — native browser arrow is hidden and replaced with a
+// custom chevron so text can be truncated cleanly on narrow columns.
+// `truncate` + `appearance-none` + `pr-10` reserves room so long option labels
+// (e.g. "Shorter than 2 feet") get an ellipsis instead of overlapping the arrow.
+const SELECT_CLASS =
+  "w-full truncate appearance-none rounded-xl border border-border-soft bg-white py-2.5 pl-3 pr-10 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40";
+const SELECT_STYLE = {
+  backgroundImage:
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='1 1 6 6 11 1'/%3E%3C/svg%3E\")",
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "right 0.875rem center",
+  backgroundSize: "12px 8px",
+};
+
 /**
  * Shared work request form used by both the create page and the edit page.
  *
@@ -279,11 +293,6 @@ export default function WorkRequestForm({
                   className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
                   required
                 />
-                {mode === "create" ? (
-                  <span className="theme-copy mt-1 text-xs">
-                    Pulled from the signed-in employee account.
-                  </span>
-                ) : null}
               </Field>
               <Field label="Account" required>
                 <input
@@ -313,16 +322,8 @@ export default function WorkRequestForm({
                   placeholder="123 Sesame St."
                   className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40 placeholder:text-muted"
                 />
-                <span className="theme-copy mt-1 text-xs">
-                  Browser autofill works now. Google Places autocomplete will
-                  turn on when `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is set.
-                </span>
               </Field>
-              <Field
-                label="Action Required"
-                required
-                className="md:col-span-2"
-              >
+              <Field label="Action Required" required className="md:col-span-2">
                 <input
                   name="actionRequired"
                   defaultValue={initialValues.actionRequired || ""}
@@ -378,7 +379,8 @@ export default function WorkRequestForm({
                       ? initialValues.plantSize || ""
                       : initialValues.plantSize || "3 Gal"
                   }
-                  className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
+                  className={SELECT_CLASS}
+                  style={SELECT_STYLE}
                 >
                   {mode === "edit" && !initialValues.plantSize ? (
                     <option value="">— not set —</option>
@@ -397,7 +399,8 @@ export default function WorkRequestForm({
                       ? initialValues.plantHeight || ""
                       : initialValues.plantHeight || "Shorter than 2 feet"
                   }
-                  className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
+                  className={SELECT_CLASS}
+                  style={SELECT_STYLE}
                 >
                   {mode === "edit" && !initialValues.plantHeight ? (
                     <option value="">— not set —</option>
@@ -450,7 +453,8 @@ export default function WorkRequestForm({
                       ? initialValues.lighting || ""
                       : initialValues.lighting || "Medium"
                   }
-                  className="rounded-xl border border-border-soft bg-white px-3 py-2.5 text-gray-900 outline-none focus:ring-2 focus:ring-brand/40"
+                  className={SELECT_CLASS}
+                  style={SELECT_STYLE}
                 >
                   {mode === "edit" && !initialValues.lighting ? (
                     <option value="">— not set —</option>
@@ -529,7 +533,9 @@ export default function WorkRequestForm({
                 <>
                   <li>1. Confirm the account and work type.</li>
                   <li>2. Add plant details only when they affect execution.</li>
-                  <li>3. Include notes or a photo when extra context matters.</li>
+                  <li>
+                    3. Include notes or a photo when extra context matters.
+                  </li>
                 </>
               )}
             </ul>
@@ -572,7 +578,8 @@ export default function WorkRequestForm({
               ? mode === "edit"
                 ? "Saving..."
                 : "Submitting..."
-              : submitLabel || (mode === "edit" ? "Save Changes" : "Submit REQ")}
+              : submitLabel ||
+                (mode === "edit" ? "Save Changes" : "Submit REQ")}
           </Button>
         </div>
       </div>
