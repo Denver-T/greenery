@@ -5,6 +5,40 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-14 — feat(web): unscheduled requests inbox and calendar sync badges
+
+**Commit:** `f065de3`
+
+### What changed
+
+Phase 4-5 of the `work-request-schedule-coupling` plan. Manager+ users now have a single-screen inbox for "what needs to be scheduled?", and the calendar surfaces work-request status + Monday sync state directly on request-type events.
+
+**New `/req/unscheduled` inbox page** — lists work_reqs that have no linked `schedule_events` row. Paginated, filterable by account name (debounced 300ms), "Assigned only", and "Show older" (bypasses the default 30-day server-side window). Four empty-state variants with explicit recovery paths: unfiltered empty (everything's scheduled), filter-matched empty (clear filters button), locked (Technician) with "Back to work requests" button, and error state (retry). Per-row "Schedule →" button opens the existing `ScheduleRequestDialog` inline with optimistic row removal on successful schedule — no full reload.
+
+**Race-free filter changes** — filter toggles reset `page` to 1 synchronously in the change handlers, batched with the filter state update in the same render. The initial implementation reset via a post-commit effect which caused a double-fetch race: React's render order meant one fetch fired with the OLD page number and the new filter, then a second fetch fired with `page=1`. Out-of-order responses could leave stale rows on screen. Caught during `/review` cycle 1, fixed inline.
+
+**All Schedule buttons disable while a dialog is open** — clicking a second row's Schedule while the first dialog is still mounted would reuse the mounted component and leak its form state across rows (same `scheduleTarget` variable, no re-mount, no state reset). Disabling every row's button whenever `scheduleTarget != null` rules out the bug without needing a `key` prop hack.
+
+**Routes + Sidebar** — `/req/unscheduled` added to the static `ROUTES` list before `/req` so pathname resolution hits the exact match. Sidebar inserts a Manager+ "Not Yet Scheduled" nav item after "Work Requests" in the Requests section; description text matches the page subtitle ("Work requests waiting to be placed on the calendar") so nav hover and page header echo.
+
+**Calendar page enhancement** — `fetchScheduleRows` now carries Phase 1.6's joined `work_req_*` metadata through to the local entry shape. Request-type event cards render a `SyncStatusBadge` (size `sm`) and a monospace reference chip with the friendly-formatted work_req status (`in_progress` → "In progress" via a `WORK_REQ_STATUS_LABELS` map). Custom events render unchanged. The existing "Open request" button on the event modal already linked to `/req/:id` — Phase 5.1 verification only.
+
+**Tests** — 9 new inbox-page tests (locked state, row rendering, empty state, dialog opens from row click, all-row-button disable during dialog, filter forwarding, pagination visibility, pagination click refetches with `page=2`, debounced search). Web tests 84/84 (was 75), lint clean, build clean, 16 routes.
+
+### Why
+
+Phase 2-3 (Chunk B) gave managers the ability to schedule a work request from its detail page, but required them to already know which work request needed scheduling. The inbox closes that gap — it's the answer to "what's on my plate today?" in dispatch terms. Combined with the calendar card enhancement, a manager can now see at a glance both "what needs to be scheduled" and "what's scheduled but not yet synced to Monday," without visiting the detail page.
+
+### Lessons learned
+
+- **React effect chains hide race conditions easily.** The filter-change double-fetch race only surfaces on skeptical re-reading of the useEffect dependencies. Unit tests didn't catch it (each test mocks fetchApi statically, so out-of-order responses are invisible). Rule going forward: when a state update triggers another state update via an effect, AND both feed the same network query, reset synchronously in the handler — don't chain through effects.
+- **`/review` caught a second "lazy" deferral pattern.** I initially noted the double-fetch race as a 🟡 Important finding but would have been tempted to defer it because "the second fetch is always the correct one anyway." The principle locked in earlier this session (fix minor issues inline) extended naturally to this: "fix race conditions that might produce the right answer today but can't be relied on" — the right fix was the synchronous reset, not a rationalization about response ordering.
+- **Friendly labels belong in the display layer.** The first version of the reference chip rendered `work_req_status` directly: `WR-2026-0042 · in_progress`. Ugly. One-line fix (a label map + `formatWorkReqStatus` helper) and the UI stops leaking DB enum values at users. This pattern generalizes — anywhere a raw enum reaches the UI, there should be a label map in between.
+- **Manager+ sidebar gating reuses the existing SuperAdmin pattern cleanly.** The sidebar already had one role-gated item (SuperAdmin → Super Admin link). Extending it for Manager+ was symmetric: check the user's permissionLevel against a set, splice the item into the right section if it passes. No new "role-aware nav" abstraction needed. Sometimes the right pattern is the one that's already there.
+- **Optimistic row removal on successful schedule is tiny but feels instant.** When a manager clicks Schedule → submits the dialog → sees the row fade out immediately vs. waits for a re-fetch of the inbox. The optimistic path is 3 lines (`setRows(prev => prev.filter(...)); setTotalCount(c => c - 1)`) and transforms the feel of the inbox from "I'm filing paperwork" to "I'm working through a list." Small UX detail, large perceived-speed payoff.
+
+---
+
 ## 2026-04-13 — feat(web): schedule dialog and linked schedule list on req detail
 
 **Commits:** `ccb4893` `5ccf5cf`
