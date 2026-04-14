@@ -10,9 +10,15 @@ import SyncStatusBadge from "@/components/SyncStatusBadge";
 import DeleteWorkRequestDialog from "@/components/DeleteWorkRequestDialog";
 import ScheduleRequestDialog from "@/components/ScheduleRequestDialog";
 import LinkedScheduleList from "@/components/LinkedScheduleList";
+import MarkCompleteDialog from "@/components/MarkCompleteDialog";
 
 const EDITOR_LEVELS = new Set(["Manager", "Administrator", "SuperAdmin"]);
 const DELETER_LEVELS = new Set(["Administrator", "SuperAdmin"]);
+// Mark Complete is only meaningful for in-flight work. 'completed' is a
+// no-op and 'cancelled' is terminal — jumping a cancelled request to
+// completed would bypass the cancel decision. 'unassigned' would skip the
+// whole assign/in-progress lifecycle in one click.
+const MARK_COMPLETABLE_STATUSES = new Set(["assigned", "in_progress"]);
 
 export default function WorkRequestDetailPage({ params }) {
   // Next.js 15+: params is a Promise, unwrap with React.use()
@@ -25,6 +31,7 @@ export default function WorkRequestDetailPage({ params }) {
   const [error, setError] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [markCompleteOpen, setMarkCompleteOpen] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [unscheduling, setUnscheduling] = useState(null);
   // Schedule-section errors are kept separate from the page-level `error`
@@ -74,6 +81,19 @@ export default function WorkRequestDetailPage({ params }) {
   async function handleDelete() {
     await fetchApi(`/reqs/${id}`, { method: "DELETE" });
     router.push("/req/list");
+  }
+
+  async function handleMarkComplete({ autoCloseScheduleEvents }) {
+    await fetchApi(`/reqs/${id}`, {
+      method: "PUT",
+      body: { status: "completed", autoCloseScheduleEvents },
+    });
+    // Reload first, then unmount the dialog — this way the dialog's
+    // `submitting` spinner stays visible through the reload, and the page
+    // re-renders with the new status in the same tick the dialog
+    // disappears. Reversed order caused a flash of stale state.
+    await load();
+    setMarkCompleteOpen(false);
   }
 
   // Open the dialog immediately, fire the /employees fetch in the background
@@ -135,7 +155,8 @@ export default function WorkRequestDetailPage({ params }) {
               ← Back to directory
             </Link>
             <h2 className="mt-3 truncate text-2xl font-black tracking-tight text-foreground">
-              {workReq?.referenceNumber || (loading ? "Loading…" : "Work Request")}
+              {workReq?.referenceNumber ||
+                (loading ? "Loading…" : "Work Request")}
             </h2>
             <p className="theme-copy mt-2 max-w-2xl text-sm leading-6">
               {workReq?.account
@@ -152,6 +173,15 @@ export default function WorkRequestDetailPage({ params }) {
               />
               {canEdit || canDelete ? (
                 <div className="flex items-center gap-2">
+                  {canEdit && MARK_COMPLETABLE_STATUSES.has(workReq.status) ? (
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onClick={() => setMarkCompleteOpen(true)}
+                    >
+                      Mark Complete
+                    </Button>
+                  ) : null}
                   {canEdit ? (
                     <Button
                       href={`/req/${id}/edit`}
@@ -193,7 +223,8 @@ export default function WorkRequestDetailPage({ params }) {
                   <h3 className="text-sm font-black uppercase tracking-[0.16em] text-foreground">
                     Linked Schedule
                   </h3>
-                  {workReq.scheduleEvents && workReq.scheduleEvents.length > 0 ? (
+                  {workReq.scheduleEvents &&
+                  workReq.scheduleEvents.length > 0 ? (
                     <span className="theme-tag rounded-full px-2.5 py-0.5 text-xs font-semibold">
                       {workReq.scheduleEvents.length === 1
                         ? "1 event"
@@ -249,6 +280,14 @@ export default function WorkRequestDetailPage({ params }) {
           onScheduled={handleScheduled}
         />
       ) : null}
+
+      {markCompleteOpen && workReq ? (
+        <MarkCompleteDialog
+          workReq={workReq}
+          onClose={() => setMarkCompleteOpen(false)}
+          onConfirm={handleMarkComplete}
+        />
+      ) : null}
     </>
   );
 }
@@ -259,7 +298,10 @@ function DetailBody({ workReq }) {
       <section className="rounded-card border border-border-soft bg-surface p-6 shadow-soft">
         <DetailSection title="Core Details">
           <DetailField label="Reference" value={workReq.referenceNumber} mono />
-          <DetailField label="Request Date" value={formatDate(workReq.requestDate)} />
+          <DetailField
+            label="Request Date"
+            value={formatDate(workReq.requestDate)}
+          />
           <DetailField label="Tech Name" value={workReq.techName} />
           <DetailField label="Account" value={workReq.account} />
           <DetailField label="Account Contact" value={workReq.accountContact} />
@@ -276,12 +318,18 @@ function DetailBody({ workReq }) {
         </DetailSection>
 
         <DetailSection title="Plant and Placement">
-          <DetailField label="Number of Plants" value={workReq.numberOfPlants} />
+          <DetailField
+            label="Number of Plants"
+            value={workReq.numberOfPlants}
+          />
           <DetailField label="Plant Wanted" value={workReq.plantWanted} />
           <DetailField label="Plant Replaced" value={workReq.plantReplaced} />
           <DetailField label="Plant Size" value={workReq.plantSize} />
           <DetailField label="Plant Height" value={workReq.plantHeight} />
-          <DetailField label="Planter Type & Size" value={workReq.planterTypeSize} />
+          <DetailField
+            label="Planter Type & Size"
+            value={workReq.planterTypeSize}
+          />
           <DetailField label="Planter Colour" value={workReq.planterColour} />
           <DetailField
             label="Staging Material"
@@ -295,7 +343,12 @@ function DetailBody({ workReq }) {
           <DetailField label="Method" value={workReq.method} />
           <DetailField label="Location" value={workReq.location} />
           <DetailField label="Due Date" value={formatDate(workReq.dueDate)} />
-          <DetailField label="Notes" value={workReq.notes} wide preserveNewlines />
+          <DetailField
+            label="Notes"
+            value={workReq.notes}
+            wide
+            preserveNewlines
+          />
         </DetailSection>
       </section>
 
@@ -357,9 +410,7 @@ function DetailBody({ workReq }) {
             <h3 className="text-sm font-black uppercase tracking-[0.16em] text-foreground">
               Attachment
             </h3>
-            <p className="theme-copy mt-2 text-xs">
-              {workReq.picturePath}
-            </p>
+            <p className="theme-copy mt-2 text-xs">{workReq.picturePath}</p>
           </section>
         ) : null}
       </aside>
@@ -380,7 +431,13 @@ function DetailSection({ title, children }) {
   );
 }
 
-function DetailField({ label, value, wide = false, mono = false, preserveNewlines = false }) {
+function DetailField({
+  label,
+  value,
+  wide = false,
+  mono = false,
+  preserveNewlines = false,
+}) {
   const display =
     value === null || value === undefined || value === "" ? "—" : String(value);
   return (
@@ -489,8 +546,8 @@ function DetailNotFound() {
     <div className="rounded-card border border-dashed border-border-soft bg-surface-warm p-10 text-center">
       <div className="theme-title text-lg font-black">Request not found</div>
       <p className="theme-copy mt-2 text-sm leading-6">
-        This work request may have been deleted. Return to the directory to
-        see what&apos;s available.
+        This work request may have been deleted. Return to the directory to see
+        what&apos;s available.
       </p>
       <div className="mt-4 flex justify-center">
         <Button href="/req/list" variant="primary" size="md">
