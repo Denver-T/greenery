@@ -5,6 +5,42 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-14 — fix(web): harden unscheduled inbox races and a11y per /review
+
+**Commit:** `76da046`
+
+### What changed
+
+Cycle-2 `/review` fixes against Chunk C (`f065de3`). Six findings — 3 🟡 Important + 3 🟢 Minor — all fixed inline, no deferrals.
+
+**Out-of-order fetch guard** — `loadPage` now tags every invocation with a monotonic `requestIdRef` counter and discards its own response in `try`/`catch`/`finally` if a newer call has started. Rapid filter toggles + keystrokes could otherwise let stale responses overwrite fresh rows. The commit message on `f065de3` claimed race-correctness but only addressed the page-reset race — out-of-order responses were untreated until now.
+
+**Page clamp on last-row schedule** — `handleScheduled` detects `rows.length === 1 && page > 1` before the optimistic removal and steps `page` back by one, which triggers a `queryString` refetch via the existing effect. Prior behavior: user scheduling the last row on page 2 got left staring at an empty "Page 2 of 1".
+
+**Ref-based rapid-click gate replaces `disabled` on row buttons** — the cycle-1 fix (`disabled={!!scheduleTarget}`) worked for the double-click race but broke dialog focus return: the row button was blurred mid-commit when `disabled` flipped to true, so `ScheduleRequestDialog`'s `previouslyFocusedRef = document.activeElement` captured `body` instead of the button, and focus on close dropped to document start. Replaced with a synchronous `scheduleTargetRef.current` guard in `openScheduleFor` that early-returns on a stale click without touching the button's DOM state. Focus now returns correctly to the opener on cancel/escape/backdrop. (Happy-path focus after a successful schedule still lands on `body` because the row unmounts — logged as a 🟢 minor for post-launch, strictly better than the cycle-1 state.)
+
+**Per-row `aria-label` on Schedule buttons** — every row now has `aria-label={`Schedule ${referenceNumber}`}` so screen-reader users can distinguish "Schedule WR-2026-0001" from "Schedule WR-2026-0002". Before this, all 25 row buttons had the same accessible name "Schedule →".
+
+**Calendar reference chip `text-[10px]` → `text-xs`** — the Chunk C diff introduced an arbitrary Tailwind font size in `calendar/page.js`, banned by `.claude/rules/components.md` ("zero arbitrary font sizes — all sizes from the defined type scale"). Swapped for the on-scale `text-xs`.
+
+**Locked-state test assertion was a no-op** — `expect(calls).not.toContain(expect.stringContaining("/reqs/unscheduled"))` never fails: `toContain` uses `Object.is` equality, which can never match an asymmetric matcher. The assertion passed regardless of whether the technician path fetched the inbox endpoint. Replaced with an explicit `.some()` check. This one is a reminder that tests can lie silently — a green check mark isn't always proof of coverage.
+
+**Two new regression tests** — one resolves two in-flight fetches in reverse order and asserts the stale payload doesn't overwrite the fresh rows; one pages to page 2, schedules the lonely row, and asserts the post-schedule refetch hits `page=1`. The cycle-1 "disables every row's Schedule button" test was replaced by a rapid-click regression test that fires two synchronous clicks and asserts only the first opens the dialog.
+
+### Why
+
+Every 🟡 Important finding fixed inline per the locked workflow rule. The out-of-order race and page-clamping bugs were real correctness issues — low-probability under normal use, but Friday is a live demo and "the inbox randomly shows stale rows under a fast click" is the kind of thing that gets noticed. The focus-return regression from the cycle-1 `disabled` fix was a new accessibility hole that the cycle-2 review caught before shipping.
+
+### Lessons learned
+
+- **A passing test isn't proof of coverage.** `expect(array).not.toContain(expect.stringContaining(...))` compiles, runs, and is always green, because `toContain` uses `Object.is` and asymmetric matchers never equal strings under `Object.is`. This is a Jest/Vitest API footgun. Rule of thumb: if an assertion mixes `toContain`/`toBe`/`toEqual` with an asymmetric matcher like `expect.stringContaining`, check the docs. For negative existence assertions on arrays of strings, prefer an explicit `.some()` or `.find()` with a manual predicate.
+- **`disabled` attribute is not a free defensive primitive.** Adding `disabled={busy}` to a button as a "just in case" race guard blurs the button mid-commit and silently breaks any focus-return logic that captures `document.activeElement` after the commit. Cycle-1 fix shipped with this bug because I only tested the click-through path, not the dialog-close-focus path. Lesson: when a button's `disabled` flips during the same commit that opens a modal, assume focus is lost and use a different gate (ref, early-return, aria-disabled). This now goes in the team feedback memory.
+- **React state reads are stale within a single handler tick.** `openScheduleFor` checking `scheduleTarget === null` before setting state doesn't actually guard rapid double-clicks — two back-to-back clicks both see the stale `null` because neither has committed yet. The synchronous `scheduleTargetRef.current` mirror is the idiomatic fix. This is a React 18 concurrent-mode-safe pattern — safer than reading from `useState` for deduplication purposes.
+- **Commit messages can overstate correctness.** Chunk C's original commit message said "filter changes reset page synchronously... to avoid a double-fetch race" — which was TRUE for the page-reset race it fixed but read like a general race-freeness claim. It wasn't. Out-of-order responses were a separate untreated race. Future lesson: when claiming race correctness, be specific about WHICH race and note which ones you did NOT address.
+- **Cycle-1 fixes can introduce cycle-2 bugs.** This is the first time this session a `/review` cycle 2 turned up a net-new finding (happy-path focus loss) that didn't exist in cycle 1 — the cycle-1 `disabled` fix improved the rapid-click guard but broke focus return. Cycle 2 caught it. The workflow rule "two cycles → stop and surface blocker" was tested and held: cycle 2 passed, so we proceed. Good guardrail.
+
+---
+
 ## 2026-04-14 — feat(web): unscheduled requests inbox and calendar sync badges
 
 **Commit:** `f065de3`
