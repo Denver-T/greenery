@@ -5,6 +5,35 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-14 — chunk E walkthrough polish (tech-name dropdown + calendar/unschedule fixes)
+
+**Commits:** `14c53bc` feat(web) tech-name dropdown, `2127d44` fix(web) calendar weekday keys / today overflow / unschedule button
+
+### What changed
+
+Two small but visible commits that landed during the Chunk E walkthrough of `work-request-schedule-coupling`. Both were driven by real problems the user hit while driving the feature in a browser — not speculative polish.
+
+**`14c53bc` — Tech Name is now an editable `<select>`.** The create-page field was a readonly text input prefilled from the signed-in user, and the edit-page field was an editable plain text input with a placeholder of "Magnus". Both read like duplicate assignee pickers. The field now fetches `/employees` once on mount and renders a required dropdown defaulting to blank in create mode. Edit mode preserves legacy `techName` values that are no longer in the active roster by surfacing them as a synthetic `<option>` at the top of the list, so a round-trip save can't silently clobber a historical value. Dropped the `currentEmployeeName` / `/auth/me` fetch from `req/page.js` since the signed-in-name prefill is gone.
+
+**`2127d44` — Three separate calendar/LinkedScheduleList fixes bundled.**
+- Calendar day cells were rendering a "Today" pill (`px-1.5 text-[10px]`) that overflowed the `aspect-square` cell at `md` viewports because the cell had no `overflow-hidden`. The pill was also duplicated information (the date digit already tells you "today"). Removed the indicator entirely — no dot, no pill — and kept `overflow-hidden` on the cell as defense-in-depth for any future absolute-positioned child.
+- Console was warning `Encountered two children with the same key, \`T\`` because the weekday header `["S","M","T","W","T","F","S"].map(d => <div key={d}>)` reuses letters. Keyed by stable day abbreviations (`sun`/`mon`/`tue`/…) with a `label` field for the displayed character.
+- `LinkedScheduleList`'s per-row Unschedule control was `variant="ghost"` with a `→` glyph. Read as clickable text, not a button. Upgraded to `variant="secondary"` (outlined brand) and dropped the glyph — now reads as a proper affordance.
+
+### Why
+
+Chunk E is the final VALIDATE pass of the work-request-schedule-coupling plan — manual browser walkthrough against a real MySQL + running API/web. Every issue in this commit was surfaced there by the user, not by running tests. The pre-commit review gate caught each before they could compound; fixing them inline (rather than deferring) kept the walkthrough productive.
+
+### Lessons learned
+
+- **A "readonly prefilled input" is a UX anti-pattern when the user mental-models it as editable.** The Tech Name field showed the signed-in user's name in a text box that looked editable but wasn't, and the submit path silently ignored any edits anyway (create mode pulled `currentEmployeeName` out of React state, never `fd.get("techName")`). Users don't trust silent fields. The dropdown fix surfaces the real shape — "pick from the roster" — and the field now reflects what actually gets persisted.
+- **`overflow-hidden` on `aspect-square` cells is cheap insurance.** The Today pill wasn't the only thing that could escape the cell — any future child with `px` padding on a narrow viewport would have the same bug. Setting `overflow-hidden` at the container level forecloses the whole class. This is one of the rare cases where "be defensive by default" beats "trust your layout math."
+- **`key={letter}` on `["S","M","T","W","T","F","S"]` is a bug trap that reads as clean code.** Static data → stable keys → looks fine. But React uses the key for reconciliation, and the double-T + double-S caused silent children duplication in dev mode (React warned but still rendered). Moral: key on *identity*, not *display value*. Even for seven constant cells.
+- **"Ghost" button variants read as links, not buttons.** The pre-launch convention of using `variant="ghost"` for tertiary/row-local actions made sense when the actions were nav-like ("View", "Details"). For a destructive-ish action like Unschedule, ghost was under-affording. The secondary variant is visually heavier and matches the user's mental model of "this is a button that does something to the row."
+- **Chunk E is doing real work.** The walkthrough wasn't a formality — it caught three visible defects in under 20 minutes that unit/integration tests would not have caught because they were all visual/interaction issues. Manual validation against a real browser remains load-bearing, even on a feature with 400+ automated tests.
+
+---
+
 ## 2026-04-14 — feat: Mark Complete + PUT /reqs/:id transaction + auto-close
 
 **Commits:** `786febb` feat(api), `044715e` feat(web)
