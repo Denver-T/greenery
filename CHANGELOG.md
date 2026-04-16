@@ -5,6 +5,56 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-16 — Azure production deploy (initial)
+
+**Commits (on `deploy/azure-initial` branch):** `80063fd` feat(api) upload dir + MySQL SSL configurable, `facd25b` ci Azure deploy workflows, `f35fc32` ci npm install for optional deps, `86ffa4d` ci regenerate lockfile for tailwind oxide.
+
+**Also in this window:** a publish-profile-based auth fallback (service principals blocked on the Azure for Students subscription) and manual seeding of the first SuperAdmin employee (`denvertimlick@gmail.com` → employees.id=1).
+
+### What changed — infra
+
+- Provisioned `greenery-rg` in `canadacentral` on the Azure for Students $100-credit subscription.
+- MySQL runs on a **self-managed Ubuntu 22.04 ARM64 VM** (`greenery-mysql-vm`, Standard_B2pls_v2, MySQL 8.0.45, public IP `20.104.245.29`). Managed Flexible Server was blocked on the Student tier — surfacing as a misleading "No available SKUs" error in every allowed region.
+- App Service plan B1 Linux (`greenery-plan`) hosts two web apps: `greenery-api` and `greenery-web`, both Node 22, Always On, with publish-profile-based deploys via `azure/webapps-deploy@v3`.
+- NSG on the VM: SSH (22) open for now, MySQL (3306) scoped to `AzureCloud` service tag. SSH tightening is post-launch.
+- GitHub Actions `deploy-api.yml` + `deploy-web.yml` workflows, `workflow_dispatch` only (no auto-deploy on push — matches Denver's manual-push pattern).
+
+### What changed — code
+
+- `apps/api/src/lib/env.js` — added `DB_SSL` + `UPLOAD_DIR` Zod schema entries.
+- `apps/api/src/db/index.js` — conditional SSL on the MySQL pool, built via a pool-config object before `createPool`.
+- `apps/api/src/routes/reqs.js` + `apps/api/src/app.js` — multer destination + static `/uploads` mount now read from `env.UPLOAD_DIR`. Dropped the now-unused `path` import from `app.js`.
+- `apps/api/.env.example` + `apps/web/.env.example` — documented new vars.
+- `apps/api/src/routes/mondayWebhook.test.js` — integration-test env mock picked up `UPLOAD_DIR` since `reqs.js` is required transitively and `fs.mkdirSync(undefined)` otherwise throws.
+
+### Smoke tests (all green)
+
+- `/health` 200 on `greenery-api.azurewebsites.net`
+- `/db-health` 200 proving App Service → VM MySQL connectivity
+- Firebase login works end-to-end against the deployed web app
+- Work request create with a photo → file lands at `/home/uploads/` and serves back via `https://greenery-api.azurewebsites.net/uploads/<file>.jpg` (content-type: image/jpeg)
+- Create → outbound Monday sync populates `monday_item_id` + `monday_synced_at` within seconds
+- Monday column edit → inbound webhook updates DB + web UI reflects the change
+- Schedule → schedule-assign-unify auto-assigns + logs `work_req.auto_assigned`; Mark Complete → auto-close deletes the schedule_event + logs `schedule.request.autoclose`
+- PIPEDA audit trail verified: 8 `activity_logs` rows across 5 action types on production MySQL
+
+### Known issues (deferred to post-launch)
+
+Logged in `DEPLOYMENT.md` — do not fix before Friday demo.
+
+### Lessons learned
+
+- **Azure for Students ≠ full Azure.** Two restrictions that bit us hard: managed MySQL Flexible Server isn't creatable on the Student subscription at all (error message lies: says "No available SKUs in this location" in every allowed region — actually a subscription-type restriction), and `az ad sp create-for-rbac` fails with "Insufficient privileges to complete the operation" because the Student tier doesn't grant directory permissions. The plan's `/deep-research` pass missed both because the public Azure docs don't distinguish Student tier limits from the general Free Account tier. Fallbacks: self-installed MySQL on an ARM VM (~$20/mo, same ballpark as managed), and publish-profile auth via `azure/webapps-deploy@v3` instead of service-principal `azure/login@v2`.
+- **"No available SKUs" and "SkuNotAvailable" are different errors with the same wording.** The `az vm create` flow with broken exception handling surfaced the generic wrapper "InvalidTemplateDeployment" but hid the real capacity error. Debugging required `--debug 2>&1 > file && grep 'SkuNotAvailable'` to find the truth. Azure CLI v2.83.0 additionally had a broken exception handler ("The content for this response was already consumed") — upgrading to 2.85.0 fixed the handler but not the underlying capacity messages. Future Azure diagnostics: always save `--debug` output to a file and grep for specific error codes, never trust the surfaced top-line error.
+- **ARM64 VM SKUs need ARM64 images.** `Standard_B2pls_v2` is Ampere ARM; pairing it with `Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:latest` (x86_64) fails with "Cannot create a VM of size 'Standard_B2pls_v2' because this VM size only supports a CPU Architecture of 'Arm64'". The fix is to use `22_04-lts-arm64` image URN. Doesn't affect MySQL — Ubuntu ARM has full MySQL 8 package support — but the VM-create step has to match archs explicitly.
+- **App Service now disables Basic Publishing Credentials by default.** Publish profiles use basic auth; the first deploy failed with "Publish profile is invalid" until we toggled `az resource update --resource-type basicPublishingCredentialsPolicies --set properties.allow=true` on both SCM and FTP endpoints for each app. This isn't documented prominently — added to DEPLOYMENT.md for future operators.
+- **npm optional-dependencies + cross-platform CI = lockfile trap.** Tailwind 4 uses `@tailwindcss/oxide` with platform-specific native binaries via npm `optionalDependencies`. When `package-lock.json` is generated on macOS (Denver's Mac) and `npm ci` runs on Ubuntu (GitHub Actions), the Linux binary entry isn't in the lockfile → `npm ci` refuses to install it → Next.js build fails loading `./src/app/globals.css`. The first attempted fix (`npm ci → npm install`) also failed because the lockfile stays authoritative for resolved versions. The working fix is `rm -f package-lock.json && npm install` in CI, which loses determinism but resolves optionals for the current platform. Longer-term: explicit `optionalDependencies` entries in `apps/web/package.json`, or commit a Linux lockfile for CI.
+- **App Service Node startup is slow on B1.** First cold start after deploy is 2–3 minutes for the Express API and 2–3 minutes for Next.js. Warmup probe succeeded at 141.7s on the first boot — near Azure's container-startup timeout. A re-deploy's first request returns a 45s timeout; by the second request the container is warm and serves fast. For the demo: hit the site ~3 min before walking anyone through it.
+- **Azure CLI shell state is lost between tool calls.** Working around this required a `.agents/.azure-secrets.local` file (gitignored) that every `az` command sources at the top. Not elegant, but a durable pattern for multi-step provisioning work across a long session.
+- **The `employees` table is the authoritative allowlist, not Firebase.** A Firebase sign-in without a matching `employees.email` row gives a valid ID token but every protected endpoint returns 401 ("auth token missing" in the UI) because `authMiddleware` can't find the employee to attach. For the demo we seeded the SuperAdmin row directly via SQL; the post-launch Option 1 invite flow (Admin SDK `createUser` + `employees` row in one transaction) closes this gap.
+
+---
+
 ## 2026-04-16 — fix(web): migrate remaining native selects to SelectChevron
 
 **Commit:** _pending_ fix(web): migrate remaining native selects to SelectChevron
