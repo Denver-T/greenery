@@ -17,11 +17,13 @@ jobs:
           cache: 'npm'
           cache-dependency-path: apps/web/package-lock.json
 
-      # Use `npm install` (not `npm ci`) so platform-specific optional
-      # native binaries like @tailwindcss/oxide-linux-x64-gnu resolve on
-      # the Linux runner. Lockfile was generated on macOS and doesn't
-      # include the Linux binary entry — `npm ci` refuses to install it.
-      - run: npm install
+      # Delete lockfile + reinstall. Tailwind 4 uses platform-specific
+      # native binaries (@tailwindcss/oxide-linux-x64-gnu on Linux CI).
+      # The macOS-generated lockfile doesn't include the Linux binary
+      # entry (npm optional-deps bug), so `npm ci` and even `npm install`
+      # against the existing lockfile fail. Rebuilding from scratch lets
+      # npm re-resolve optional deps for the current platform.
+      - run: rm -f package-lock.json && npm install
 
       - name: Build (bakes NEXT_PUBLIC_* into client bundle)
         env:
