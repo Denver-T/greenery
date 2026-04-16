@@ -7,6 +7,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchApi } from "@/lib/api/api";
+import SelectChevron from "@/components/SelectChevron";
 
 const PERMISSION_OPTIONS = ["Administrator", "SuperAdmin"];
 
@@ -195,43 +196,49 @@ export default function SuperAdminPage() {
                   <span className="text-sm font-bold text-gray-700">
                     Employee
                   </span>
-                  <select
-                    className="rounded-xl border border-border-soft bg-white px-3 py-2.5"
-                    value={promotion.employeeId}
-                    onChange={(e) =>
-                      setPromotion((current) => ({
-                        ...current,
-                        employeeId: e.target.value,
-                      }))
-                    }
-                  >
-                    <option value="">Select employee...</option>
-                    {employees.map((employee) => (
-                      <option key={employee.id} value={employee.id}>
-                        {employee.name} ({employee.permissionLevel})
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      className="w-full truncate appearance-none rounded-xl border border-border-soft bg-white pl-3 pr-10 py-2.5"
+                      value={promotion.employeeId}
+                      onChange={(e) =>
+                        setPromotion((current) => ({
+                          ...current,
+                          employeeId: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Select employee...</option>
+                      {employees.map((employee) => (
+                        <option key={employee.id} value={employee.id}>
+                          {employee.name} ({employee.permissionLevel})
+                        </option>
+                      ))}
+                    </select>
+                    <SelectChevron />
+                  </div>
                 </label>
 
                 <label className="grid gap-1">
                   <span className="text-sm font-bold text-gray-700">
                     Permission Level
                   </span>
-                  <select
-                    className="rounded-xl border border-border-soft bg-white px-3 py-2.5"
-                    value={promotion.permissionLevel}
-                    onChange={(e) =>
-                      setPromotion((current) => ({
-                        ...current,
-                        permissionLevel: e.target.value,
-                      }))
-                    }
-                  >
-                    {PERMISSION_OPTIONS.map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      className="w-full truncate appearance-none rounded-xl border border-border-soft bg-white pl-3 pr-10 py-2.5"
+                      value={promotion.permissionLevel}
+                      onChange={(e) =>
+                        setPromotion((current) => ({
+                          ...current,
+                          permissionLevel: e.target.value,
+                        }))
+                      }
+                    >
+                      {PERMISSION_OPTIONS.map((option) => (
+                        <option key={option}>{option}</option>
+                      ))}
+                    </select>
+                    <SelectChevron />
+                  </div>
                 </label>
               </div>
 

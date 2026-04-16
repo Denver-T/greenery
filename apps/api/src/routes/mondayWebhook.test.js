@@ -3,6 +3,7 @@ jest.mock("../lib/env", () => ({
   MONDAY_BOARD_ID: "8887438729",
   MONDAY_WEBHOOK_SECRET: undefined,
   MONDAY_API_VERSION: "2024-10",
+  UPLOAD_DIR: "/tmp",
 }));
 
 const express = require("express");
@@ -212,6 +213,10 @@ describe("integration: /monday/webhook on wired app", () => {
         MONDAY_WEBHOOK_SECRET: "i".repeat(64),
         MONDAY_API_VERSION: "2024-10",
         CORS_ORIGINS: "http://localhost:3000",
+        UPLOAD_DIR: "/tmp",
+        // ↑ Required by reqs.js multer destination + app.js static mount.
+        // The top-level jest.mock also sets it, but duplicating here makes
+        // the integration mock self-contained for future readers.
       }));
       jest.doMock("../../config/firebase", () => ({}));
       realApp = require("../app");

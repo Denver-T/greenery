@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { fetchApi } from "@/lib/api/api";
 import Button from "@/components/Button";
+import SelectChevron from "@/components/SelectChevron";
 
 const EMPLOYEE_NAME_LIMIT = 30;
 const EMPLOYEE_EMAIL_LIMIT = 45;
@@ -158,15 +159,18 @@ function EmployeeDetailModal({
 
               <label className="grid gap-1.5">
                 <span className="theme-title text-sm font-semibold">Role</span>
-                <select
-                  value={form.role}
-                  onChange={(event) => onChange("role", event.target.value)}
-                  className="rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
-                >
-                  {roleOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={form.role}
+                    onChange={(event) => onChange("role", event.target.value)}
+                    className="w-full appearance-none truncate rounded-2xl border border-border-soft bg-white py-3 pl-4 pr-10 text-sm"
+                  >
+                    {roleOptions.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                  <SelectChevron />
+                </div>
               </label>
 
               <label className="grid gap-1.5">
@@ -211,31 +215,37 @@ function EmployeeDetailModal({
                 <span className="theme-title text-sm font-semibold">
                   Status
                 </span>
-                <select
-                  value={form.status}
-                  onChange={(event) => onChange("status", event.target.value)}
-                  className="rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
-                >
-                  <option>Active</option>
-                  <option>Inactive</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={form.status}
+                    onChange={(event) => onChange("status", event.target.value)}
+                    className="w-full appearance-none truncate rounded-2xl border border-border-soft bg-white py-3 pl-4 pr-10 text-sm"
+                  >
+                    <option>Active</option>
+                    <option>Inactive</option>
+                  </select>
+                  <SelectChevron />
+                </div>
               </label>
 
               <label className="grid gap-1.5">
                 <span className="theme-title text-sm font-semibold">
                   Permission Level
                 </span>
-                <select
-                  value={form.permissionLevel}
-                  onChange={(event) =>
-                    onChange("permissionLevel", event.target.value)
-                  }
-                  className="rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
-                >
-                  {permissionOptions.map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={form.permissionLevel}
+                    onChange={(event) =>
+                      onChange("permissionLevel", event.target.value)
+                    }
+                    className="w-full appearance-none truncate rounded-2xl border border-border-soft bg-white py-3 pl-4 pr-10 text-sm"
+                  >
+                    {permissionOptions.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                  <SelectChevron />
+                </div>
               </label>
             </div>
           ) : (
@@ -567,17 +577,20 @@ export default function EmployeesPage() {
 
               <label className="grid min-w-0 gap-1.5">
                 <span className="theme-title text-sm font-semibold">Role</span>
-                <select
-                  className="min-w-0 rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
-                  value={form.role}
-                  onChange={(event) =>
-                    updateCreateField("role", event.target.value)
-                  }
-                >
-                  {getRoleOptions(form.role).map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
+                <div className="relative min-w-0">
+                  <select
+                    className="w-full min-w-0 appearance-none truncate rounded-2xl border border-border-soft bg-white py-3 pl-4 pr-10 text-sm"
+                    value={form.role}
+                    onChange={(event) =>
+                      updateCreateField("role", event.target.value)
+                    }
+                  >
+                    {getRoleOptions(form.role).map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                  <SelectChevron />
+                </div>
               </label>
 
               <label className="grid min-w-0 gap-1.5">
@@ -631,33 +644,41 @@ export default function EmployeesPage() {
                 <span className="theme-title text-sm font-semibold">
                   Status
                 </span>
-                <select
-                  className="min-w-0 rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
-                  value={form.status}
-                  onChange={(event) =>
-                    updateCreateField("status", event.target.value)
-                  }
-                >
-                  <option>Active</option>
-                  <option>Inactive</option>
-                </select>
+                <div className="relative min-w-0">
+                  <select
+                    className="w-full min-w-0 appearance-none truncate rounded-2xl border border-border-soft bg-white py-3 pl-4 pr-10 text-sm"
+                    value={form.status}
+                    onChange={(event) =>
+                      updateCreateField("status", event.target.value)
+                    }
+                  >
+                    <option>Active</option>
+                    <option>Inactive</option>
+                  </select>
+                  <SelectChevron />
+                </div>
               </label>
 
               <label className="grid min-w-0 gap-1.5">
                 <span className="theme-title text-sm font-semibold">
                   Permission Level
                 </span>
-                <select
-                  className="min-w-0 rounded-2xl border border-border-soft bg-white px-4 py-3 text-sm"
-                  value={form.permissionLevel}
-                  onChange={(event) =>
-                    updateCreateField("permissionLevel", event.target.value)
-                  }
-                >
-                  {getPermissionOptions(form.permissionLevel).map((option) => (
-                    <option key={option}>{option}</option>
-                  ))}
-                </select>
+                <div className="relative min-w-0">
+                  <select
+                    className="w-full min-w-0 appearance-none truncate rounded-2xl border border-border-soft bg-white py-3 pl-4 pr-10 text-sm"
+                    value={form.permissionLevel}
+                    onChange={(event) =>
+                      updateCreateField("permissionLevel", event.target.value)
+                    }
+                  >
+                    {getPermissionOptions(form.permissionLevel).map(
+                      (option) => (
+                        <option key={option}>{option}</option>
+                      ),
+                    )}
+                  </select>
+                  <SelectChevron />
+                </div>
               </label>
             </div>
 

@@ -5,9 +5,9 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const path = require("path");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpecs = require("../config/swagger");
+const env = require("./lib/env");
 
 const healthRoutes = require("./routes/health");
 const dbHealthRoutes = require("./routes/dbHealth");
@@ -62,7 +62,7 @@ const app = express();
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/uploads", express.static(env.UPLOAD_DIR));
 
 /**
  * API routes

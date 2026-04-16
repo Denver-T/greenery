@@ -5,6 +5,54 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-16 — fix(web): migrate remaining native selects to SelectChevron
+
+**Commit:** _pending_ fix(web): migrate remaining native selects to SelectChevron
+
+### What changed
+
+Five `<select>` elements across three pages were still rendering native browser chevrons because they had never been migrated to the shared `SelectChevron` + `appearance-none` pattern that `WorkRequestForm.js` and (post-`0b01e51`) `employees/page.js` already use:
+
+- `apps/web/src/app/(app)/calendar/page.js` — Visible to + Assigned person on the event create form
+- `apps/web/src/app/(app)/assigntasks/page.js` — Employee picker
+- `apps/web/src/app/(app)/superadmin/page.js` — Employee + Permission Level on the promotion form
+
+Each select was wrapped in a `relative` div, given `w-full truncate appearance-none` and `pl-3 pr-10` to reserve room for the overlay, then followed by `<SelectChevron />`. `SelectChevron` was added to each file's imports.
+
+### Why
+
+Cross-page visual consistency. The employees fix in `0b01e51` only addressed one of the four remaining offenders — the same root cause (form predates the shared component) was still present on calendar, assigntasks, and superadmin. Closes the visible regression while leaving a tracked tech-debt note that a shared `<Select>` wrapper component would prevent recurrence.
+
+### Lessons learned
+
+- **A "fix the symptom on this page" commit is rarely enough.** Pattern misses tend to be platform-wide. Grepping for `<select` across the entire app surfaced the other four offenders in one pass — should have been the closing step of `0b01e51`, not a separate session two days later.
+- **Surface fix vs root cause.** The deeper fix is a shared `<Select>` wrapper component so the pattern can't be re-broken by the next form author. Logged as post-launch tech debt — not Friday-blocking, but worth doing before the next form lands.
+- **Tailwind `p-3` shorthand bites when migrating to chevron pattern.** `assigntasks` had `p-3` (all sides), and the migration needed `pl-3 pr-10 py-3` to keep the original vertical padding while reserving chevron room. Easy to miss if you only swap `px-` → `pl-/pr-`.
+
+---
+
+## 2026-04-14 — fix(web): employees form chevron regression
+
+**Commit:** `0b01e51` fix(web): restore custom chevron on employees form selects
+
+### What changed
+
+Six `<select>` elements on `apps/web/src/app/(app)/employees/page.js` (Role / Status / Permission Level, duplicated across the detail-panel edit form and the create form) were rendering native browser chevrons and had tight right-edge spacing. They had never been migrated to the shared `SelectChevron` + `appearance-none` pattern that `WorkRequestForm.js` already uses.
+
+Each select now: wrapped in a `relative` div, `px-4` swapped to `pl-4 pr-10` to reserve room for the overlay, `appearance-none truncate w-full` added, `<SelectChevron />` dropped in after the `</select>`. Create-form selects preserve their existing `min-w-0` so the two-column grid still collapses cleanly on narrow widths.
+
+### Why
+
+Visual inconsistency with the rest of the web app — `WorkRequestForm`, `ScheduleRequestDialog`, and every other select on the platform already use the decorative SVG chevron. The native browser arrow also had no reserved padding, so long `Permission Level` labels could overlap it in dark mode.
+
+### Lessons learned
+
+- **Form extractions need a shared-style audit.** The employees page was written before `SelectChevron` existed and never got backfilled. Any form that predates a design-system component is a latent regression waiting to be noticed.
+- **`min-w-0` belongs on the wrapper, not just the select.** The create form uses a two-column `md:grid-cols-2` grid, and the `relative` wrapper needed `min-w-0` explicitly — otherwise the flex/grid min-content width defeats the `truncate` on the inner select.
+- **Native chevrons are invisible until dark mode.** The regression had been present the whole time but was easier to spot in dark mode because the native arrow has less contrast against the panel surface.
+
+---
+
 ## 2026-04-14 — mobile-friday-slice (technician status actions on work request detail)
 
 **Commit:** `aca05b1` feat(mobile): add technician status actions on work request detail
@@ -57,6 +105,7 @@ Collapsed the three-step "pick a tech" friction surfaced during the Chunk E walk
 **`e1746d8` — API.** `createLinkedEvent` is now transactional (BEGIN/COMMIT on a dedicated pool connection, mirroring `reqSequenceService.js`). The initial work_req SELECT is upgraded to `SELECT ... FOR UPDATE` so concurrent schedule-create POSTs against the same WR serialize behind the row lock — without it, two managers scheduling within milliseconds would both observe `assignedTo=NULL` and both run the auto-assign UPDATE, with the second silently winning. When a schedule event is created with a non-null `employee_id` against a WR that is still `status='unassigned' AND assignedTo IS NULL`, the same transaction promotes the WR to `status='assigned' + assignedTo=<employee_id>`. Never clobbers an existing assignment; never regresses a status. A second `work_req.auto_assigned` activity log entry fires after commit so `/superadmin` can trace automated transitions back to the triggering schedule event. When the WR has a `monday_item_id`, a fire-and-forget `mondaySyncService.pushUpdate` mirrors the status transition to Monday so the board doesn't drift until the next PUT touches the row — the partial-row path works because `toMondayColumnValues` skips null fields. `getReqById` now `LEFT JOIN`s `employees` and returns `assignedToName` alongside the FK so the detail page can render the technician's name.
 
 Test coverage is heavy for a plan marked Low complexity:
+
 - 8 new unit tests in `workReqScheduleService.test.js` covering promote, no-clobber, null-employee skip, rollback, `FOR UPDATE` pinning, and all three Monday-push cases
 - 3 new `itIfDb` integration tests in `reqs.integration.test.js` against real MySQL: promote + activity log row assertion, no-clobber, and Mark Complete preserves `assignedTo` after PUT to `completed`
 - The existing `createLinkedEvent` unit tests were restructured around a new `setupConnMock()` canonical shape (mirrors `reqs.routes.test.js`) so future services that need transactional mocks have a reference implementation
@@ -91,8 +140,9 @@ Two small but visible commits that landed during the Chunk E walkthrough of `wor
 **`14c53bc` — Tech Name is now an editable `<select>`.** The create-page field was a readonly text input prefilled from the signed-in user, and the edit-page field was an editable plain text input with a placeholder of "Magnus". Both read like duplicate assignee pickers. The field now fetches `/employees` once on mount and renders a required dropdown defaulting to blank in create mode. Edit mode preserves legacy `techName` values that are no longer in the active roster by surfacing them as a synthetic `<option>` at the top of the list, so a round-trip save can't silently clobber a historical value. Dropped the `currentEmployeeName` / `/auth/me` fetch from `req/page.js` since the signed-in-name prefill is gone.
 
 **`2127d44` — Three separate calendar/LinkedScheduleList fixes bundled.**
+
 - Calendar day cells were rendering a "Today" pill (`px-1.5 text-[10px]`) that overflowed the `aspect-square` cell at `md` viewports because the cell had no `overflow-hidden`. The pill was also duplicated information (the date digit already tells you "today"). Removed the indicator entirely — no dot, no pill — and kept `overflow-hidden` on the cell as defense-in-depth for any future absolute-positioned child.
-- Console was warning `Encountered two children with the same key, \`T\`` because the weekday header `["S","M","T","W","T","F","S"].map(d => <div key={d}>)` reuses letters. Keyed by stable day abbreviations (`sun`/`mon`/`tue`/…) with a `label` field for the displayed character.
+- Console was warning `Encountered two children with the same key, \`T\``because the weekday header`["S","M","T","W","T","F","S"].map(d => <div key={d}>)` reuses letters. Keyed by stable day abbreviations (`sun`/`mon`/`tue`/…) with a `label` field for the displayed character.
 - `LinkedScheduleList`'s per-row Unschedule control was `variant="ghost"` with a `→` glyph. Read as clickable text, not a button. Upgraded to `variant="secondary"` (outlined brand) and dropped the glyph — now reads as a proper affordance.
 
 ### Why
@@ -103,7 +153,7 @@ Chunk E is the final VALIDATE pass of the work-request-schedule-coupling plan �
 
 - **A "readonly prefilled input" is a UX anti-pattern when the user mental-models it as editable.** The Tech Name field showed the signed-in user's name in a text box that looked editable but wasn't, and the submit path silently ignored any edits anyway (create mode pulled `currentEmployeeName` out of React state, never `fd.get("techName")`). Users don't trust silent fields. The dropdown fix surfaces the real shape — "pick from the roster" — and the field now reflects what actually gets persisted.
 - **`overflow-hidden` on `aspect-square` cells is cheap insurance.** The Today pill wasn't the only thing that could escape the cell — any future child with `px` padding on a narrow viewport would have the same bug. Setting `overflow-hidden` at the container level forecloses the whole class. This is one of the rare cases where "be defensive by default" beats "trust your layout math."
-- **`key={letter}` on `["S","M","T","W","T","F","S"]` is a bug trap that reads as clean code.** Static data → stable keys → looks fine. But React uses the key for reconciliation, and the double-T + double-S caused silent children duplication in dev mode (React warned but still rendered). Moral: key on *identity*, not *display value*. Even for seven constant cells.
+- **`key={letter}` on `["S","M","T","W","T","F","S"]` is a bug trap that reads as clean code.** Static data → stable keys → looks fine. But React uses the key for reconciliation, and the double-T + double-S caused silent children duplication in dev mode (React warned but still rendered). Moral: key on _identity_, not _display value_. Even for seven constant cells.
 - **"Ghost" button variants read as links, not buttons.** The pre-launch convention of using `variant="ghost"` for tertiary/row-local actions made sense when the actions were nav-like ("View", "Details"). For a destructive-ish action like Unschedule, ghost was under-affording. The secondary variant is visually heavier and matches the user's mental model of "this is a button that does something to the row."
 - **Chunk E is doing real work.** The walkthrough wasn't a formality — it caught three visible defects in under 20 minutes that unit/integration tests would not have caught because they were all visual/interaction issues. Manual validation against a real browser remains load-bearing, even on a feature with 400+ automated tests.
 
@@ -223,12 +273,14 @@ Phase 2-3 (Chunk B) gave managers the ability to schedule a work request from it
 Two commits shipping Phase 2-3 (UI) of the `work-request-schedule-coupling` plan. Manager+ users can now put a work request on the calendar from its detail page and see the linked schedule events inline.
 
 **`ccb4893` — refactor(web): extract shared trapFocus and SelectChevron**
+
 - `apps/web/src/lib/dialogA11y.js` — exports `trapFocus(event, container)`. Was inlined at the bottom of `DeleteWorkRequestDialog.js`; now imported by both that dialog and the new `ScheduleRequestDialog`. Tiny module, no external deps
 - `apps/web/src/components/SelectChevron.js` — decorative chevron SVG for `appearance-none` native selects, positioned absolutely inside a `relative` wrapper. Uses `currentColor` + `text-muted` so it inherits the muted token in light AND dark mode automatically
 - `WorkRequestForm.js` — drops the `SELECT_STYLE` constant (which had a hardcoded `data:image/svg+xml,...stroke='%236b7280'...` data URL). Each of the three selects now wraps in `<div class="relative">` with a `<SelectChevron />` sibling. Same visual result, but the chevron color follows the token cascade instead of being a hex literal
 - No behavioral changes. Web tests 75/75 still pass
 
 **`5ccf5cf` — feat(web): schedule dialog and linked schedule list on req detail**
+
 - New `ScheduleRequestDialog.js` — modal form with start/end `datetime-local` inputs, tech `<select>` (lazy-loaded from `/employees`, includes "Unassigned"), and an optional details textarea (max 500 chars). Inline validation: end must be after start, submit disabled until both times are set. Submits to `POST /reqs/:id/schedule-events`, fires `onScheduled` on success, parent reloads
 - Accessibility: `role="dialog"` + `aria-modal="true"`, focus trap via the shared `dialogA11y.trapFocus`, Escape close, backdrop close, focus return on unmount. **Initial focus on the Start time input** — not Cancel — because this is a form, not a confirm dialog (deliberate spec divergence from `DeleteWorkRequestDialog`)
 - New `LinkedScheduleList.js` — presentational list component. Empty state, time-range formatting, tech name with italic "Unassigned" fallback, details preview with a muted "No details" fallback. When the parent work_req `status === 'completed'`, rows render dimmed with a "Completed" pill and the Unschedule button is hidden. Per-row Unschedule button only renders when the parent passes a function for `onUnschedule` — role gating happens at the parent layer
@@ -258,11 +310,13 @@ Phase 1 (backend) shipped a fully functional API for scheduling work requests bu
 Two commits shipping Phase 1 (backend) of the `work-request-schedule-coupling` plan, plus a prior UI cleanup that had been sitting uncommitted.
 
 **`cde3c69` — fix(web): remove stub helper copy and truncate select chevrons**
+
 - Deleted the "Browser autofill works / Google Places…" stub helper text under the Account Address input on the work request form (Google Places activation is logged as a post-launch task since it requires a GCP billing account)
 - Deleted the "Pulled from the signed-in employee account" stub under Tech Name (the readOnly input is self-explanatory)
 - Extracted shared `SELECT_CLASS` + `SELECT_STYLE` constants for the three form selects (plantSize, plantHeight, lighting). Selects now use `appearance-none` + a custom inline SVG chevron at `right 0.875rem center` with `pr-10`, and `truncate` clips long option labels with an ellipsis instead of overlapping the arrow
 
 **`b645b30` — feat(api): work request schedule coupling — Phase 1 backend**
+
 - Migration 006 (up + down) plus `01_schema.sql` update adds `idx_schedule_workreq` on `schedule_events(work_req_id)` so the upcoming LEFT JOIN queries and linked-event lookups are indexed
 - New service `workReqScheduleService.js` owns all SQL for the feature. Public surface: `listLinkedEvents(workReqId)`, `createLinkedEvent({workReqId, body, req})`, `deleteLinkedEvent({workReqId, eventId, req})`, `listUnscheduledWorkReqs({pageSize, offset, filters})`. Private helpers: `validateRequestScheduleEventPayload`, `normalizeDateTime`, `buildEventTitle`, `getLinkedEventById`
 - Invariants enforced at the service layer (not the route): `event_type = 'request'` is hardcoded on insert; title is server-derived from the work request's `referenceNumber` + truncated `actionRequired`; employee_id (when provided) must reference an `Active` employees row, else 400 `EMPLOYEE_NOT_FOUND`; the unscheduled inbox hides work_reqs older than 30 days by default unless `includeOlder=true`
@@ -335,8 +389,6 @@ the threat model isn't theoretical.
   pass because `webhookLimiter` is mounted upstream of the synthetic
   test app's router factory.
 
-
-
 **Commits:** `c6badc5` `543804f`
 
 ### What changed
@@ -345,6 +397,7 @@ Two commits closing out Phase 4 after a full end-to-end walkthrough of the
 web-UI-driven bidirectional sync path ("Path B"):
 
 **`c6badc5` — chore(api): consolidate Monday webhook scripts into node CLI**
+
 - Deleted four one-shot bash scripts from the Phase 4.2.0 capture work:
   `monday-diag.sh`, `monday-introspect-webhook-events.sh`,
   `monday-webhook-register-capture.sh`, `monday-webhook-teardown.sh`
@@ -362,7 +415,7 @@ web-UI-driven bidirectional sync path ("Path B"):
 
 **`543804f` — fix(api): Monday webhook decoder aliases + sentinel + review hardening**
 
-*Critical bug fixes caught during the Path B e2e walkthrough:*
+_Critical bug fixes caught during the Path B e2e walkthrough:_
 
 1. Monday sends `columnType="long-text"` (hyphen) in webhook bodies for
    long_text columns, not `"long_text"` (underscore). The decoder's switch
@@ -373,7 +426,8 @@ web-UI-driven bidirectional sync path ("Path B"):
 2. Monday sends `columnType="numeric"` for number columns, not `"numbers"`.
    Same silent-clear failure mode for `numberOfPlants`.
 
-*Fixes:*
+_Fixes:_
+
 - Added hyphen-to-underscore normalization at the top of `decodeWebhookValue`
 - Added `"numeric"` as an explicit case fall-through for `"numbers"`
 - **Introduced a `DECODE_UNSUPPORTED` sentinel** — previously unknown column
@@ -381,8 +435,9 @@ web-UI-driven bidirectional sync path ("Path B"):
   unknown types return the sentinel and the handler explicitly skips the
   `UPDATE` while logging loudly. Defense-in-depth against future alias drift.
 
-*Phase 4 review follow-ups (bundled with the decoder fixes since they
-all touch the same files):*
+_Phase 4 review follow-ups (bundled with the decoder fixes since they
+all touch the same files):_
+
 - `env.js` — `emptyToUndefined` Zod preprocess on all three Monday env
   vars so a blank `.env` copy of `.env.example` degrades to "Monday sync
   disabled" instead of crashing validation on `z.string().min(32).optional()`
@@ -399,7 +454,8 @@ all touch the same files):*
   outbound-trigger loop) and what future maintainers must replicate here
   if they add side-effects to `reqs.js`
 
-*5 new regression tests (326 → 331):*
+_5 new regression tests (326 → 331):_
+
 - `decodeWebhookValue` returns the `DECODE_UNSUPPORTED` sentinel (not null)
   for unknown column types
 - `decodeWebhookValue` routes `long-text` (hyphen) to the same case as
@@ -438,8 +494,8 @@ clearing production data.
   GraphQL enum says. The webhook body actually uses `"long-text"`. Both
   bugs (long-text and numeric) would have been caught by a single captured
   real webhook payload per column type. The SESSION.md open thread from
-  Phase 4.5 specifically flagged this gap: *"Text/long_text/numbers/date
-  column webhook shapes are unverified."* Phase 4.5 deferred it; Path B
+  Phase 4.5 specifically flagged this gap: _"Text/long_text/numbers/date
+  column webhook shapes are unverified."_ Phase 4.5 deferred it; Path B
   paid for the deferral in live debugging time. Next time: capture
   empirical fixture samples FIRST, then write the decoder against them.
 - **"Silent null on unknown type" is a dangerous default.** The original
@@ -484,6 +540,7 @@ board and applies them to its own database, while suppressing echoes
 from its own outbound pushes via an in-memory deduplication set.
 
 **Phase 4.2.0 — Live webhook payload capture (`b58a2b0`)**
+
 - Five throwaway-but-reusable scripts under `apps/api/scripts/`:
   - `monday-diag.sh` — three-step diagnostic (board read, webhook list, current user) so we can isolate auth/permission/shape issues independently
   - `monday-introspect-webhook-events.sh` — queries Monday's `WebhookEventType` enum so we don't guess at registration enum names
@@ -493,6 +550,7 @@ from its own outbound pushes via an in-memory deduplication set.
 - `.gitignore` updated to exclude `.monday-webhook-samples.json` so captured Monday user/item IDs stay out of git.
 
 **Phase 4.1 — `loopPreventionSet.js` (`1936e36`)**
+
 - In-memory `Map<signature, expiryEpochMs>`, 15s TTL, 10k entry size cap with FIFO eviction
 - Lazy pruning on `has()` calls — no background timer, no test-hang risk
 - Stable signature: SHA-256 of `${itemId}:${columnId}:${stableStringify(value)}`
@@ -500,6 +558,7 @@ from its own outbound pushes via an in-memory deduplication set.
 - Process-local — multi-process deployment would need Redis; accepted for current single-process API
 
 **Phase 4.2 — Webhook route (`f386ae4`)**
+
 - `POST /monday/webhook/:secret` mounted at `app.js`
 - URL-based secret authentication via `crypto.timingSafeEqual`. Fail-closed: missing or mismatched secret returns 404 with no body
 - Auth failures log `[monday-webhook] auth failure` with the source IP from `cf-connecting-ip` — never the URL or the secret
@@ -511,6 +570,7 @@ from its own outbound pushes via an in-memory deduplication set.
 - `.env.example` documents the placeholder plus the `openssl rand -hex 32` generation command
 
 **Phase 4.3 — Event handler (`f386ae4`)**
+
 - `mondayWebhookHandler.handleEvent(event)` dispatches on the runtime `event.type` string (NOT the registration enum — Monday renamed `change_column_value` → `update_column_value` and `item_deleted` → `delete_pulse` between API versions; we discovered this empirically in 4.2.0 capture)
 - `handleUpdateColumnValue` decodes the value into a canonical scalar, checks loop prevention via the matching signature, and runs a parameterized `UPDATE work_reqs SET <field> = ? WHERE monday_item_id = ?`
 - `<field>` is interpolated from a static whitelist (`SYNCED_FIELDS = new Set(Object.values(COLUMN_TO_FIELD))`) — defense-in-depth assertion against future refactors that might weaken the source-of-truth invariant
@@ -522,6 +582,7 @@ from its own outbound pushes via an in-memory deduplication set.
 - Decoder handles four column types empirically + defensively: text, long_text, numbers, date
 
 **Phase 4.4 — Outbound loop-prevention hooks (`3e015d0`)**
+
 - `mondaySyncService.pushCreate/pushUpdate/pushDelete` now call `rememberOutboundColumnSignatures(itemId, workReq)` after every successful Monday API call
 - `remember()` sits BETWEEN the Monday API call and the subsequent `db.query` bookkeeping — failed pushes don't poison the set
 - Both the primary push functions AND the `drainQueue` retry branches get the hooks, so retried items also seed the prevention set
@@ -559,7 +620,7 @@ Phase 4's time budget to loop prevention specifically.
 - **`set -euo pipefail` + macOS bash 3.2 + Unicode ellipsis = unbound-variable error.** macOS ships with bash 3.2 from 2007, which mis-parses the Unicode ellipsis (`…`) as part of an adjacent variable name under nounset. `echo "Deleting webhook $WEBHOOK_ID…"` exploded with `WEBHOOK_ID?: unbound variable`. Fix: use `${WEBHOOK_ID}...` with brace expansion + ASCII dots. **Takeaway:** if a shell script will run on macOS, stick to ASCII in identifier-adjacent strings.
 - **Express 5 deprecated bare `*` wildcards.** `app.post("*", handler)` in Express 5 throws `PathError [TypeError]: Missing parameter name at index 1: *`. Fix: use a regex (`app.post(/.*/, handler)`) or a named wildcard (`app.post("/*path", handler)`). Logged for any future Express 4 → 5 migration.
 - **Cache-warm `jest.mock` doesn't work for indirect transitive imports.** Adding `const env = require("../lib/env")` to `mondayWebhookHandler.js` for the new `boardId` defense-in-depth check broke two test files that `require` the handler indirectly. The auto-mock of `../db` triggers loading the real `db/index.js` to fingerprint its exports, which transitively loads `env.js`, which fails Zod validation before `setupFilesAfterEach` runs. Fix: explicitly `jest.mock("../lib/env", () => ({...}))` in any test file whose dependency chain reaches env.js. Same pattern as `analytics.test.js` and `mondaySyncService.test.js`. **Takeaway:** in a Zod-validated env.js codebase, env mocks have to be hoisted in any test file that touches a module that touches db that touches env.
-- **The signature canonicalization is the silent-failure failure mode.** Loop prevention works only if both sides hash the *same* canonical form. Outbound passes `String(workReq.field)`; inbound passes `decodeWebhookValue(event.value, columnType)`. Both have to converge to identical strings/numbers/dates. The very first version of Phase 4.3 hashed `event.value` directly (the raw Monday-shape wrapper object) — Phase 4.4 caught this during integration testing because the round-trip test failed. Fix was to decode BEFORE hashing on the inbound side. Without round-trip tests, this would have shipped silently broken and only manifested as occasional duplicate updates in production. **Takeaway:** any time two code paths must agree on a hash, write the integration test that hashes both sides and asserts equality.
+- **The signature canonicalization is the silent-failure failure mode.** Loop prevention works only if both sides hash the _same_ canonical form. Outbound passes `String(workReq.field)`; inbound passes `decodeWebhookValue(event.value, columnType)`. Both have to converge to identical strings/numbers/dates. The very first version of Phase 4.3 hashed `event.value` directly (the raw Monday-shape wrapper object) — Phase 4.4 caught this during integration testing because the round-trip test failed. Fix was to decode BEFORE hashing on the inbound side. Without round-trip tests, this would have shipped silently broken and only manifested as occasional duplicate updates in production. **Takeaway:** any time two code paths must agree on a hash, write the integration test that hashes both sides and asserts equality.
 - **Two `/review` cycles is the right cadence even mid-phase.** Cycle 1 caught 7 important findings (4 fixable in code, 3 deferred). Cycle 2 wasn't needed because all 7 got addressed in the same fix pass. Holding the line on "fix everything the review flagged before commit" prevents the deferred items from accumulating into a Phase 5 backlog.
 
 ### Out of scope for this entry (post-launch open threads)
@@ -578,6 +639,7 @@ Phase 4's time budget to loop prevention specifically.
 ### What changed
 
 **Phase 3 — Web: work request routes (list/detail/edit + delete flow)**
+
 - New routes: `/req/list` (paginated directory), `/req/[id]` (full detail with sync panel), `/req/[id]/edit` (form pre-filled).
 - Extracted the existing create form into `WorkRequestForm` (`mode="create" | "edit"`). Uncontrolled FormData-based, dirty tracking + beforeunload guard preserved. ~450 lines, single source of truth for both flows.
 - New `SyncStatusBadge` resolves four states (Synced / Queued / Failed / Not synced) from `monday_item_id`, `monday_synced_at`, and an optional `queueAttempts`. Rendered on list rows AND the detail page.
@@ -590,12 +652,14 @@ Phase 4's time budget to loop prevention specifically.
 - `routes.js` gained a `DYNAMIC_ROUTES` regex layer (checked before the static ROUTES array) so `/req/42` resolves to "Work Request Detail" instead of colliding with the `/req` create page. `/req/42/edit` resolves to "Edit Work Request". Test coverage at `routes.test.js`.
 
 **Test additions (+23 web tests, 29 → 52 passing)**
+
 - `SyncStatusBadge.test.js` — 6 tests covering each state and the priority order.
 - `WorkRequestRow.test.js` — 6 tests covering rendering, link target, status pill, fallback placeholders.
 - `DeleteWorkRequestDialog.test.js` — 7 tests covering ARIA attrs, Cancel/Confirm wiring, error display, Escape, missing reference number.
 - `routes.test.js` — 4 new dynamic-route tests.
 
 **Login contrast fix (`34ad54a`)**
+
 - Login page email/password inputs now set explicit `color: #223126` plus a scoped `<style>` block targeting `.login-input::placeholder` and `:-webkit-autofill`. Browser autofill suggestions, placeholder text, and typed text all render with adequate contrast against the cream `#f4f1e8` background.
 - Surface fix only — the deeper issue is that `apps/web/src/app/page.js` is built entirely with inline `style={...}` objects and can't participate in the design token system. Logged as a post-launch open thread.
 
@@ -630,6 +694,7 @@ Phase 4's time budget to loop prevention specifically.
 ### What changed
 
 **Phase 2 — API: Monday.com outbound sync + retry queue**
+
 - New migration `004_monday_sync_up.sql` / `004_monday_sync_down.sql`:
   - Adds `work_reqs.monday_item_id VARCHAR(32)` + `monday_synced_at TIMESTAMP` + index on `monday_item_id`.
   - Creates `monday_sync_queue` (id PK, work_req_id FK ON DELETE SET NULL, operation ENUM, payload JSON, attempts, last_error, next_attempt_at, timestamps) + indexes.
@@ -650,6 +715,7 @@ Phase 4's time budget to loop prevention specifically.
 - `apps/api/package.json` — added `zod@^4.3.6`, `jsonwebtoken@^9.0.3`.
 
 **Phase 2.5 — Web: design token foundation**
+
 - `apps/web/src/app/globals.css` — major restructure, purely additive for existing code.
   - `:root` and `.dark` keep only theme-variant values. Added semantic colors (`--success`/`--success-soft`, `--warning`/`--warning-soft`, `--danger`/`--danger-soft`/`--danger-border`, `--info`/`--info-soft`) mirrored exactly from `apps/mobile/theme.js` COLORS / COLORS_DARK. Also added `--fg-primary`/`--fg-soft`/`--fg-on-brand` — prefixed `fg-` specifically to avoid collision with Tailwind v4's `--text-*` font-size namespace.
   - `@theme inline` extended with: the semantic color aliases (`--color-success: var(--success)` etc. — which means `bg-success`, `text-danger-soft`, etc. respond to dark-mode automatically via the `:root`/`.dark` cascade); the full canonical spacing scale `--spacing-0` through `--spacing-32`; the type scale `--text-xs` through `--text-6xl`; leading tokens; radius scale `--radius-sm` through `--radius-full` (with `--radius-lg` aliasing the legacy `--radius-card`); shadow scale; motion durations; easings. Everything generates matching Tailwind utilities on demand.
@@ -661,6 +727,7 @@ Phase 4's time budget to loop prevention specifically.
 - `.claude/design/web.md` checklist now references `apps/web/src/app/globals.css` instead of `design/tokens.md`. **Not committed.**
 
 **Phase 2.6 — Web: design + UX audit and Fix-now punch list**
+
 - Ran `/design-review` and `/ux-review` in sequence. Produced a triaged punch list of 9 Fix-now items + 3 deferred classes of issues (full-file `text-gray-*`/`bg-white` migration, cold→warm dark palette rework, full a11y audit — all flagged for post-launch plans).
 - Two product decisions locked:
   - Phase 3 will build `/req/[id]` as dedicated routes. `/tasks` modal detail view will migrate to `router.push('/req/${id}')` on row click, and the in-page modal code will be deleted during Phase 3.
@@ -673,6 +740,7 @@ Phase 4's time budget to loop prevention specifically.
 - Added a form abandonment guard to `/req`: `formDirty` state tracked via `onInput` on the form, `beforeunload` listener warns on browser close/refresh when dirty, Cancel button confirms before discarding. Cleared before successful submit navigation.
 
 **Phase 2.7 — Review-driven fixes (this session's final pass)**
+
 - **C1 (critical):** `reqSequenceService.js` was calling `db.query()` twice in sequence — once for the upsert and once for `SELECT LAST_INSERT_ID()`. Because `db.query()` is a shortcut for pool `getConnection → query → release`, the two calls could land on DIFFERENT connections in the mysql2 pool. `LAST_INSERT_ID()` is session-local, so reading it on a different connection returned 0 or stale state, silently breaking the uniqueness guarantee for WR numbers. **Rewritten to explicitly `db.getConnection()` once, run both queries on that connection, and `release()` in `finally`.** The test suite was also updated to mock `getConnection` returning independent mock connections per call — simulating the pool behavior so the 20-concurrent-call test is now meaningful instead of passing for the wrong reason.
 - **C2 (critical):** Migration 004's `INSERT INTO work_req_sequences (year, next_seq) VALUES (YEAR(NOW()), 1)` pre-seed defeated the fresh-insert path in the service. First `nextReferenceNumber()` call of the year always hit the `ON DUPLICATE KEY UPDATE` branch (incrementing 1 → 2), so the first visible WR of the year was `WR-2026-0002` and slot 0001 was permanently skipped. Pre-seed line removed. Dev DB `work_req_sequences` row truncated so the next call really starts at 0001.
 - **I1 (important):** `fetchApi` error extraction. Phase 2's errorHandler shape change flipped the wire format from `{error: "string"}` flat to `{error: {code, message, details}}` nested, and I updated `fetchApi` to do `payload?.error?.message`. But 14+ routes still use the legacy direct-return pattern `res.status(400).json({error: "string"})` which bypasses the global errorHandler entirely. Result: users saw "HTTP Error 400" instead of the actual validation messages. Fixed by making `fetchApi` try both shapes: if `typeof payload.error === "string"`, use it directly; otherwise try `payload.error.message` / `payload.message`.
@@ -683,7 +751,7 @@ Phase 4's time budget to loop prevention specifically.
 
 **The Friday 2026-04-17 web launch demo is the forcing function.** Monday.com bidirectional sync is the headline deliverable (it eliminates the pen-and-paper → JotForm → Monday.com workflow the real company currently uses). Without outbound sync working end-to-end, there's no demo story. Phase 2 was the biggest chunk of that plan.
 
-Phase 2.5 was scoped in mid-session after a user request for a "source of truth for styling." Scoping the problem revealed ~227 token violations across 18 of 41 web files, but the audit separated *fixing components* (deferred to `web-token-sweep.md` post-launch) from *establishing the token infrastructure itself* (doable in a few hours, unblocks Phase 3 UI work). The split was important — interleaving a 16-file migration with sprint work before a public demo was too risky. This phase is purely additive and leaves all existing code working.
+Phase 2.5 was scoped in mid-session after a user request for a "source of truth for styling." Scoping the problem revealed ~227 token violations across 18 of 41 web files, but the audit separated _fixing components_ (deferred to `web-token-sweep.md` post-launch) from _establishing the token infrastructure itself_ (doable in a few hours, unblocks Phase 3 UI work). The split was important — interleaving a 16-file migration with sprint work before a public demo was too risky. This phase is purely additive and leaves all existing code working.
 
 Phase 2.6 was triggered by the user manually walking dark mode after Phase 2.5 and immediately hitting contrast issues. Rather than fixing them one-at-a-time, we ran `/design-review` and `/ux-review` in sequence to produce a punch list. The review found the button color inconsistency was systemic — three competing button styles across five pages, no shared component, `.dark .theme-button` hardcoded a cold blue, and `--brand-700` dark mode was a cream that made primary buttons look ghosted. Building a shared `<Button>` component first and then migrating the critical surfaces (instead of incremental whack-a-mole) was the right lever.
 
@@ -729,6 +797,7 @@ Phase 2.7 was triggered by the first formal `/review` of the session. The review
 **Commits:** `4934461` (scaffolding + dashboard proof), `31efa67` (remaining 8 pages)
 
 ### What changed
+
 - Created `apps/web/src/lib/routes.js` with a `ROUTES` map + `getTopBarTitle(pathname)` helper. Single source of truth for per-route top-bar titles. Includes a prefix-collision guard (the `"+ '/'"` suffix prevents `/req` from matching `/reqs`).
 - Created `apps/web/src/app/(app)/layout.js` — client component that calls `usePathname()`, resolves the title via `getTopBarTitle()`, and wraps children in `<AppShell title={title}>`. This is the persistent shell instance.
 - Moved 9 authenticated page directories from `apps/web/src/app/*` into `apps/web/src/app/(app)/*` via `git mv`: dashboard, tasks, req, calendar, assigntasks, employees, inventory, profile, superadmin. Two co-located page tests (employees, inventory) rode along.
@@ -739,14 +808,17 @@ Phase 2.7 was triggered by the first formal `/review` of the session. The review
 - IDE auto-formatter ran on several moved files during the session (tasks, calendar, assigntasks, dashboard, profile, superadmin), producing line-wrapping changes that are mixed into the refactor diff. No behavioral impact; pure style normalization.
 
 ### Why
+
 - The original per-page `<AppShell>` pattern meant every navigation unmounted and remounted the entire shell tree: Sidebar, TopBar, MobileNavDrawer, TopBarUserMenu all tore down and re-created. Each remount fired its own `onAuthStateChanged` listener and its own `/auth/me` fetch, producing 3 concurrent shell-level requests per navigation (desktop `Sidebar` + drawer `Sidebar` inside `MobileNavDrawer` + `TopBarUserMenu`). Users saw a brief flicker on every nav click; theme state re-initialized from localStorage each time.
 - After the lift, `(app)/layout.js` mounts `<AppShell>` **once per session**. Navigating between `/dashboard`, `/tasks`, `/req`, etc. now only swaps `children` — the shell, its auth listeners, its theme state, and its drawer state all persist. Shell-level `/auth/me` calls drop from `3 × nav count` to `3 × 1` per session.
 
 ### Scope notes
+
 - 4 page-level `/auth/me` fetchers (`employees/page.js:340`, `superadmin/page.js:57`, `calendar/page.js:253`, `req/page.js:58`) are **orthogonal to this refactor** and still fire on every visit to those pages. Collapsing them into a shared `useCurrentUser` hook (or finally wiring the dead `AuthProvider.js`) is the natural follow-up.
 - `Sidebar.js` still hardcodes its own `baseSections` array instead of consuming the new `ROUTES` map. The `sidebarLabel` field was included in `ROUTES` to give a future Sidebar refactor an obvious hook — do not delete it.
 
 ### Validation
+
 - `cd apps/web && npm run lint` — 0 errors, 4 pre-existing warnings (same baseline)
 - `cd apps/web && npm test` — **29/29** across 8 suites (21 baseline + 8 new)
 - `cd apps/web && npm run build` — clean production build, all 14 routes discovered (9 authenticated + `/` + `/api/req` + `/_not-found` + 2 static)
@@ -754,6 +826,7 @@ Phase 2.7 was triggered by the first formal `/review` of the session. The review
 - Manual browser matrix (zero flicker + exactly 3 shell-level `/auth/me` per session + matrix total of 7): **deferred to Denver** — requires a real browser with Firebase auth and DevTools Network tab; not automatable via curl.
 
 ### Lessons learned
+
 - **`(app)` parens MUST be double-quoted in every shell command.** Unquoted `apps/web/src/app/(app)/dashboard` is a bash/zsh syntax error (parens start a subshell). Every `git mv`, `ls`, `mkdir`, and path reference in a shell pipeline needs quotes. An early draft of the plan said "should always quote" — that understated it. Corrected during plan review before execution; zero failures during /execute as a result.
 - **Rename + modify + auto-format can drop git's rename similarity below 50%.** Two files (`assigntasks`, `superadmin`) had enough IDE auto-format churn that `git log --follow` no longer stitches them to their pre-move history at the default threshold. Workaround: `git log --follow --find-renames=30% -- <path>`. Not a bug — a consequence of combining structural refactors with style passes in the same commit. Next time: do a style-only pass BEFORE the structural refactor (or after, in a separate commit) so the rename detection stays clean.
 - **`helmet({contentSecurityPolicy: false})` does NOT remove an existing CSP header** (carried over from last session). Still true.
@@ -768,6 +841,7 @@ Phase 2.7 was triggered by the first formal `/review` of the session. The review
 **Commit:** `db59ab4`
 
 ### What changed
+
 - Added helmet for baseline security headers (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, etc).
 - Removed CSP only on `/api-docs` via a `res.removeHeader` middleware so swagger-ui's inline scripts can execute.
 - Locked CORS to a `CORS_ORIGINS` allowlist with `403 CORS_ORIGIN_DENIED` rejection (no wildcard).
@@ -778,10 +852,12 @@ Phase 2.7 was triggered by the first formal `/review` of the session. The review
 - 27 new tests across 4 files. Suite went from 184 → 211 passing across 17 files.
 
 ### Why
+
 - Closes 5 critical 🔴 + 1 medium 🟡 findings from the API security audit (2026-04-09).
 - Sets the baseline for production hardening before the validation-layer and test-coverage plans land.
 
 ### Lessons learned
+
 - **Test the mechanism, not the symptom.** The original Swagger CSP fix shipped through `/execute` and `/reflect` because the test only checked the response body for `swagger-ui` text, not the actual CSP header. The bug — `helmet({ contentSecurityPolicy: false })` does not remove a CSP header that the global helmet already set — was caught only in `/review` when a header-level assertion was added. **Rule:** when testing middleware behavior, assert on headers (the mechanism), not on downstream content (the symptom). A passing test on the wrong layer is worse than no test.
 - **Structured logs prove their value on the first real failure.** The new `[auth] <ts> req=<id> <method> <path> — <code>: <msg>` format made it possible to scan 21 lines and instantly see "every request is dying with ECONNREFUSED 127.0.0.1:3307" when MySQL was down. The previous three-lines-per-failure `console.error` format would have been 63 un-correlated lines for the same incident.
 - **Always patch the plan with concrete code, not "remember to verify."** During the first `/review` of the plan, the Swagger UI risk was flagged in NOTES with "Document this for /reflect to verify." That deferral was the seed of the bug. Patching the plan to require an actual test case + browser smoke would have caught it in `/execute`.
