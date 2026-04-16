@@ -20,6 +20,7 @@ const {
 } = require("../services/taskService");
 const { httpError } = require("../utils/httpError");
 const { logActivity } = require("../utils/activityLogger");
+const env = require("../lib/env");
 
 // PUT /reqs/:id accepts the same status values as the dedicated tasks
 // endpoint. Reused from taskService so there's one source of truth — adding
@@ -35,7 +36,9 @@ const VALID_WORK_REQ_STATUSES = new Set(
 const router = express.Router();
 
 // Ensure upload directory exists before multer attempts to write files.
-const uploadDir = path.join(__dirname, "../../uploads");
+// Configurable via UPLOAD_DIR — defaults to apps/api/uploads locally,
+// set to /home/uploads on Azure App Service for persistence across restarts.
+const uploadDir = env.UPLOAD_DIR;
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }

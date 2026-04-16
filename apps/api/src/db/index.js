@@ -10,7 +10,7 @@ let pool;
 function getPool() {
   if (!pool) {
     // Lazily create the pool once so startup does not fail before the first DB-backed request.
-    const rawPool = mysql.createPool({
+    const poolConfig = {
       host: env.DB_HOST,
       port: env.DB_PORT,
       user: env.DB_USER,
@@ -22,7 +22,16 @@ function getPool() {
       enableKeepAlive: true,
       keepAliveInitialDelay: 30000,
       connectTimeout: 10000,
-    });
+    };
+
+    // Azure MySQL Flexible Server enforces SSL — without this, every query
+    // fails with `Connections using insecure transport are prohibited`.
+    // Local docker-compose MySQL leaves DB_SSL unset → false → no SSL.
+    if (env.DB_SSL) {
+      poolConfig.ssl = { rejectUnauthorized: true };
+    }
+
+    const rawPool = mysql.createPool(poolConfig);
 
     rawPool.on("error", (err) => {
       console.error("MySQL pool error:", err);
