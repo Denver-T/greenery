@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import WorkspaceHeader from "@/components/WorkspaceHeader";
 import WorkspaceToolbar from "@/components/WorkspaceToolbar";
 import SyncStatusBadge from "@/components/SyncStatusBadge";
+import SelectChevron from "@/components/SelectChevron";
 import { fetchApi } from "@/lib/api/api";
 import { formatDateLabel } from "@/lib/inputSafety";
 
@@ -858,43 +859,49 @@ export default function Page() {
                 <span className="text-sm font-bold theme-title">
                   Visible to
                 </span>
-                <select
-                  value={eventForm.audience_level}
-                  onChange={(e) =>
-                    setEventForm((current) => ({
-                      ...current,
-                      audience_level: e.target.value,
-                    }))
-                  }
-                  className="rounded-xl border border-border-soft bg-white px-3 py-2 text-sm"
-                >
-                  <option value="technician">Everyone</option>
-                  <option value="manager">Managers and admins</option>
-                  <option value="admin">Admins only</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={eventForm.audience_level}
+                    onChange={(e) =>
+                      setEventForm((current) => ({
+                        ...current,
+                        audience_level: e.target.value,
+                      }))
+                    }
+                    className="w-full truncate appearance-none rounded-xl border border-border-soft bg-white pl-3 pr-10 py-2 text-sm"
+                  >
+                    <option value="technician">Everyone</option>
+                    <option value="manager">Managers and admins</option>
+                    <option value="admin">Admins only</option>
+                  </select>
+                  <SelectChevron />
+                </div>
               </label>
 
               <label className="grid gap-1">
                 <span className="text-sm font-bold theme-title">
                   Assigned person
                 </span>
-                <select
-                  value={eventForm.employee_id}
-                  onChange={(e) =>
-                    setEventForm((current) => ({
-                      ...current,
-                      employee_id: e.target.value,
-                    }))
-                  }
-                  className="rounded-xl border border-border-soft bg-white px-3 py-2 text-sm"
-                >
-                  <option value="">No assignee</option>
-                  {employees.map((employee) => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={eventForm.employee_id}
+                    onChange={(e) =>
+                      setEventForm((current) => ({
+                        ...current,
+                        employee_id: e.target.value,
+                      }))
+                    }
+                    className="w-full truncate appearance-none rounded-xl border border-border-soft bg-white pl-3 pr-10 py-2 text-sm"
+                  >
+                    <option value="">No assignee</option>
+                    {employees.map((employee) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.name}
+                      </option>
+                    ))}
+                  </select>
+                  <SelectChevron />
+                </div>
               </label>
 
               <label className="grid gap-1 md:col-span-2">

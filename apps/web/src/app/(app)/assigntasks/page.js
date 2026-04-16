@@ -3,6 +3,7 @@
 import WorkspaceHeader from "@/components/WorkspaceHeader";
 import WorkspaceToolbar from "@/components/WorkspaceToolbar";
 import Button from "@/components/Button";
+import SelectChevron from "@/components/SelectChevron";
 import { fetchApi } from "@/lib/api/api";
 import {
   formatDateLabel,
@@ -269,18 +270,22 @@ export default function AssignmentsPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium theme-copy">Employee</label>
-              <select
-                className="mt-2 w-full rounded-xl border border-border-soft bg-white p-3 theme-copy shadow-soft"
-                value={selectedEmployeeId}
-                onChange={(e) => setSelectedEmployeeId(e.target.value)}
-              >
-                <option value="">Select employee...</option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={employee.id}>
-                    {employee.name} {employee.role ? `- ${employee.role}` : ""}
-                  </option>
-                ))}
-              </select>
+              <div className="relative mt-2">
+                <select
+                  className="w-full truncate appearance-none rounded-xl border border-border-soft bg-white pl-3 pr-10 py-3 theme-copy shadow-soft"
+                  value={selectedEmployeeId}
+                  onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                >
+                  <option value="">Select employee...</option>
+                  {employees.map((employee) => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.name}{" "}
+                      {employee.role ? `- ${employee.role}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <SelectChevron />
+              </div>
             </div>
 
             {topEmployees.length > 0 ? (
