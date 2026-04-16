@@ -17,7 +17,11 @@ jobs:
           cache: 'npm'
           cache-dependency-path: apps/web/package-lock.json
 
-      - run: npm ci
+      # Use `npm install` (not `npm ci`) so platform-specific optional
+      # native binaries like @tailwindcss/oxide-linux-x64-gnu resolve on
+      # the Linux runner. Lockfile was generated on macOS and doesn't
+      # include the Linux binary entry — `npm ci` refuses to install it.
+      - run: npm install
 
       - name: Build (bakes NEXT_PUBLIC_* into client bundle)
         env:
