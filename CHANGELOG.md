@@ -5,6 +5,16 @@ valuable section — they're how the project gets smarter over time.
 
 ---
 
+## 2026-04-22 — Post-convention tear-down + handoff
+
+### What changed
+
+- **Production mysqldump saved** to `~/greenery-prod-dump-2026-04-22.sql` (all 8 tables, 311 lines). Taken via SSH before tear-down so demo data is recoverable.
+- **Azure resource group `greenery-rg` deleted.** Both web apps, App Service plan, MySQL VM, disks, networking — all destroyed. Billing is $0.
+- **`HANDOFF.md` created** at repo root. Client-facing document covering: delivered feature matrix, DB backup + restore instructions, redeploy recipe, known issues, post-launch work queue (9 chunks in priority order), repo structure and branch map.
+
+---
+
 ## 2026-04-16 — Azure production deploy (initial)
 
 **Commits (on `deploy/azure-initial` branch):** `80063fd` feat(api) upload dir + MySQL SSL configurable, `facd25b` ci Azure deploy workflows, `f35fc32` ci npm install for optional deps, `86ffa4d` ci regenerate lockfile for tailwind oxide.
